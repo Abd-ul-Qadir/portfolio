@@ -13,6 +13,12 @@
  * Usage:
  *   node scripts/cdp.mjs <url> <path-to-script.js> [--reduced-motion] [--viewport 390x844]
  *                                                  [--screenshot out.png]
+ *                                                  [--press-tab N] [--then after.js]
+ *
+ * `--press-tab N` dispatches N real Tab keypresses through the input pipeline after the main
+ * script runs, and `--then` evaluates a second script afterwards. Real key events are the
+ * only way to exercise `:focus-visible`, which deliberately does not match a programmatic
+ * `element.focus()`.
  *
  * `--screenshot` captures *after* the script has run, so it can photograph a section the
  * script scrolled to. Plain `chrome --screenshot` cannot: it renders a blank frame for any
@@ -53,6 +59,14 @@ const reducedMotion = flags.includes("--reduced-motion");
 // check a 500px check.
 const screenshotPath = flags.includes("--screenshot")
   ? flags[flags.indexOf("--screenshot") + 1]
+  : null;
+
+const pressTabCount = flags.includes("--press-tab")
+  ? Number(flags[flags.indexOf("--press-tab") + 1]) || 0
+  : 0;
+
+const thenScriptPath = flags.includes("--then")
+  ? flags[flags.indexOf("--then") + 1]
   : null;
 
 const viewportFlag = flags[flags.indexOf("--viewport") + 1];
@@ -134,9 +148,8 @@ function send(socket, method, params = {}) {
 
 const body = readFileSync(scriptPath, "utf8");
 
-// Helpers available to every script: a real `sleep`, and a `scrollTo` that waits for the
-// scroll to actually be applied and painted rather than returning immediately.
-const wrapped = `(async () => {
+/** Wraps a script body in the async helper preamble every script gets. */
+const wrap = (source) => `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
   // Scrolling is verified rather than assumed: the page can still be settling (fonts,
@@ -155,11 +168,13 @@ const wrapped = `(async () => {
     }
   };
   try {
-    ${body}
+    ${source}
   } catch (error) {
     return "ERROR: " + (error && error.stack ? error.stack : String(error));
   }
 })()`;
+
+const wrapped = wrap(body);
 
 try {
   const socketUrl = await getTargetSocket();
@@ -215,6 +230,38 @@ try {
     process.exitCode = 1;
   } else {
     const value = result.result.value;
+    console.log(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  }
+
+  if (pressTabCount > 0) {
+    for (let index = 0; index < pressTabCount; index += 1) {
+      // Real key events through the input pipeline — `element.focus()` does not satisfy
+      // `:focus-visible`, so a programmatic focus would report the wrong styles.
+      await send(socket, "Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key: "Tab",
+        code: "Tab",
+        windowsVirtualKeyCode: 9,
+        nativeVirtualKeyCode: 9,
+      });
+      await send(socket, "Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Tab",
+        code: "Tab",
+        windowsVirtualKeyCode: 9,
+        nativeVirtualKeyCode: 9,
+      });
+      await delay(60);
+    }
+  }
+
+  if (thenScriptPath) {
+    const after = await send(socket, "Runtime.evaluate", {
+      expression: wrap(readFileSync(thenScriptPath, "utf8")),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    const value = after.result.value;
     console.log(typeof value === "string" ? value : JSON.stringify(value, null, 2));
   }
 

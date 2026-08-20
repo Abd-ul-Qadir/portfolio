@@ -5,14 +5,14 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–6 committed
+Repo status: git initialised, Phases 0–7 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–6 complete.** Currently starting **Phase 7 — Services (bento grid, magnetic
-> 3D cards)** (see `docs/PHASE_PLAN.md`).
+> **Phases 0–7 complete.** Currently starting **Phase 8 — Experience Timeline**
+> (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
@@ -23,7 +23,7 @@ Repo status: git initialised, Phases 0–6 committed
 - [x] Phase 4 — Loader & Navbar
 - [x] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 - [x] Phase 6 — About Section (text reveal, portrait-tied constellation)
-- [ ] Phase 7 — Services (bento grid, magnetic 3D cards)
+- [x] Phase 7 — Services (bento grid, magnetic 3D cards)
 - [ ] Phase 8 — Experience Timeline
 - [ ] Phase 9 — Projects Showcase + Certifications & Awards
 - [ ] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
@@ -41,6 +41,63 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 7: Services
+**Did:**
+- `components/ui/icons.ts` — the `IconName` → `LucideIcon` registry, so `content/data.ts`
+  stays free of React imports. **Typed `Partial<Record<...>>` on purpose:** `lucide-react` v1
+  no longer ships brand marks, so there is no `Github` / `Linkedin` / `Instagram` icon to map
+  to. They are absent rather than aliased to some unrelated glyph. See the decision log; Phase
+  10 decides between text labels and inline SVG for the socials.
+- `TiltCard` — mouse-following 3D tilt on spring-smoothed `rotateX`/`rotateY`, plus the
+  cursor-following spotlight (it writes `--spot-x` / `--spot-y`, which the `.card-spotlight`
+  radial gradient reads; custom properties inherit, so the glow lives on the inner card while
+  the pointer maths lives on the wrapper). `maxTilt` defaults to **5°** — `DESIGN_SYSTEM.md`
+  sets 3–6° as a *cap*, not a target. Not mounted at all for touch/reduced-motion users, where
+  it renders as a plain wrapper.
+- `Services` section: bento grid over three columns with the first and last card spanning two,
+  so the rhythm is 2+1 / 1+2 rather than a flat 2×2. Icons rotate and scale on hover
+  (`motion-reduce:transform-none`), icon and text carry `data-depth` for the parallax, each
+  card is wrapped in `MagneticWrapper`, and entrance is a Framer Motion `whileInView` stagger
+  (`once: true`).
+- `GlassCard` now forwards native HTML attributes, so the cards can be `tabIndex={0}` and
+  `aria-labelledby` their own title.
+- Replaced the section's first-draft heading/description: it both trailed off mid-sentence and
+  invented marketing copy. The heading now uses `CONTENT_BRIEF.md`'s own section title
+  ("Services / What I Do") — `CLAUDE.md` §1 says not to invent copy.
+
+**Verified (via `scripts/cdp.mjs`):**
+- **Tilt stays inside the cap:** recovering the angles from the computed 3D matrix gives
+  `rotX=-4.80° / rotY=4.80°` with the pointer in the top-left corner, `+4.74° / -4.81°` in the
+  bottom-right, and `0.00° / -0.00°` at the centre. Within 3–6°, and it returns to flat.
+- **The keyboard equivalent genuinely works.** This needed a real key event: a programmatic
+  `element.focus()` does *not* satisfy `:focus-visible`, and reading styles after one reports
+  the unfocused card and looks like a bug. Driving a real Tab through CDP,
+  `matchesFocusVisible=true`, the border becomes `rgba(139, 81, 239, 0.27)` (the violet
+  `--border-hover`) and a 2px violet outline appears — the static treatment that stands in for
+  tilt and spotlight.
+- **Grid reflow measured, not eyeballed:** `grid-template-columns` resolves to **1 column at
+  390px, 2 at 834px, 3 at 1424px**, with no horizontal overflow at any of them. `TiltCard` is
+  mounted only at desktop and absent under touch emulation.
+- Screenshots at 1424 and 834 confirm the bento proportions and that tablet width is actually
+  used rather than collapsing to a single column.
+
+**Tooling:** `scripts/cdp.mjs` gained `--press-tab N` (dispatches real Tab keypresses through
+the input pipeline) and `--then <script.js>` (evaluates a second script afterwards). Phase 14's
+full keyboard pass should use these rather than `element.focus()`.
+
+**Next up:** **Phase 8 — Experience Timeline.** `content/data.ts` already exports `timeline`
+with work and education pre-merged reverse-chronologically and a `kind` discriminant, so the
+data work is done. Build: a vertical line that **grows as you scroll**, GSAP ScrollTrigger with
+`scrub` (a fixed-duration Framer draw fails the criterion — scrolling back up must retract it),
+one node per entry, the node nearest the viewport glowing, and the whole thing marked up as a
+real ordered list so a screen reader announces it as one. Education entries get a small type
+badge (`Badge tone="accent"` is already there) — this is the phase where that decision lands,
+so do not drop them. Verify the retraction the same way the Phase 6 reveal was verified:
+sample the line's height at several scroll positions going down *and* back up.
+
+**Blockers / open questions:** unchanged — portrait, project and certificate images, plus the
+contact-form-vs-links call before Phase 10.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 6: About Section
 **Did:**
@@ -530,6 +587,11 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-21 (Phase 7) — `lucide-react` v1 has no brand icons.** `CLAUDE.md` §2 makes
+  lucide the sole icon set, but v1 removed GitHub / LinkedIn / Instagram marks. Rather than
+  map them to unrelated glyphs, `components/ui/icons.ts` simply omits them and socials render
+  as text labels for now. If brand marks are wanted, add them as inline SVG in Phase 10 — do
+  **not** install a second icon package.
 - **2026-08-20 (Phase 5) — the hero's entrance is a CSS animation, not Framer Motion.**
   `CLAUDE.md` §2 assigns entrances to Framer Motion, and that still holds everywhere else
   (Navbar, Cursor, MagneticWrapper, and the Phase 11 `Reveal` component all use it). The hero
@@ -575,6 +637,11 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
   ships a working form (needs Resend or a serverless function) or just the three direct
   links. Unanswered — Phase 10 ships the three links and keeps this flagged unless Abdul
   says otherwise first.
+- **Service sub-points are derived, not supplied.** The checkmark bullets under each service
+  card (e.g. "React front-ends", "Business process automation") are condensed restatements of
+  that service's own description in `CONTENT_BRIEF.md` — `PHASE_PLAN.md` Phase 7 asks for
+  sub-points but the brief does not list any. No new claims were introduced, but Abdul should
+  read them over and reword if he'd put it differently.
 - **Award issuer names** were only partly legible in the source screenshots; confirm exact
   organisation names with Abdul before spelling any of them out beyond what the brief lists.
 

@@ -1,8 +1,8 @@
-import type { ElementType, ReactNode } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-interface GlassCardProps {
+interface GlassCardProps extends Omit<HTMLAttributes<HTMLElement>, "className" | "children"> {
   children: ReactNode;
   className?: string;
   as?: ElementType;
@@ -23,9 +23,11 @@ export function GlassCard({
   className,
   as: Tag = "div",
   interactive = false,
+  ...rest
 }: GlassCardProps) {
   return (
     <Tag
+      {...rest}
       className={cn(
         "glass-surface rounded-card text-left shadow-elevated",
         interactive &&

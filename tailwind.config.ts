@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
 
-import { tokens } from "./lib/tokens";
+import { tokens, violetAt } from "./lib/tokens";
 
 /**
  * Single source of truth for the design tokens in `docs/DESIGN_SYSTEM.md`.
@@ -247,6 +247,22 @@ const config: Config = {
             // No animation at all — the element simply renders in its final state.
             animation: "none",
           },
+        },
+
+        /**
+         * Services cards (Phase 7). `card-tilt` supplies the perspective the 3D rotation is
+         * read against; `card-spotlight` is the soft glow that follows the cursor inside the
+         * card, positioned from the `--spot-x` / `--spot-y` custom properties that
+         * `TiltCard` writes on pointer move.
+         */
+        ".card-tilt": {
+          perspective: "900px",
+          transformStyle: "preserve-3d",
+        },
+        ".card-spotlight": {
+          "--spot-x": "50%",
+          "--spot-y": "50%",
+          backgroundImage: `radial-gradient(220px circle at var(--spot-x) var(--spot-y), ${violetAt(18)}, transparent 70%)`,
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

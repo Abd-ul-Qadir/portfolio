@@ -28,6 +28,13 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   useEffect(() => {
     const lenis = lenisRef.current?.lenis;
     if (!lenis) return;
+
+    // Exposed for `scripts/cdp.mjs` (and manual debugging) so a driver can move the page to
+    // an exact scroll position. Development only — never shipped.
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __lenis?: unknown }).__lenis = lenis;
+    }
+
     return connectLenisToScrollTrigger(lenis);
   }, [reducedMotion]);
 

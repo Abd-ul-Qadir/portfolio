@@ -79,9 +79,25 @@ const config: Config = {
       spacing: {
         section: "clamp(6rem, 12vw, 10rem)",
       },
+      /**
+       * One z-scale for the whole site, so the stacking order is decided here and not by
+       * whichever component was written last:
+       * nav (30) < grain (40) < loader (45) < cursor (50).
+       * The loader must cover the nav; the cursor must stay visible over everything.
+       */
+      zIndex: {
+        nav: "30",
+        grain: "40",
+        loader: "45",
+        cursor: "50",
+      },
       opacity: {
         /** The grain layer's resting opacity — barely perceptible by design. */
         grain: "0.035",
+      },
+      transitionProperty: {
+        /** The navbar compacts on scroll; only its height animates. */
+        height: "height",
       },
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
 /**
  * Shared media-query hooks. Every effect component in `components/effects/` consumes these
@@ -58,4 +58,40 @@ export function usePointerEffectsEnabled() {
   const reducedMotion = useReducedMotion();
   const isTouch = useIsTouchDevice();
   return !reducedMotion && !isTouch;
+}
+
+const LOADER_SESSION_KEY = "aq.loader.seen";
+
+/**
+ * Whether the boot-sequence loader has already played this browser session.
+ *
+ * Backed by `sessionStorage` so returning to `/` from a project detail page does not replay
+ * a 1.5s boot sequence on every internal navigation (`CLAUDE.md` §4).
+ *
+ * The initial read happens in a `useState` initialiser, which is safe because this hook is
+ * only ever called from a component mounted with `next/dynamic({ ssr: false })` — but it is
+ * still written defensively, since `sessionStorage` throws in some privacy modes.
+ */
+export function useHasSeenLoader(): [boolean, () => void] {
+  const [hasSeen, setHasSeen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.sessionStorage.getItem(LOADER_SESSION_KEY) === "1";
+    } catch {
+      // Storage unavailable (private mode, blocked cookies): show the loader once per page
+      // load rather than failing to render at all.
+      return false;
+    }
+  });
+
+  const markSeen = useCallback(() => {
+    setHasSeen(true);
+    try {
+      window.sessionStorage.setItem(LOADER_SESSION_KEY, "1");
+    } catch {
+      // Non-fatal — the loader simply plays again next navigation.
+    }
+  }, []);
+
+  return [hasSeen, markSeen];
 }

@@ -5,14 +5,14 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–3 committed
+Repo status: git initialised, Phases 0–4 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–3 complete.** Currently starting **Phase 4 — Loader & Navbar**
-> (see `docs/PHASE_PLAN.md`).
+> **Phases 0–4 complete.** Currently starting **Phase 5 — Hero Section + Constellation
+> Effect** (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
@@ -20,7 +20,7 @@ Repo status: git initialised, Phases 0–3 committed
 - [x] Phase 1 — Content Intake & Information Architecture
 - [x] Phase 2 — Design System Implementation (tokens + base UI primitives)
 - [x] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
-- [ ] Phase 4 — Loader & Navbar
+- [x] Phase 4 — Loader & Navbar
 - [ ] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 - [ ] Phase 6 — About Section (text reveal, portrait-tied constellation)
 - [ ] Phase 7 — Services (bento grid, magnetic 3D cards)
@@ -41,6 +41,82 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-20 — Phase 4: Loader & Navbar
+**Did:**
+- **`scripts/cdp.mjs` — read this before writing another verification script.** A ~150-line,
+  zero-dependency Chrome DevTools Protocol driver (Node 22's global `fetch` + global
+  `WebSocket`, nothing installed). It exists because `chrome --headless --dump-dom
+  --virtual-time-budget` never runs the browser's rendering steps: `requestAnimationFrame`
+  never ticks, `scroll` events never fire, and IntersectionObserver callbacks never run. In
+  that mode *every* scroll-driven feature reads as broken when it is fine — which is exactly
+  what happened here, and it cost most of this phase to work out. Run
+  `node scripts/cdp.mjs <url> <script.js> [--reduced-motion]`; the script body runs in the
+  page with `sleep(ms)` and a self-verifying `scrollTo(y)` available, and its return value is
+  printed. It defaults to the motion path (headless otherwise reports reduced motion), waits
+  for the boot loader to clear before evaluating (the loader calls `lenis.stop()`, so
+  scrolling during it is silently ignored), and retries `scrollTo` until the position sticks.
+  `SmoothScrollProvider` exposes `window.__lenis` in development only so the driver can
+  position the page exactly.
+- `useHasSeenLoader` in `lib/hooks.ts` — `sessionStorage`-backed, reads in a `useState`
+  initialiser (safe: only ever called from an `ssr: false` component), and defensive against
+  `sessionStorage` throwing in privacy modes.
+- `Loader` — the `DESIGN_SYSTEM.md` boot sequence (initials, role, block-character progress
+  bar with a live percentage, four staged status lines), ~1.3s, then a 0.4s fade. Built as a
+  **single GSAP timeline** because the bar, the percentage and the four lines all have to stay
+  in lockstep; `PHASE_PLAN.md` explicitly permits either library here and nothing about it is
+  scroll-driven, so this does not cut across the Framer/GSAP split. Locks page scroll and
+  calls `lenis.stop()` while it plays. Marked up as `role="status" aria-live="polite"`.
+- `LoaderMount` gates it on reduced motion (skipped outright) and on the session flag.
+  **The session is claimed when the sequence *starts*, not when it completes** — marking on
+  completion meant a load interrupted part-way (tab backgrounded, navigation away) would
+  replay the whole boot sequence next time, which is the opposite of the point.
+- `Navbar` rebuilt: transparent over the hero → glass + border + `shadow-elevated` on scroll,
+  height compacting 80px → 56px, scroll-spy via IntersectionObserver, `aria-current` on the
+  active item, and a `layoutId` underline that slides between items (and simply jumps, without
+  sliding, under reduced motion). Added an accessible mobile disclosure menu
+  (`aria-expanded` / `aria-controls`, Escape to close, closes on link activation) — the
+  desktop-only link row would otherwise have left mobile with no navigation at all.
+- One z-scale for the whole site now lives in `tailwind.config.ts` — nav (30) < grain (40) <
+  loader (45) < cursor (50) — after a screenshot caught the navbar rendering *through* the
+  loader.
+
+**Verified (via `scripts/cdp.mjs`, on both the motion and reduced-motion paths — identical
+results):** at scroll 0 the navbar is 80px and not glass with no active item; at each of
+About / Services / Contact the requested position was reached exactly, the navbar was 56px and
+glass, and `aria-current` was on precisely the right item (About → Services → Contact);
+scrolling back to 0 returned it to 80px, not-glass, no active item. Mobile menu: `aria-expanded`
+false → true on activation with the panel mounted, and Escape returns it to false and unmounts
+the panel; the header exposes 8 keyboard-focusable controls and focus moves into them.
+Loader: screenshotted mid-sequence (correct layout, covering the navbar); **absent** from the
+DOM under reduced motion; and a second `LoaderMount` mounted later in the same session
+rendered nothing while `sessionStorage["aq.loader.seen"] === "1"` — the "don't replay on
+internal navigation" requirement, tested by remount, which is what returning from a project
+page will do. `npm run lint` and `npm run build` clean; still zero raw hex and zero Tailwind
+arbitrary values outside `lib/tokens.ts`.
+
+**A dead end, recorded so it is not repeated:** mid-phase I replaced the IntersectionObserver
+scroll-spy with cached `offsetTop` maths because the IO version appeared not to fire — it was
+the frozen-rAF artifact above, not the code. It has been **reverted to IntersectionObserver**,
+which is also the right choice going forward: Phase 11 pins the hero with ScrollTrigger, which
+changes section offsets during scroll, and cached offsets would go stale silently.
+
+**Next up:** **Phase 5 — Hero Section + Constellation Effect.** Build
+`ConstellationCanvas` **generic from the start** — particle count, connection distance, node
+styling and interactivity strength all as props — because Phase 6 (portrait-tied) and Phase 10
+(skills ecosystem) reuse this exact component with different config, and a second
+implementation is the failure mode to avoid. Requirements: drift, distance-thresholded
+connecting lines with opacity falloff, pointer parallax, particle count scaling down on small
+viewports, `requestAnimationFrame` paused on `visibilitychange`, and **one static frame with no
+loop at all** under reduced motion. Then the hero itself: copy from `content/data.ts` (already
+wired), Framer Motion staggered entrance, CTAs wrapped in `MagneticWrapper`, animated
+scroll-down arrow, and the typewriter role line cycling all three `identity.roles` (static
+first variant under reduced motion). **Do not** build the pinned hero-shrinks-into-a-corner
+transform — that is Phase 11, with GSAP, and it needs About's layout to exist first.
+
+**Blockers / open questions:** none for Phase 5. Phase 6 needs the portrait asset from Abdul
+(see Known issues) — if it has not arrived by then, build the section around a placeholder and
+keep going.
 
 ### Session 1 (cont.) — 2026-08-20 — Phase 3: Global Interaction Layer
 **Did:**

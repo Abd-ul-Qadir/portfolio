@@ -78,7 +78,7 @@ export default function Cursor() {
   if (!enabled) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-50 mix-blend-difference">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-cursor mix-blend-difference">
       {/* Outer: springs and lags behind the pointer. */}
       <motion.div
         className={cn(

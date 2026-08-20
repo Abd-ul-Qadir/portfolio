@@ -18,7 +18,7 @@ export function NoiseOverlay({ className }: NoiseOverlayProps) {
     <div
       aria-hidden
       className={cn(
-        "noise-overlay pointer-events-none fixed z-40 animate-grain-shift opacity-grain mix-blend-overlay will-change-transform motion-reduce:animate-none",
+        "noise-overlay pointer-events-none fixed z-grain animate-grain-shift opacity-grain mix-blend-overlay will-change-transform motion-reduce:animate-none",
         className,
       )}
     />

@@ -22,7 +22,7 @@ Repo status: git initialised, Phases 0–6 committed
 - [x] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
 - [x] Phase 4 — Loader & Navbar
 - [x] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
-- [ ] Phase 6 — About Section (text reveal, portrait-tied constellation)
+- [x] Phase 6 — About Section (text reveal, portrait-tied constellation)
 - [ ] Phase 7 — Services (bento grid, magnetic 3D cards)
 - [ ] Phase 8 — Experience Timeline
 - [ ] Phase 9 — Projects Showcase + Certifications & Awards

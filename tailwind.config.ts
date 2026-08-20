@@ -62,6 +62,13 @@ const config: Config = {
         "glow-strong": v("glow-strong"),
         elevated: v("shadow-elevated"),
       },
+      aspectRatio: {
+        portrait: "4 / 5",
+      },
+      gridTemplateColumns: {
+        /** About: portrait column narrower than the text column. */
+        about: "minmax(0, 0.8fr) minmax(0, 1.2fr)",
+      },
       borderRadius: {
         card: "1rem",
         panel: "1.5rem",

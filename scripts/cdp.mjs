@@ -12,6 +12,11 @@
  *
  * Usage:
  *   node scripts/cdp.mjs <url> <path-to-script.js> [--reduced-motion] [--viewport 390x844]
+ *                                                  [--screenshot out.png]
+ *
+ * `--screenshot` captures *after* the script has run, so it can photograph a section the
+ * script scrolled to. Plain `chrome --screenshot` cannot: it renders a blank frame for any
+ * page that has been scrolled.
  *
  * The script file is evaluated in the page as the body of an async function; whatever it
  * returns is JSON-serialised and printed. `sleep(ms)` and `scrollTo(y)` are provided.
@@ -22,7 +27,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const CHROME_CANDIDATES = [
@@ -46,6 +51,10 @@ const reducedMotion = flags.includes("--reduced-motion");
 // `--viewport 390x844` emulates a real mobile viewport. Necessary because plain headless
 // Chrome clamps its window to a 500px minimum width, which silently makes every "mobile"
 // check a 500px check.
+const screenshotPath = flags.includes("--screenshot")
+  ? flags[flags.indexOf("--screenshot") + 1]
+  : null;
+
 const viewportFlag = flags[flags.indexOf("--viewport") + 1];
 const viewport =
   flags.includes("--viewport") && /^\d+x\d+$/.test(viewportFlag ?? "")
@@ -207,6 +216,12 @@ try {
   } else {
     const value = result.result.value;
     console.log(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  }
+
+  if (screenshotPath) {
+    const shot = await send(socket, "Page.captureScreenshot", { format: "png" });
+    writeFileSync(screenshotPath, Buffer.from(shot.data, "base64"));
+    console.error(`screenshot written: ${screenshotPath}`);
   }
 
   socket.close();

@@ -5,14 +5,14 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–5 committed
+Repo status: git initialised, Phases 0–6 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–5 complete.** Currently starting **Phase 6 — About Section**
-> (see `docs/PHASE_PLAN.md`).
+> **Phases 0–6 complete.** Currently starting **Phase 7 — Services (bento grid, magnetic
+> 3D cards)** (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
@@ -41,6 +41,74 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 6: About Section
+**Did:**
+- `ScrollRevealText` — per-word progressive reveal, **GSAP ScrollTrigger with `scrub: true`**
+  (not `whileInView`, which cannot satisfy this phase's acceptance criterion). Words start at
+  `--text-secondary` / 45% opacity and brighten to `--text-primary` / 100% as the paragraph
+  crosses the reading band (`top 80%` → `bottom 55%`). Under reduced motion no ScrollTrigger
+  is created at all and the paragraph renders fully bright — importantly, the *base* class is
+  `text-text-primary` in that case, so text is never left stuck at 45% waiting for a scroll
+  that will never come.
+  - One layout detail worth keeping: each word is its own `inline-block` span and **the space
+    is rendered between spans, not inside them**. A trailing space inside an `inline-block`
+    collapses, which runs every word together.
+- `About` section: `SectionHeading`, the bio from `content/data.ts` through `ScrollRevealText`,
+  a portrait column, a small Focus/Backend/Frontend definition list, and location badges.
+- **Portrait-tied constellation** — the same `ConstellationCanvas` from Phase 5 with different
+  props, exactly as the plan requires (no second implementation): `connectionDistance` 62 vs
+  the hero's 130, `glow` 12 vs 6, `parallaxStrength` **0** (the hero's whole-field drift is
+  wrong here) and `attractStrength` **0.55** so nodes visibly pull toward the cursor over the
+  portrait, with connecting lines brightening while the pointer is over it.
+- **Portrait asset is still missing.** Per `PHASE_PLAN.md` Phase 6 the section is built around
+  it: a placeholder holds the exact `aspect-portrait` (4/5) box the real image will occupy, so
+  dropping the asset in cannot shift the layout. `identity.portrait` is typed
+  `ContentImage | null` in `content/data.ts` and the `next/image` branch is already written —
+  filling that field in is the *only* change needed.
+
+**A real bug found while measuring, not reading:** the constellation's "scale down on smaller
+viewports" rule was keyed off **canvas** width rather than viewport width. The About portrait
+canvas is only ~380px wide, so on a 1440px desktop it was silently taking the mobile branch,
+and the old `particleCount * (width / 1440)` scaling would have thinned a deliberately dense
+small cluster down to a handful of dots. It now keys off `window.innerWidth`, and the
+per-context count is the caller's to choose — which is what the requirement actually says.
+
+**Verified (via `scripts/cdp.mjs`):**
+- **The reveal is genuinely scrubbed.** Sampling a mid-paragraph word while scrolling down and
+  then back up the same positions: `rgb(156,163,175)`/0.45 before → `rgb(245,246,250)`/1.00 in
+  the middle → and **back to `rgb(156,163,175)`/0.45 on the way up**. A fire-once animation
+  would have stayed bright. The desktop screenshot also caught it mid-scrub, with the last ten
+  words still dim.
+- **The portrait field is measurably denser than the hero's:** 25.2 vs 6.2 particles per
+  100k px² on desktop (70 particles over 1409×805 vs 46 over 382×478), and 18.0 vs 8.5 on
+  mobile. Both the count and the connection distance differ, so the shared component is
+  genuinely doing different work in each context.
+- Reduced motion: words are `rgb(245,246,250)`/1.00 before *and* after scrolling, and the
+  portrait canvas produces byte-identical frames over 900ms (static, no loop).
+- Screenshots at 1440 and 390: layout stacks correctly, no overflow, navbar in its glass state
+  with the About nav item underlined.
+- `npm run lint`, `npm run build` clean; no arbitrary Tailwind values, no raw hex.
+
+**Tooling:** `scripts/cdp.mjs` gained `--screenshot <path>`, which captures **after** the
+script runs. This matters more than it sounds: plain `chrome --screenshot` renders a blank
+frame for any page that has been scrolled, which is why earlier attempts to photograph a
+mid-page section produced empty images. Every section from here on can be photographed in
+place.
+
+**Next up:** **Phase 7 — Services (bento grid + magnetic 3D cards).** The four services are
+already typed in `content/data.ts` with `icon` names and checkmark sub-points; build the
+`Record<IconName, LucideIcon>` lookup in the component (content stays free of React imports).
+Needs: a bento grid that uses tablet width properly rather than collapsing to one column
+everywhere, mouse-following 3D tilt capped at **3–6°** (a cap, not a target), a cursor-following
+glow inside the card, icon/text at slightly different depths, icon rotate/scale on hover, each
+card wrapped in `MagneticWrapper`, and a `whileInView` staggered entrance. The acceptance
+criterion that is easiest to miss: **`:focus-visible` must get an equivalent static
+glow/border**, because tilt and spotlight have no keyboard analog — `GlassCard`'s `interactive`
+prop already does exactly this, so use it rather than re-inventing the focus state.
+
+**Blockers / open questions:** unchanged — portrait and project/certificate images are the
+outstanding asks, and the contact-form-vs-links decision is needed before Phase 10 ships.
 
 ### Session 1 (cont.) — 2026-08-20 — Phase 5: Hero + Constellation
 **Did:**

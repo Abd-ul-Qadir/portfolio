@@ -27,6 +27,14 @@ export type IconName =
   | "mail"
   | "phone";
 
+/* ----------------------------------------------------------------- images */
+
+export interface ContentImage {
+  readonly src: string;
+  /** Real descriptive alt text — never a filename (Phase 9 acceptance criteria). */
+  readonly alt: string;
+}
+
 /* --------------------------------------------------------------- identity */
 
 export interface SocialLink {
@@ -47,6 +55,12 @@ export interface Identity {
   readonly phone: string;
   /** `[TODO]` in the brief — no CV link supplied yet. */
   readonly resumeUrl: string | null;
+  /**
+   * `[TODO]` — the About-section portrait has not been supplied. While this is `null` the
+   * About section renders a placeholder holding the right aspect ratio, and the portrait-tied
+   * constellation still runs over it. Drop the file into `public/` and fill this in.
+   */
+  readonly portrait: ContentImage | null;
   readonly socials: readonly SocialLink[];
 }
 
@@ -61,6 +75,7 @@ export const identity: Identity = {
   email: "abdulqadir12511@gmail.com",
   phone: "+92 324 542 24298",
   resumeUrl: null,
+  portrait: null,
   socials: [
     { label: "GitHub", href: "https://github.com/Abd-ul-Qadir", icon: "github" },
     {
@@ -232,12 +247,6 @@ export const timeline: readonly TimelineEntry[] = [...experience, ...education].
 );
 
 /* --------------------------------------------------------------- projects */
-
-export interface ContentImage {
-  readonly src: string;
-  /** Real descriptive alt text — never a filename (Phase 9 acceptance criteria). */
-  readonly alt: string;
-}
 
 export interface Project {
   readonly slug: string;

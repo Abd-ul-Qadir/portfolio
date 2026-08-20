@@ -124,12 +124,15 @@ export default function ConstellationCanvas({
     const random = (min: number, max: number) => min + Math.random() * (max - min);
 
     const resolveCount = () => {
+      // Keyed off the *viewport*, not the canvas. Keying off canvas width made a narrow
+      // canvas (the About portrait is ~380px wide) take the mobile branch on a desktop, and
+      // scaling by canvas width would have thinned a deliberately dense small cluster into
+      // a handful of dots. The stated requirement is "scales down on smaller viewports", and
+      // the per-context count is the caller's to choose.
       const base =
-        width < 640
-          ? settings.mobileParticleCount
-          : Math.round(settings.particleCount * Math.min(1, width / 1440));
+        window.innerWidth < 640 ? settings.mobileParticleCount : settings.particleCount;
       // Never fewer than a handful, or the "constellation" reads as a few stray dots.
-      return Math.max(12, base);
+      return Math.max(10, base);
     };
 
     const seed = () => {

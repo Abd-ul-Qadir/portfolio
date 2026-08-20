@@ -37,6 +37,7 @@ export function Hero() {
           (Phase 6), and a third configuration to Skills (Phase 10). */}
       <ConstellationMount
         particleCount={70}
+        mobileParticleCount={28}
         connectionDistance={130}
         parallaxStrength={0.02}
         glow={6}

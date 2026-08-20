@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NoiseOverlay } from "@/components/effects/NoiseOverlay";
+import { palette } from "@/lib/tokens";
+
 import "./globals.css";
 
 const sans = Geist({
@@ -21,14 +24,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#08090D",
+  themeColor: palette["bg-base"],
   colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* One global grain layer for the whole page, not one per section. */}
+        <NoiseOverlay />
+      </body>
     </html>
   );
 }

@@ -1,28 +1,20 @@
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
 
+import { tokens } from "./lib/tokens";
+
 /**
  * Single source of truth for the design tokens in `docs/DESIGN_SYSTEM.md`.
- * Raw values live here and nowhere else — the `cssVariables` plugin at the
- * bottom emits them onto `:root` so non-Tailwind consumers (canvas, GSAP,
- * inline SVG) can read the exact same values via `var(--token)`.
+ *
+ * Raw values live in `lib/tokens.ts` and nowhere else — the plugin at the bottom emits every one of
+ * them onto `:root` as a CSS custom property, so non-Tailwind consumers (the constellation
+ * canvas, GSAP timelines, inline SVG) read the identical value via `var(--token)` instead of
+ * keeping a second copy. Do not re-declare any of these in `globals.css`, and do not inline
+ * hex values or arbitrary Tailwind values in JSX.
  */
-const tokens = {
-  "bg-base": "#08090D",
-  "bg-surface": "#0E1016",
-  "bg-glass": "rgba(255,255,255,0.04)",
-  "border-subtle": "rgba(255,255,255,0.08)",
-  "border-hover": "rgba(124,58,237,0.4)",
-  "text-primary": "#F5F6FA",
-  "text-secondary": "#9CA3AF",
-  "accent-violet": "#7C3AED",
-  "accent-indigo": "#6366F1",
-  "accent-cyan": "#22D3EE",
-  "accent-pink": "#EC4899",
-  "accent-emerald": "#34D399",
-} as const;
+type TokenName = keyof typeof tokens;
 
-const v = (name: keyof typeof tokens) => `var(--${name})`;
+const v = (name: TokenName) => `var(--${name})`;
 
 const config: Config = {
   content: [
@@ -59,14 +51,148 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
+      backgroundImage: {
+        primary: v("gradient-primary"),
+      },
+      boxShadow: {
+        glow: v("glow-primary"),
+        "glow-strong": v("glow-strong"),
+        elevated: v("shadow-elevated"),
+      },
+      borderRadius: {
+        card: "1rem",
+        panel: "1.5rem",
+        pill: "9999px",
+      },
+      /** Fluid, confident type for hero/section headings (`DESIGN_SYSTEM.md` Typography). */
+      fontSize: {
+        display: ["clamp(2.75rem, 8vw, 6rem)", { lineHeight: "1.02", letterSpacing: "-0.03em" }],
+        heading: ["clamp(2rem, 4.5vw, 3.25rem)", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
+        eyebrow: ["0.75rem", { lineHeight: "1", letterSpacing: "0.3em" }],
+      },
+      /** Generous, consistent section rhythm — the whitespace is doing real work here. */
+      spacing: {
+        section: "clamp(6rem, 12vw, 10rem)",
+      },
+      opacity: {
+        /** The grain layer's resting opacity — barely perceptible by design. */
+        grain: "0.035",
+      },
+      transitionTimingFunction: {
+        smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+      keyframes: {
+        "orb-drift": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
+          "50%": { transform: "translate3d(2%, -3%, 0) scale(1.06)" },
+        },
+        "grain-shift": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0)" },
+          "25%": { transform: "translate3d(-1%, 1%, 0)" },
+          "50%": { transform: "translate3d(1%, -1%, 0)" },
+          "75%": { transform: "translate3d(1%, 1%, 0)" },
+        },
+      },
+      animation: {
+        /** Deliberately very slow — this is ambience, not motion you should notice. */
+        "orb-drift": "orb-drift 24s ease-in-out infinite",
+        "grain-shift": "grain-shift 12s steps(4, end) infinite",
+      },
     },
   },
   plugins: [
-    plugin(({ addBase }) => {
+    plugin(({ addBase, addComponents }) => {
       addBase({
         ":root": Object.fromEntries(
           Object.entries(tokens).map(([key, value]) => [`--${key}`, value]),
         ),
+      });
+
+      addComponents({
+        /** Glass only where it earns its place: cards and the nav bar. */
+        ".glass-surface": {
+          backgroundColor: v("bg-glass"),
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+        },
+        /** Short headline phrases only — never body copy (`DESIGN_SYSTEM.md` Colour). */
+        ".text-gradient-primary": {
+          backgroundImage: v("gradient-primary"),
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          color: "transparent",
+        },
+
+        /**
+         * Ambient background texture. Pure CSS — no per-frame JS — so it can run everywhere
+         * without a measurable frame cost. `--dot-size` and `--dot-gap` are overridable per
+         * instance; Phase 12 scrubs the element's opacity at the About boundary.
+         */
+        ".dot-grid": {
+          "--dot-size": "1.25px",
+          "--dot-gap": "28px",
+          backgroundImage: `radial-gradient(${v("dot-color")} var(--dot-size), transparent var(--dot-size))`,
+          backgroundSize: "var(--dot-gap) var(--dot-gap)",
+        },
+
+        /**
+         * Ambient radial light (`DESIGN_SYSTEM.md` #11/#12). Size, position, opacity and the
+         * stagger between orbs live here rather than as arbitrary values in JSX. The drift is
+         * ambience, so it stops outright under `prefers-reduced-motion`.
+         */
+        ".ambient-orb": {
+          position: "absolute",
+          borderRadius: "9999px",
+          filter: "blur(64px)",
+          animation: "orb-drift 24s ease-in-out infinite",
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        },
+        ".ambient-orb-a": {
+          width: "28rem",
+          height: "28rem",
+          top: "0",
+          left: "-8rem",
+          opacity: "0.10",
+        },
+        ".ambient-orb-b": {
+          width: "24rem",
+          height: "24rem",
+          top: "33%",
+          right: "-6rem",
+          opacity: "0.10",
+          animationDelay: "-8s",
+        },
+        ".ambient-orb-c": {
+          width: "20rem",
+          height: "20rem",
+          bottom: "0",
+          left: "33%",
+          opacity: "0.07",
+          animationDelay: "-16s",
+        },
+
+        /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */
+        ".mask-radial-fade": {
+          maskImage: "radial-gradient(ellipse at center, black 35%, transparent 75%)",
+          WebkitMaskImage: "radial-gradient(ellipse at center, black 35%, transparent 75%)",
+        },
+
+        /**
+         * The very faint, slow-moving grain that keeps flat dark sections from looking
+         * sterile. One inline SVG turbulence tile, no particle system.
+         */
+        ".noise-overlay": {
+          // Oversized so the drift never exposes an edge of the tile.
+          inset: "-5%",
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")",
+          backgroundRepeat: "repeat",
+        },
       });
     }),
   ],

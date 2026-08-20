@@ -5,20 +5,20 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–1 committed
+Repo status: git initialised, Phases 0–2 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–1 complete.** Currently starting **Phase 2 — Design System Implementation**
+> **Phases 0–2 complete.** Currently starting **Phase 3 — Global Interaction Layer**
 > (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
 - [x] Phase 0 — Project Setup & Foundations
 - [x] Phase 1 — Content Intake & Information Architecture
-- [ ] Phase 2 — Design System Implementation (tokens + base UI primitives)
+- [x] Phase 2 — Design System Implementation (tokens + base UI primitives)
 - [ ] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
 - [ ] Phase 4 — Loader & Navbar
 - [ ] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
@@ -41,6 +41,77 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-20 — Phase 2: Design System Implementation
+**Did:**
+- **Moved the token definitions out of `tailwind.config.ts` into `lib/tokens.ts`**, which the
+  config now imports. Same single-source-of-truth guarantee as before, but app code can also
+  import a literal where it genuinely needs one at runtime — `viewport.themeColor` already
+  does, and the Phase 5 constellation canvas will need real colour values to paint with.
+  `tailwind.config.ts` still emits every token onto `:root` via the `addBase` plugin.
+  Translucent tokens (`border-hover`, both glows) are derived from the palette with
+  `color-mix()` rather than restating the same channels as an `rgba()` literal.
+- Extended the theme with the rest of `DESIGN_SYSTEM.md`: `bg-primary` gradient utility,
+  `shadow-glow` / `shadow-glow-strong` / `shadow-elevated`, a radius scale
+  (`card` / `panel` / `pill`), fluid `text-display` / `text-heading` / `text-eyebrow` clamps,
+  a `spacing.section` clamp for the section rhythm, an `ease-smooth` timing function, and the
+  `orb-drift` / `grain-shift` keyframes.
+- Component classes added in the plugin so no consumer needs an arbitrary value:
+  `.glass-surface`, `.text-gradient-primary`, `.dot-grid`, `.ambient-orb{,-a,-b,-c}`,
+  `.mask-radial-fade`, `.noise-overlay`.
+- `lib/utils.ts` — `cn()` over `clsx` + `tailwind-merge`.
+- Primitives in `components/ui/`: `Container` (the one horizontal rhythm, `as` +
+  default/wide), `Button` (renders a real `<button>` or a `next/link` depending on `href` —
+  never a clickable `<div>`; carries an optional `cursorLabel` that Phase 3's cursor will read
+  off `data-cursor-label`), `Badge` (neutral/accent/positive), `GlassCard` (with an
+  `interactive` flag whose `:focus-visible` state is identical to its hover state, since
+  Phase 7's tilt and spotlight have no keyboard analog), `GradientText`, `SectionHeading`
+  (eyebrow + heading + optional gradient accent + description + the diffused violet glow, with
+  an optional sparkle).
+- Background layers in `components/effects/`, all CSS/SVG-driven with zero per-frame JS:
+  `DotGrid` (tiled radial-gradient, `faint`/`visible` intensities for Phase 12 to scrub
+  between, optional radial edge fade), `RadialOrbs` (three blurred circles on a 24s drift,
+  `violet`/`cool` tones), `NoiseOverlay` (one tiled SVG turbulence texture at `opacity-grain`
+  = 0.035, `mix-blend-overlay`, mounted once globally in the root layout rather than per
+  section).
+- Two fixes found by looking at the rendered output rather than the code: `GlassCard` now
+  forces `text-left` (it was inheriting `<button>`'s centred text when rendered `as="button"`),
+  and the dot grid got its own `--dot-color` token at 0.14 alpha — at `border-subtle`'s 0.08 a
+  1px dot was literally invisible rather than subtle.
+
+**Verified (not eyeballed — actual screenshots):** rendered the primitives against the real
+background layers at **390 / 834 / 1440** and read the images back. Two things worth knowing
+for later phases:
+- **Headless Chrome clamps its window to a 500px minimum width**, so a `--window-size=390`
+  screenshot is a 500px render cropped to 390 and *looks* like a horizontal-overflow bug.
+  To check a real mobile breakpoint, load the page in a fixed-width `<iframe>` inside a
+  wrapper HTML file and screenshot that. Don't re-litigate this next session.
+- Measured overflow directly with a temporary client component rather than guessing:
+  `docSW == innerWidth` at 390/834/1440, so there is no horizontal overflow anywhere.
+Also confirmed in the compiled CSS: `@media (prefers-reduced-motion: reduce)` kills
+`.ambient-orb`'s animation and the `motion-reduce:animate-none` utility exists; the global
+`:focus-visible` outline and `GlassCard`'s focus utilities are all present. `npm run lint`,
+`npm run build` and `npx tsc --noEmit` all clean. Audited with grep: **zero raw hex values and
+zero Tailwind arbitrary values anywhere outside `lib/tokens.ts`.**
+
+**Decisions made:** the `lib/tokens.ts` move (see decision log — it supersedes the wording of
+the Phase 0 entry, which said the values live in `tailwind.config.ts`). Also added
+`argsIgnorePattern`/`varsIgnorePattern` `^_` to `eslint.config.mjs` so a component can
+destructure styling props off its props and spread the remainder onto a native element without
+a lint warning.
+
+**Next up:** **Phase 3 — Global Interaction Layer.** In order: `lib/hooks.ts`
+(`useReducedMotion` over `matchMedia`, `useIsTouchDevice`) -> `lib/gsap.ts` (register
+ScrollTrigger once and wire Lenis's scroll position into it — `CLAUDE.md` §2 flags this as the
+file every later scroll phase depends on, so get it right) -> a Lenis provider wrapping the app
+-> `Cursor` (dual layer, `useMotionValue`+`useSpring`, `mix-blend-mode`, contextual label read
+from `data-cursor-label`, *unmounted* on touch and under reduced motion) -> `MagneticWrapper`
+(distance-weighted, clamped, few-pixels-max pull). Then build a throwaway pinned ScrollTrigger
+element, confirm Lenis and GSAP agree on scroll position with no jitter, and **delete the test
+element before checking the phase off**. The temporary `/styleguide` route built this phase was
+already deleted the same way — don't go looking for it.
+
+**Blockers / open questions:** none for Phase 3.
 
 ### Session 1 (cont.) — 2026-08-20 — Phase 1: Content Intake & Information Architecture
 **Did:**
@@ -162,6 +233,12 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-20 (Phase 2, supersedes the entry below) — the token object now lives in
+  `lib/tokens.ts`, not inside `tailwind.config.ts`.** `tailwind.config.ts` imports it, so
+  there is still exactly one definition of every value, but app code can import a literal
+  where it genuinely needs one at runtime (`viewport.themeColor`; the Phase 5 canvas, which
+  has to paint with a colour value rather than a class). Everything else must keep using a
+  Tailwind class or `var(--token)`.
 - **2026-08-20 — Raw hex values live in `tailwind.config.ts`; CSS custom properties are
   generated from them, not hand-written.** Phase 2's "no raw hex outside
   `tailwind.config.ts`" and the fact that the constellation canvas (Phase 5) needs literal

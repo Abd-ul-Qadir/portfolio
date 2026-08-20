@@ -5,14 +5,15 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–7 committed
+Repo status: git initialised, Phases 0–8 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–7 complete.** Currently starting **Phase 8 — Experience Timeline**
-> (see `docs/PHASE_PLAN.md`).
+> **Phases 0–8 complete.** **Phase 9 — Projects Showcase + Certifications & Awards** is
+> next, and it is the first phase that is genuinely blocked on assets from Abdul (see
+> Blockers below). Build the structure regardless; every image degrades to a placeholder.
 
 ## Phase checklist
 
@@ -24,7 +25,7 @@ Repo status: git initialised, Phases 0–7 committed
 - [x] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 - [x] Phase 6 — About Section (text reveal, portrait-tied constellation)
 - [x] Phase 7 — Services (bento grid, magnetic 3D cards)
-- [ ] Phase 8 — Experience Timeline
+- [x] Phase 8 — Experience Timeline
 - [ ] Phase 9 — Projects Showcase + Certifications & Awards
 - [ ] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
 - [ ] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
@@ -41,6 +42,60 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 8: Experience Timeline
+**Did:**
+- `Experience` rebuilt around `content/data.ts`'s pre-merged `timeline` export, so work and
+  education render in **one** list — the Phase 8 decision, implemented. Education entries carry
+  an accent "Education" badge against work's neutral "Work" badge, and the work arrangement
+  ("Hybrid" / "Onsite") is a third badge where the data has one.
+- **Two separate mechanisms, on purpose** — this is the part to understand before changing it:
+  1. *The line grows with scroll* — GSAP ScrollTrigger, `scrub: true`, animating `scaleY` on a
+     `origin-top` rail from `top 70%` to `bottom 70%`. Scrubbed, so it retracts on the way back
+     up; a fixed-duration draw would fail the acceptance criterion outright.
+  2. *The active node glows* — an IntersectionObserver over a middle band. This is a
+     "what am I reading" question, not a scroll-progress one, so it is deliberately not derived
+     from the scrub.
+- Markup is a real `<ol>` of `<li>`s, so assistive tech announces an ordered list of six items
+  rather than a run of headings. Rail geometry lives in a `.timeline-rail` component class in
+  `tailwind.config.ts` (the 7px/11px offsets align it to the centre of the 16px/24px nodes).
+- Under reduced motion no ScrollTrigger is created and the rail renders fully drawn.
+
+**Verified (via `scripts/cdp.mjs`):**
+- **The scrub genuinely retraces.** Sampling the rail's `scaleY` down the section and back up:
+  `0.000 → 0.569 → 0.919 → 1.000`, then `0.919 → 0.569 → 0.000` on the way up — the same values
+  in reverse, which is only possible if it is tied to scroll position rather than fired once.
+- Active node tracks while scrolling (`pyora-full-stack` → `octanet-intern` →
+  `air-university-bscs`).
+- `listTag=OL` with `items=6`, and all six ids present including both education entries — they
+  are not dropped.
+- Reduced motion: `scaleY=1.000` immediately, no scrub.
+- Screenshot confirms the growing gradient rail, the glowing active node, and the badges.
+
+**Next up:** **Phase 9 — Projects Showcase + Certifications & Awards.** This is the biggest
+remaining phase and the first one that is genuinely asset-blocked. Build it anyway — every
+image path already degrades to `null` in `content/data.ts`:
+- Project cards on `/`: scroll-in image reveal (zoomed image + dark overlay fading out, title
+  sliding in, tech tags staggering after), and a desktop-only hover parallax where the image
+  shifts slightly toward the cursor inside the card bounds.
+- **Build the `/projects/[slug]` route this phase** — `getProject(slug)` and `projectSlugs` are
+  already exported and waiting. Next.js 16 has **async `params`**; check
+  `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md` before writing the
+  page, and use `generateStaticParams`. Each page needs hero image, title, pitch, a
+  Role/Type/Date/Stack meta block, Abstract, a "Live Preview" button that is **hidden or
+  disabled while `liveUrl` is null** (never a dead click), and a Back control to the homepage
+  projects section.
+- Certifications & Awards as a lighter secondary gallery with `All / Projects / Certifications
+  / Awards` filter tabs that swap the grid client-side with no reload. Cert/award items open a
+  link, or a simple image lightbox when `url` is null.
+- `next/image` everywhere, lazy below the fold, real alt text from the content (never a
+  filename). While images are `null`, render the placeholder treatment the About portrait
+  already uses as a model.
+
+**Blockers / open questions (unchanged, now urgent):** the three project hero images, the five
+certificate images, the six award images, the About portrait, the résumé link, the project
+live/repo links, and the contact-form-vs-links decision. Phase 9 can be *structurally*
+complete without them, but it cannot be visually finished.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 7: Services
 **Did:**

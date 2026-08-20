@@ -265,6 +265,21 @@ const config: Config = {
           backgroundImage: `radial-gradient(220px circle at var(--spot-x) var(--spot-y), ${violetAt(18)}, transparent 70%)`,
         },
 
+        /**
+         * Experience timeline rail (Phase 8). The offsets line the rail up with the centre of
+         * the 16px/24px nodes, so they live here rather than as arbitrary values in JSX.
+         */
+        ".timeline-rail": {
+          position: "absolute",
+          left: "7px",
+          top: "0.5rem",
+          width: "1px",
+          height: "calc(100% - 1rem)",
+          "@media (min-width: 640px)": {
+            left: "11px",
+          },
+        },
+
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */
         ".mask-radial-fade": {
           maskImage: "radial-gradient(ellipse at center, black 35%, transparent 75%)",

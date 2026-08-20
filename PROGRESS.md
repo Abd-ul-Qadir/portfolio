@@ -5,19 +5,19 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phase 0 committed
+Repo status: git initialised, Phases 0–1 committed
 
 ---
 
 ## Current phase
 
-> **Phase 0 complete.** Currently starting **Phase 1 — Content Intake & Information
-> Architecture** (see `docs/PHASE_PLAN.md`).
+> **Phases 0–1 complete.** Currently starting **Phase 2 — Design System Implementation**
+> (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
 - [x] Phase 0 — Project Setup & Foundations
-- [ ] Phase 1 — Content Intake & Information Architecture
+- [x] Phase 1 — Content Intake & Information Architecture
 - [ ] Phase 2 — Design System Implementation (tokens + base UI primitives)
 - [ ] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
 - [ ] Phase 4 — Loader & Navbar
@@ -41,6 +41,57 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-20 — Phase 1: Content Intake & Information Architecture
+**Did:**
+- Built `content/data.ts` — the whole of `docs/CONTENT_BRIEF.md`, typed, `readonly`
+  throughout, zero `any` (verified with `grep` and a clean `tsc --noEmit`). Covers: identity
+  + socials, the 3-role typewriter tuple, education (2), services (4), experience (4),
+  projects (3, with full meta + abstract), core skills (4, with percentages), the 5 unscored
+  stack groups, spoken languages, certifications (5), awards (6), the gallery filter tabs,
+  contact copy + methods, and the nav items.
+- **Every `[TODO]` in the brief is typed as `T | null`, never invented and never an empty
+  string** — `identity.resumeUrl`, each project's `liveUrl` / `repoUrl` / `image`, each
+  credential's `url` / `image`. Consumers must degrade gracefully (Phase 9 criteria); the
+  doc comment at the top of the file says so.
+- Modelling decisions worth knowing before you touch this file:
+  - `IconName` is a string union, not an imported `LucideIcon` — content stays free of React
+    imports, and each consuming component owns its `Record<IconName, LucideIcon>` lookup.
+  - Work and education share one `TimelineEntry` type separated by a `kind` discriminant,
+    and `timeline` exports them pre-merged reverse-chronologically (work first on a year
+    tie). That's Phase 8's "Education entries in the same timeline with a type badge"
+    decision already encoded in the data, so Phase 8 just renders it.
+  - `coreSkills[].proficiency` is kept as a number so Phase 10 can map it to node size/glow
+    and reveal it on hover — the brief's "animated progress bars" wording is superseded by
+    `DESIGN_SYSTEM.md`, which explicitly retires the bars.
+  - `contact.formEnabled` is `false` pending Abdul's call on form-vs-links, so Phase 10 has
+    a single flag to flip rather than a rewrite.
+  - `siteUrl` is a placeholder until the production domain is settled at deploy (Phase 14).
+- **Sitemap confirmed:** `/` (single page, all sections), `/projects/[slug]` (3 static
+  params from `projectSlugs`), and the custom `not-found`. No other routes. The
+  `/projects/[slug]` route itself is *not* built yet — `PHASE_PLAN.md` assigns it to Phase 9;
+  `getProject(slug)` and `projectSlugs` are already exported and waiting for it.
+- Wired the data into the shell so it is genuinely exercised by the build rather than sitting
+  as dead exports: Navbar renders `navItems` + initials, Hero renders name/tagline/`roles[0]`,
+  Contact renders the headline/supporting line/three working links, Footer renders the three
+  socials. All still deliberately unstyled-beyond-base and unanimated — About, Skills,
+  Services, Experience and Projects remain plain stubs for their own phases.
+
+**Verified:** `npm run lint` clean, `npm run build` clean (routes: `/`, `/_not-found`,
+`/icon.svg`), `npx tsc --noEmit` clean.
+
+**Next up:** **Phase 2 — Design System Implementation.** Extend `tailwind.config.ts` with the
+remaining `DESIGN_SYSTEM.md` tokens (`--gradient-primary`, `--glow-primary`, shadow presets,
+radius scale, a `glass-surface` utility) alongside the colours already there — keep the
+`tokens`-object + `addBase` pattern, don't start a second source of truth. Then `lib/utils.ts`
+(`cn()` from `clsx` + `tailwind-merge`), the six primitives in `components/ui/` (`Button`,
+`Badge`, `GlassCard`, `GradientText`, `SectionHeading`, `Container`), and the three background
+layers in `components/effects/` (`DotGrid`, `RadialOrbs`, `NoiseOverlay` — CSS/SVG-driven, no
+per-frame JS). Check the "no raw hex or arbitrary values outside `tailwind.config.ts`"
+criterion by grepping for `#` and `[` in `components/` before checking the box.
+
+**Blockers / open questions:** none for Phase 2. The asset/decision questions below have been
+put to Abdul directly so they can be gathered while Phases 2–5 proceed.
 
 ### Session 1 — 2026-08-20 — Phase 0: Project Setup & Foundations
 **Did:**

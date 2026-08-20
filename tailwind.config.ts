@@ -39,6 +39,9 @@ const config: Config = {
           primary: v("text-primary"),
           secondary: v("text-secondary"),
         },
+        cursor: {
+          fill: v("cursor-fill"),
+        },
         accent: {
           violet: v("accent-violet"),
           indigo: v("accent-indigo"),
@@ -69,6 +72,8 @@ const config: Config = {
         display: ["clamp(2.75rem, 8vw, 6rem)", { lineHeight: "1.02", letterSpacing: "-0.03em" }],
         heading: ["clamp(2rem, 4.5vw, 3.25rem)", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
         eyebrow: ["0.75rem", { lineHeight: "1", letterSpacing: "0.3em" }],
+        /** The contextual label inside the expanded cursor ring. */
+        cursor: ["0.5rem", { lineHeight: "1", letterSpacing: "0.15em" }],
       },
       /** Generous, consistent section rhythm — the whitespace is doing real work here. */
       spacing: {
@@ -174,6 +179,17 @@ const config: Config = {
           left: "33%",
           opacity: "0.07",
           animationDelay: "-16s",
+        },
+
+        /**
+         * The outer cursor ring. Only size and fill transition — position is driven by
+         * Framer Motion springs on `transform`, so a blanket `transition-all` here would
+         * fight them.
+         */
+        ".cursor-ring": {
+          transitionProperty: "width, height, background-color, border-color",
+          transitionDuration: "300ms",
+          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

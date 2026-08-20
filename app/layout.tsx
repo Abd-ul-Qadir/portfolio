@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { CursorMount } from "@/components/effects/CursorMount";
 import { NoiseOverlay } from "@/components/effects/NoiseOverlay";
+import { SmoothScrollProvider } from "@/components/effects/SmoothScrollProvider";
 import { palette } from "@/lib/tokens";
 
 import "./globals.css";
@@ -32,9 +35,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        {children}
+        {/* Lenis is skipped entirely under reduced motion — see SmoothScrollProvider. */}
+        <SmoothScrollProvider>{children}</SmoothScrollProvider>
         {/* One global grain layer for the whole page, not one per section. */}
         <NoiseOverlay />
+        {/* Unmounted (never merely hidden) on touch devices and under reduced motion. */}
+        <CursorMount />
       </body>
     </html>
   );

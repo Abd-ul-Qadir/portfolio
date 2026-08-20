@@ -48,6 +48,11 @@ export const tokens = {
    */
   "dot-color": "rgba(255,255,255,0.14)",
 
+  /* -- cursor ------------------------------------------------------------ */
+  /** Fill of the expanded outer cursor ring. Neutral, because the whole cursor layer is
+      composited with `mix-blend-mode: difference`. */
+  "cursor-fill": "rgba(255,255,255,0.10)",
+
   /* -- composites ------------------------------------------------------- */
   "gradient-primary": `linear-gradient(135deg, ${palette["accent-violet"]}, ${palette["accent-indigo"]} 50%, ${palette["accent-cyan"]})`,
   /** Diffused violet light behind headings/cards (`DESIGN_SYSTEM.md` #11). */

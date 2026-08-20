@@ -5,13 +5,13 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–2 committed
+Repo status: git initialised, Phases 0–3 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–2 complete.** Currently starting **Phase 3 — Global Interaction Layer**
+> **Phases 0–3 complete.** Currently starting **Phase 4 — Loader & Navbar**
 > (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
@@ -19,7 +19,7 @@ Repo status: git initialised, Phases 0–2 committed
 - [x] Phase 0 — Project Setup & Foundations
 - [x] Phase 1 — Content Intake & Information Architecture
 - [x] Phase 2 — Design System Implementation (tokens + base UI primitives)
-- [ ] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
+- [x] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
 - [ ] Phase 4 — Loader & Navbar
 - [ ] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 - [ ] Phase 6 — About Section (text reveal, portrait-tied constellation)
@@ -41,6 +41,86 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-20 — Phase 3: Global Interaction Layer
+**Did:**
+- `lib/hooks.ts` — `useReducedMotion`, `useIsTouchDevice`, and `usePointerEffectsEnabled`
+  (the `!reduced && !touch` combination every pointer effect starts with). Built on
+  `useSyncExternalStore` rather than `useState` + `useEffect`, so the value is right on the
+  first client render and there is never a frame where an animation starts and is then torn
+  down. **Both hooks default to the cautious value during SSR** (reduced = true, touch =
+  true): assume less motion until the client proves otherwise.
+- `lib/gsap.ts` — registers `ScrollTrigger` (and `useGSAP`) exactly once, and exports
+  `connectLenisToScrollTrigger()`. **Import `gsap`/`ScrollTrigger` from this file, never from
+  `gsap` directly**, so no component can forget the registration. Lenis drives *native*
+  scroll, so no `scrollerProxy` is needed — the integration is: update ScrollTrigger on every
+  Lenis scroll event, drive `lenis.raf()` from `gsap.ticker` (seconds → ms) instead of Lenis's
+  own rAF so both live in one frame, and `gsap.ticker.lagSmoothing(0)` so GSAP never skips
+  time and desynchronises a scrub. The returned cleanup undoes all three.
+- `SmoothScrollProvider` wraps the app in `ReactLenis root options={{ autoRaf: false }}`.
+  **Under reduced motion Lenis is not mounted at all** — eased scrolling is exactly what the
+  setting asks us to drop, and native scroll is the right fallback. ScrollTrigger keeps
+  working either way precisely because Lenis drives native scroll position.
+- `Cursor` — dual layer per `DESIGN_SYSTEM.md`: outer ring on a `useSpring`
+  (stiffness 220 / damping 26 / mass 0.6) that lags, inner dot on the raw motion values that
+  tracks immediately. Expands to a violet-bordered filled ring over anything interactive and
+  shows that element's own `data-cursor-label`. `mix-blend-difference` on the whole layer.
+  Mounted through `CursorMount`, a client wrapper whose only job is that `next/dynamic`'s
+  `ssr: false` is illegal in a Server Component (confirmed in the bundled Next 16 docs) — the
+  gate there also keeps the chunk from ever being fetched on touch/reduced-motion sessions.
+  `globals.css` hides the native cursor under a media query matching the mount conditions
+  exactly, so it is never hidden without a replacement.
+- `MagneticWrapper` — distance-weighted linear falloff (full strength at centre, zero at the
+  radius edge), clamped to `maxTravel` (default 8px over a 120px radius), spring-smoothed,
+  resets to 0 outside the radius and on pointer-leave. Renders a plain `div` — no motion
+  component, no listeners — when pointer effects are off, so the wrapped control is untouched
+  for keyboard and touch users.
+- `Button` gained nothing new this phase but is now wired end to end: `cursorLabel` prop →
+  `data-cursor-label` → the cursor's contextual label.
+
+**Verified — the throwaway ScrollTrigger test from the acceptance criteria (now deleted):**
+built a temporary `/scrolltest` route with a pinned, scrubbed box plus a probe that jumped to
+a series of scroll positions and read back all four numbers at each. Lenis, `window.scrollY`,
+ScrollTrigger's own scroll reading and the tween progress agreed **exactly** at every sample,
+in both directions (`target=900 window=900 st=900 progress=0.75`, and scrolling back up to 600
+returned the identical `progress=0.5 scale=0.675` it had on the way down). No drift, no
+jitter, no fighting. The route, its probes and a temporary `/magnettest` route were all
+deleted; `lib/gsap.ts` is what remains.
+- Cursor and Lenis are **present** in the DOM with motion allowed and **absent** (not hidden)
+  under reduced motion — checked by dumping the DOM in both states.
+- `MagneticWrapper` measured numerically: at a 120px radius and 8px max travel, a pointer 60px
+  from centre produced exactly 4.00px of travel and 119px produced 0.07px — textbook linear
+  falloff — while 121px (just outside the radius) and 400px both produced 0. The spring's
+  visual interpolation was then confirmed by screenshot diff: with the pointer to the right,
+  the button's rightmost pixel moved 541 → 544 mid-flight toward its target.
+
+**Headless-browser gotchas worth not rediscovering (this cost real time):**
+- **Headless Chrome reports `prefers-reduced-motion: reduce` by default.** Every screenshot
+  and DOM dump so far was silently testing the reduced-motion path. Pass
+  `--force-prefers-no-reduced-motion` to test the real one.
+- **`requestAnimationFrame` does not tick under `--dump-dom --virtual-time-budget`** (a frame
+  counter stayed at 4 for an entire run), so no spring/GSAP-ticker animation can be *observed*
+  that way — read the underlying motion value instead. `--screenshot` does force paint, and
+  with `--run-all-compositor-stages-before-draw` it captures mid-animation.
+- Headless Chrome clamps its window to 500px wide (already noted under Phase 2 — use an
+  iframe harness for real mobile widths).
+
+**Not verified here, flagged for Phase 14:** the touch-device branch. `(pointer: coarse)`
+cannot be forced in this headless setup, so `useIsTouchDevice` is verified by code path only —
+it is the same `usePointerEffectsEnabled` gate whose reduced-motion branch *was* confirmed to
+unmount everything. Confirm on a real phone during the Phase 14 device pass.
+
+**Next up:** **Phase 4 — Loader & Navbar.** `useHasSeenLoader` (new hook in `lib/hooks.ts`,
+`sessionStorage`-backed, SSR-safe) gating a `Loader` that runs the boot sequence from
+`DESIGN_SYSTEM.md` in ~1–1.5s and is **skipped entirely — not merely sped up — under reduced
+motion**. Then the `Navbar`: transparent over the hero → glass/blurred/bordered with a height
+reduction on scroll, scroll-spy active-section indicator, animated underline. Framer Motion
+for both (the navbar is a discrete state transition, not a scrub — do not reach for
+ScrollTrigger). `navItems` is already in `content/data.ts` and every section stub already
+carries its final `id`, so the scroll-spy has real targets. Remember to re-check the navbar
+against `--force-prefers-no-reduced-motion` or you will be testing the wrong path.
+
+**Blockers / open questions:** none for Phase 4.
 
 ### Session 1 (cont.) — 2026-08-20 — Phase 2: Design System Implementation
 **Did:**

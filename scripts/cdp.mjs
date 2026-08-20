@@ -11,7 +11,7 @@
  * No dependencies: Node 22's global `fetch` and global `WebSocket` are all this needs.
  *
  * Usage:
- *   node scripts/cdp.mjs <url> <path-to-script.js>
+ *   node scripts/cdp.mjs <url> <path-to-script.js> [--reduced-motion] [--viewport 390x844]
  *
  * The script file is evaluated in the page as the body of an async function; whatever it
  * returns is JSON-serialised and printed. `sleep(ms)` and `scrollTo(y)` are provided.
@@ -42,6 +42,18 @@ if (!url || !scriptPath) {
 // Headless Chrome reports `prefers-reduced-motion: reduce` by default, which silently tests
 // the wrong code path. Default to the motion path here; opt into the other one explicitly.
 const reducedMotion = flags.includes("--reduced-motion");
+
+// `--viewport 390x844` emulates a real mobile viewport. Necessary because plain headless
+// Chrome clamps its window to a 500px minimum width, which silently makes every "mobile"
+// check a 500px check.
+const viewportFlag = flags[flags.indexOf("--viewport") + 1];
+const viewport =
+  flags.includes("--viewport") && /^\d+x\d+$/.test(viewportFlag ?? "")
+    ? {
+        width: Number(viewportFlag.split("x")[0]),
+        height: Number(viewportFlag.split("x")[1]),
+      }
+    : null;
 
 const chromePath = CHROME_CANDIDATES.find((candidate) => {
   try {
@@ -146,6 +158,27 @@ try {
 
   await send(socket, "Page.enable");
   await send(socket, "Runtime.enable");
+
+  if (viewport) {
+    await send(socket, "Emulation.setDeviceMetricsOverride", {
+      width: viewport.width,
+      height: viewport.height,
+      deviceScaleFactor: 2,
+      mobile: true,
+    });
+    // Device metrics alone do not change `(hover: none)` / `(pointer: coarse)`; touch
+    // emulation is what flips those, and therefore what exercises the touch branch of
+    // `useIsTouchDevice`.
+    await send(socket, "Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 5,
+    });
+    await send(socket, "Emulation.setEmitTouchEventsForMouse", {
+      enabled: true,
+      configuration: "mobile",
+    });
+  }
+
   await send(socket, "Page.navigate", { url });
 
   // Wait for the page to settle: hydration, then the boot-sequence loader finishing.

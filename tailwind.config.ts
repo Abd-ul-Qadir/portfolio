@@ -107,6 +107,19 @@ const config: Config = {
           "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
           "50%": { transform: "translate3d(2%, -3%, 0) scale(1.06)" },
         },
+        "rise-in": {
+          from: { opacity: "0", transform: "translate3d(0, 24px, 0)" },
+          to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
+        },
+        "caret-blink": {
+          "0%, 45%": { opacity: "1" },
+          "50%, 95%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "arrow-nudge": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(6px)" },
+        },
         "grain-shift": {
           "0%, 100%": { transform: "translate3d(0, 0, 0)" },
           "25%": { transform: "translate3d(-1%, 1%, 0)" },
@@ -118,6 +131,8 @@ const config: Config = {
         /** Deliberately very slow — this is ambience, not motion you should notice. */
         "orb-drift": "orb-drift 24s ease-in-out infinite",
         "grain-shift": "grain-shift 12s steps(4, end) infinite",
+        "caret-blink": "caret-blink 1.1s steps(1, end) infinite",
+        "arrow-nudge": "arrow-nudge 2s ease-in-out infinite",
       },
     },
   },
@@ -206,6 +221,25 @@ const config: Config = {
           transitionProperty: "width, height, background-color, border-color",
           transitionDuration: "300ms",
           transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+
+        /**
+         * The hero's staggered entrance.
+         *
+         * Deliberately CSS rather than Framer Motion (see `PROGRESS.md`'s decision log): a
+         * Framer entrance server-renders `style="opacity:0"` on the `<h1>`, which is the
+         * page's LCP element — it would stay invisible until hydration, and forever without
+         * JS. A CSS animation starts at first paint instead, with no JS involved, and the
+         * markup is meaningful with scripting off.
+         *
+         * Stagger comes from an inline `animation-delay` per child.
+         */
+        ".rise-in": {
+          animation: "rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+          "@media (prefers-reduced-motion: reduce)": {
+            // No animation at all — the element simply renders in its final state.
+            animation: "none",
+          },
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

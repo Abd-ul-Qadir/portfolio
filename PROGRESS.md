@@ -5,14 +5,14 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–4 committed
+Repo status: git initialised, Phases 0–5 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–4 complete.** Currently starting **Phase 5 — Hero Section + Constellation
-> Effect** (see `docs/PHASE_PLAN.md`).
+> **Phases 0–5 complete.** Currently starting **Phase 6 — About Section**
+> (see `docs/PHASE_PLAN.md`).
 
 ## Phase checklist
 
@@ -21,7 +21,7 @@ Repo status: git initialised, Phases 0–4 committed
 - [x] Phase 2 — Design System Implementation (tokens + base UI primitives)
 - [x] Phase 3 — Global Interaction Layer (cursor, GSAP+Lenis wiring, magnetic wrapper)
 - [x] Phase 4 — Loader & Navbar
-- [ ] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
+- [x] Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 - [ ] Phase 6 — About Section (text reveal, portrait-tied constellation)
 - [ ] Phase 7 — Services (bento grid, magnetic 3D cards)
 - [ ] Phase 8 — Experience Timeline
@@ -41,6 +41,79 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-20 — Phase 5: Hero + Constellation
+**Did:**
+- **`ConstellationCanvas`** — the one canvas implementation for all three contexts, built
+  generic from the start as `PHASE_PLAN.md` insists. Every difference between contexts is a
+  prop: `particleCount`, `mobileParticleCount`, `connectionDistance`, `min/maxRadius`,
+  `speed`, `nodeColor`, `lineColor`, `glow`, `parallaxStrength`, and
+  `attractStrength`/`attractRadius`. **Phase 6 and Phase 10 must pass different props to this
+  component, not write a second one.** Implementation notes: devicePixelRatio-aware sizing
+  (capped at 2) via `ResizeObserver`; particles *wrap* rather than bounce (bouncing makes the
+  field visibly breathe against the edges, which reads as motion instead of ambience);
+  connecting-line opacity falls off linearly with distance; pointer attraction is eased toward
+  its target each frame instead of snapping; the rAF loop stops on `visibilitychange` and on
+  unmount; under reduced motion it draws **one frame and never starts a loop**.
+- Hero-ambient instance wired: 70 particles at 1440px, 130px connection distance, parallax
+  only (no attraction — that is the portrait's configuration in Phase 6).
+- `Typewriter` — self-contained, cycles all three `identity.roles`, types/holds/deletes. Every
+  state change happens inside the timer rather than in the effect body (React's
+  cascading-render lint rule is right about this). Under reduced motion it renders the first
+  role as plain static text with no timers at all. The animating text is `aria-hidden` and a
+  stable `sr-only` label carries all three roles, so a screen reader is not read a
+  character-by-character stream.
+- Hero section: copy entirely from `content/data.ts`, staggered entrance, CTAs wrapped in
+  `MagneticWrapper` with `EXPLORE` / `OPEN` cursor labels, and an animated scroll-down arrow.
+- **`scripts/cdp.mjs` gained `--viewport 390x844`**, which sets device metrics *and* enables
+  touch emulation — device metrics alone do not flip `(hover: none)` / `(pointer: coarse)`.
+  This finally closes the gap flagged in Phase 3.
+
+**A real bug caught by looking at the SSR output, worth understanding before touching the
+hero again:** the hero was first built with a Framer Motion staggered entrance. That
+server-renders `style="opacity:0"` onto the `<h1>` — which is this page's **LCP element**. It
+would have stayed invisible until hydration, and forever with JS disabled, against a
+Lighthouse Performance ≥ 90 budget. The entrance is now a **CSS** animation (`.rise-in`, with
+an inline `animation-delay` per child for the stagger), which starts at first paint with no JS
+and no framework involved. Confirmed in the served HTML: the `<h1>` now ships its real text
+with only `animation-delay` inline and no opacity. A side benefit is that `Hero` went back to
+being a Server Component — only the canvas, typewriter and magnetic wrappers are client
+components. See the decision log for why this is not treated as abandoning Framer Motion.
+
+**Verified (all via `scripts/cdp.mjs`, i.e. with a real rendering loop):**
+- Canvas genuinely paints and animates frame to frame; the loop **stops** while the tab is
+  hidden (`visibilitychange` → no pixel changes at all) and **resumes** when visible.
+- Under reduced motion: exactly one static frame, unchanged over 1.2s; role line static on
+  "Full Stack AI Engineer"; cursor absent. Computed `animation-name` is `none` for the scroll
+  arrow, the ambient orbs and the grain layer — checked as computed style, not class names.
+- Typewriter observed mid-cycle deleting "ML Engineer", so it is cycling past variant 1.
+- **Particle scaling: 68 particles at 1440px vs 28 at 390px** (the canvas exposes
+  `data-particles` so this is asserted, not guessed).
+- At 390x844 with touch emulation: no horizontal overflow, hamburger shown, desktop nav
+  hidden, and **the cursor is not mounted** while `(hover: none)`/`(pointer: coarse)` are
+  true — the touch branch is now empirically confirmed, not just reasoned about.
+- Frame cadence with constellation + cursor + grain all running: **median 16.70ms / p95
+  16.70ms (60fps) under mobile emulation**, and a locked 30fps on desktop headless — that is
+  `--disable-gpu` vsync-capping, not jank, and the giveaway is that p95 (33.40ms) is
+  essentially identical to the median (33.30ms). Zero frame-time variance attributable to our
+  own work in either case. A real 60Hz laptop reading still belongs in the Phase 14 pass.
+- Screenshots at 1440 and 390 both read correctly.
+
+**Next up:** **Phase 6 — About Section.** Bio copy is already in `content/data.ts`. Three
+pieces: (1) the **portrait-tied** `ConstellationCanvas` — same component, different props: a
+much tighter node cluster, denser/thinner lines, glow, and a *pronounced* `attractStrength`
+so nodes visibly pull toward the cursor over the portrait. The acceptance criterion is that it
+is visibly tighter/denser than the hero field, so set `connectionDistance` well below the
+hero's 130 and turn `attractStrength` up from 0. (2) The scroll-tied **progressive text
+reveal** — words dim → bright as they cross the viewport, and it must be genuinely scrubbed:
+scrolling back up has to dim them again, so a fire-once `whileInView` fails the criterion.
+`scripts/cdp.mjs` can verify this directly by sampling computed colour at several scroll
+positions going down *and* back up. (3) The portrait itself — **the image asset is still
+missing** (Known issues); `PHASE_PLAN.md` Phase 6 explicitly says to build around it and flag
+it, so use a styled placeholder holding the correct aspect ratio and keep going.
+
+**Blockers / open questions:** none that stop Phase 6, but the portrait and project images are
+now the nearest real blocker — Phase 9 cannot be finished properly without them.
 
 ### Session 1 (cont.) — 2026-08-20 — Phase 4: Loader & Navbar
 **Did:**
@@ -389,6 +462,16 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-20 (Phase 5) — the hero's entrance is a CSS animation, not Framer Motion.**
+  `CLAUDE.md` §2 assigns entrances to Framer Motion, and that still holds everywhere else
+  (Navbar, Cursor, MagneticWrapper, and the Phase 11 `Reveal` component all use it). The hero
+  is the one exception because Framer server-renders `opacity: 0` onto the `<h1>`, and that
+  `<h1>` is the page's LCP element: it would be invisible until hydration and permanently
+  invisible without JS, against a Lighthouse Performance ≥ 90 budget. The `.rise-in` class in
+  `tailwind.config.ts` starts at first paint instead and collapses to no animation at all
+  under reduced motion. This is a substitution of *technique*, not of the dependency — no
+  package was added or dropped. If you ever move the hero entrance back to Framer Motion,
+  re-check the served HTML for an inline `opacity:0` on the heading first.
 - **2026-08-20 (Phase 2, supersedes the entry below) — the token object now lives in
   `lib/tokens.ts`, not inside `tailwind.config.ts`.** `tailwind.config.ts` imports it, so
   there is still exactly one definition of every value, but app code can import a literal

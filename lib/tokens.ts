@@ -65,5 +65,20 @@ export const tokens = {
 
 export type TokenName = keyof typeof tokens;
 
+/**
+ * `#RRGGBB` -> `rgba(r, g, b, alpha)`.
+ *
+ * For canvas code only: `<canvas>` needs a real colour string and cannot resolve
+ * `var(--accent-violet)` or a Tailwind class. Everything that renders as DOM should keep
+ * using a class or a custom property instead of calling this.
+ */
+export function withAlpha(hex: string, alpha: number) {
+  const value = hex.replace("#", "");
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 /** `var(--token)` reference for a token, for use in CSS-in-JS and canvas code. */
 export const cssVar = (name: TokenName) => `var(--${name})`;

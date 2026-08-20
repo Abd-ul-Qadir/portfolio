@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens (`--bg-base`, `--accent-violet`, ...) are emitted onto `:root`
+   by the plugin in `tailwind.config.ts` — do not redeclare them here. */
+
+@layer base {
+  html {
+    /* Lenis (Phase 3) drives smooth scrolling; never set `scroll-behavior: smooth`
+       here or the two will fight. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg-base font-sans text-text-primary antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--accent-violet) 40%, transparent);
+    color: var(--text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-violet);
+    outline-offset: 2px;
+  }
+}

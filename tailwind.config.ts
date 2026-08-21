@@ -32,6 +32,7 @@ const config: Config = {
       colors: {
         bg: {
           base: v("bg-base"),
+          deep: v("bg-deep"),
           surface: v("bg-surface"),
           glass: v("bg-glass"),
         },
@@ -311,6 +312,17 @@ const config: Config = {
          */
         ".project-scrim": {
           backgroundImage: `linear-gradient(to top, ${baseAt(92)} 0%, ${baseAt(55)} 35%, transparent 70%)`,
+        },
+
+        /**
+         * The Phase 12 Hero -> About travelling glow. Size lives here rather than as an
+         * arbitrary value in JSX; position and opacity are scrubbed by the hero timeline.
+         */
+        ".transition-blob": {
+          width: "26rem",
+          height: "26rem",
+          borderRadius: "9999px",
+          filter: "blur(64px)",
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

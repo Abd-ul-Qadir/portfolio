@@ -97,6 +97,7 @@ export function Projects() {
           {showProjects ? (
             <motion.ul
               key="projects"
+              data-project-grid
               className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

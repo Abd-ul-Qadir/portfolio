@@ -82,6 +82,18 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
       whileInView="visible"
       viewport={{ once: true, amount: 0.25 }}
     >
+      {/* Phase 12, Skills -> Projects: a node-and-line connector echoing the skill
+          ecosystem's hub-and-spoke language. `SectionTransitions` scrubs these in, staggered,
+          as the grid is approached. Authored fully drawn, so under reduced motion (where that
+          ScrollTrigger is never created) it simply renders as a static connector. */}
+      <span aria-hidden className="flex flex-col items-center">
+        <span className="h-1.5 w-1.5 rounded-pill bg-accent-violet" />
+        <span
+          data-card-connector
+          className="h-6 w-px origin-top bg-primary"
+        />
+      </span>
+
       <Link
         href={`/projects/${project.slug}`}
         data-cursor-label="VIEW"

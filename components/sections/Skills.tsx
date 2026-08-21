@@ -1,6 +1,7 @@
 "use client";
 
 import { ConstellationMount } from "@/components/effects/ConstellationMount";
+import { DotGrid } from "@/components/effects/DotGrid";
 import { Reveal } from "@/components/effects/Reveal";
 import { SkillEcosystem } from "@/components/effects/SkillEcosystem";
 import { Badge } from "@/components/ui/Badge";
@@ -28,6 +29,11 @@ export function Skills() {
       aria-labelledby="skills-heading"
       className="relative overflow-hidden py-section"
     >
+      {/* Phase 12, About -> Skills: this grid's opacity is scrubbed from faint to fully
+          defined as the section is approached (see `SectionTransitions`). It is authored at
+          its resting `faint` intensity, so under reduced motion it just sits there. */}
+      <DotGrid data-transition-dotgrid />
+
       <ConstellationMount
         particleCount={38}
         mobileParticleCount={18}

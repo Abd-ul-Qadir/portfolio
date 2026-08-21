@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-interface DotGridProps {
+interface DotGridProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   /**
    * How present the grid reads. Phase 12 animates the element's opacity at the
@@ -16,9 +16,15 @@ interface DotGridProps {
  * `tailwind.config.ts`) — no canvas, no per-frame JS, nothing to clean up on unmount.
  * Decorative only, so it is `aria-hidden` and never receives pointer events.
  */
-export function DotGrid({ className, intensity = "faint", fade = true }: DotGridProps) {
+export function DotGrid({
+  className,
+  intensity = "faint",
+  fade = true,
+  ...rest
+}: DotGridProps) {
   return (
     <div
+      {...rest}
       aria-hidden
       data-dot-grid
       className={cn(

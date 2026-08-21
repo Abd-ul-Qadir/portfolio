@@ -5,15 +5,15 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–11 committed; real image assets wired in
+Repo status: git initialised, Phases 0–12 committed; real image assets wired in
 
 ---
 
 ## Current phase
 
-> **Phases 0–11 complete.** Currently starting **Phase 12 — Section-Transition
-> Macro-Layer** (see `docs/PHASE_PLAN.md`). Phases 9/10 are structurally finished but
-> **visually incomplete until the image assets land** — see Blockers.
+> **Phases 0–12 complete.** Currently starting **Phase 13 — 404, Metadata & SEO Pass**
+> (see `docs/PHASE_PLAN.md`). All images are wired; the remaining gaps are the résumé link,
+> two project live/repo links, the contact-form decision and the production domain.
 
 ## Phase checklist
 
@@ -29,7 +29,7 @@ Repo status: git initialised, Phases 0–11 committed; real image assets wired i
 - [x] Phase 9 — Projects Showcase + Certifications & Awards
 - [x] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
 - [x] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
-- [ ] Phase 12 — Section-Transition Macro-Layer
+- [x] Phase 12 — Section-Transition Macro-Layer
 - [ ] Phase 13 — 404, Metadata & SEO Pass
 - [ ] Phase 14 — Performance, Accessibility, Easter Egg & Launch
 
@@ -42,6 +42,66 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 12: Section-Transition Macro-Layer
+**Did:** all four boundaries, every one GSAP ScrollTrigger-scrubbed.
+
+- **Hero → About — folded into the existing Phase 11 timeline, not a second one.**
+  `HeroChoreography`'s `gsap.to` became a `gsap.timeline({ scrollTrigger })` carrying two
+  tweens at position `0`: the hero transform, and a travelling violet glow that crosses the
+  screen (`xPercent -30 → 55`, fading up from 0) as the hero gives way. `PHASE_PLAN.md` is
+  explicit that this must share the hero's timeline rather than compete with it — **if you add
+  anything else to this boundary, add it to that timeline too.**
+- **About → Skills:** a `DotGrid` was added to the Skills section carrying
+  `data-transition-dotgrid`, and its opacity is scrubbed `0.25 → 1` as the section is
+  approached, so the ambient grid becomes more defined exactly at the boundary. `DotGrid` now
+  spreads extra props so it can take a `data-*` hook.
+- **Skills → Projects:** each project card grew a node-and-line connector echoing the skill
+  ecosystem's hub-and-spoke language (violet node, gradient line, same visual grammar). They
+  draw in with a scrubbed, staggered `scaleY` as the grid is approached. This is the "shared
+  visual grammar, not necessarily a literal shape morph" the phase asks for.
+- **Projects → Contact:** a fixed `bg-bg-deep` layer at `-z-10` — behind the content but above
+  the body's own background — scrubs from `opacity 0 → 1`, genuinely darkening the page rather
+  than tinting the content. Needed a new `bg-deep` (`#03040A`) token, because overlaying
+  `bg-base` on itself cannot darken anything.
+- The three non-hero boundaries live in one `SectionTransitions` component mounted once in
+  `app/page.tsx` — the macro-layer is a layer *on top of* finished sections, so it finds what
+  it animates by `data-*` attribute rather than being tangled into each section.
+
+**Verified (via `scripts/cdp.mjs`) — sampled down the page and back up:**
+
+| boundary | down | back up |
+|---|---|---|
+| blob (Hero→About) | `0 → 0.585 → 1` | `→ 0` |
+| dot grid (About→Skills) | `0.25 → 1` | `→ 0.25` |
+| connector (Skills→Projects) | `0 → 1` | `→ 0` |
+| darken (Projects→Contact) | `0 → 1` | `→ 0` |
+
+Every one retraces, which is what distinguishes a scrub from a fire-once reveal.
+
+**Reduced motion** (`--reduced-motion`): at *every* scroll position the dot grid sits at its
+resting 0.6, connectors are fully drawn and static, the darkening layer stays at 0, the blob
+never appears, and the hero never pins — while project cards stay at opacity 1 and content
+remains readable and in order. That is the required collapse: no pinning, no blob travel, no
+morph. None of these ScrollTriggers are even created, because the whole layer is inside
+`gsap.matchMedia("(prefers-reduced-motion: no-preference)")`.
+
+`npm run build`, `npm run lint`, `tsc --noEmit` clean; zero Tailwind arbitrary values.
+
+**Next up:** **Phase 13 — 404, Metadata & SEO Pass.**
+- `app/not-found.tsx` — lost-in-space/constellation motif (reuse `ConstellationMount`, it
+  already takes a config) with a clear way home.
+- Per-route `generateMetadata`: `/` and each `/projects/[slug]` already have distinct titles
+  and descriptions — **verify** rather than assume, and add the 404's.
+- `sitemap.ts`, `robots.ts`, and an OG image. Note `siteUrl` in `content/data.ts` is still the
+  placeholder `https://abdulqadir.dev` — the sitemap and canonical URLs are wrong until Abdul
+  confirms the real domain, so flag it if it is still unanswered.
+- Then Phase 14: perf/a11y passes, the `sudo hire-me` easter egg (built last), Lighthouse ≥ 90
+  in all four categories recorded here, and the Vercel deploy.
+
+**Blockers / open questions:** the résumé link, Pest Eye + Netflix live/repo links, the
+contact-form-vs-links decision, the production domain, and a Vercel account. Also still
+unanswered: the "Best Developer" award question in Known issues.
 
 ### Session 1 (cont.) — 2026-08-21 — Real assets wired in (Abdul supplied images)
 **Did:** Abdul dropped his image library into `assets/` at the repo root. Next only serves
@@ -60,14 +120,13 @@ gone — the count went 14 → 0.**
   and the files are `*-card.*` / `*-hero.*` to match. The card frame changed from `aspect-project`
   (16:11) to **`aspect-square`**, because the source graphics are 2560x2560 and a 16:11 frame
   cropped off their titles and bottom panels.
-- **⚠ Two source files are misnamed and were swapped to match their contents.**
-  `portfolio/Customer_Segmentaion.jpeg` actually contains the **Netflix (NFLX) Stock Predictor**
-  graphic, and `portfolio/Netflix_Stock_Price.jpeg` actually contains the **RFM Customer
-  Segmentation** graphic. Confirmed by opening both — and the embedded tech logos settle it
-  (Python/Gradio/Hugging Face on the RFM one, HTML/CSS/JS/Django on the Netflix one). The files
-  in `public/` are named for their *content*, so `customer-segmentation-card.jpeg` really is the
-  RFM graphic. **Do not "fix" this by matching the original filenames.** The originals in
-  `assets/` were left untouched.
+- **(Resolved 2026-08-21)** Two source files were originally misnamed — `Customer_Segmentaion.jpeg`
+  held the Netflix graphic and vice versa — so the `public/` copies were named for their
+  *contents* instead. **Abdul has since renamed the originals correctly**, and the two now
+  agree: `Customer_Segmentaion.jpeg` (md5 `6dfcd7b6`) is the RFM graphic and matches
+  `customer-segmentation-card.jpeg`; `Netflix_Stock_Price.jpeg` (md5 `0a30d4b2`) is the Netflix
+  graphic and matches `netflix-stock-price-card.jpeg`. Nothing to do — verified by checksum,
+  no code change was needed.
 - **Certifications** — images plus **real verification URLs read off the certificates
   themselves**, each checked to return HTTP 200: Programming for Everybody
   (`2CCTQBHBYKRE`), Programming with JavaScript (`5NHZQ49GDDUS`), Django Web Framework

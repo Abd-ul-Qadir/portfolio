@@ -14,6 +14,12 @@
 export const palette = {
   "bg-base": "#08090D",
   "bg-surface": "#0E1016",
+  /**
+   * Deeper than `bg-base`, used only by the Phase 12 Projects->Contact darkening layer.
+   * Overlaying `bg-base` on itself cannot darken anything, so the macro-layer needs a
+   * genuinely darker value to fade toward.
+   */
+  "bg-deep": "#03040A",
   "text-primary": "#F5F6FA",
   "text-secondary": "#9CA3AF",
   "accent-violet": "#7C3AED",

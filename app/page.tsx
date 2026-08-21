@@ -1,3 +1,4 @@
+import { SectionTransitions } from "@/components/effects/SectionTransitions";
 import { About } from "@/components/sections/About";
 import { Contact } from "@/components/sections/Contact";
 import { Experience } from "@/components/sections/Experience";
@@ -11,6 +12,9 @@ import { Skills } from "@/components/sections/Skills";
 export default function Home() {
   return (
     <>
+      {/* Phase 12: the boundaries between sections, scrubbed. Hero -> About lives in
+          HeroChoreography's own timeline; this owns the other three. */}
+      <SectionTransitions />
       <Navbar />
       <main id="main">
         <Hero />

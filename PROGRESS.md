@@ -5,15 +5,16 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–9 committed
+Repo status: git initialised, Phases 0–10 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–9 complete.** Currently starting **Phase 10 — Skills (floating AI ecosystem),
-> Contact, Footer** (see `docs/PHASE_PLAN.md`). Phase 9 is structurally finished but
-> **visually incomplete until the image assets land** — see Blockers.
+> **Phases 0–10 complete — every section of the page now exists.** Currently starting
+> **Phase 11 — Scroll Choreography Pass** (see `docs/PHASE_PLAN.md`). Phases 9/10 are
+> structurally finished but **visually incomplete until the image assets land** — see
+> Blockers.
 
 ## Phase checklist
 
@@ -27,7 +28,7 @@ Repo status: git initialised, Phases 0–9 committed
 - [x] Phase 7 — Services (bento grid, magnetic 3D cards)
 - [x] Phase 8 — Experience Timeline
 - [x] Phase 9 — Projects Showcase + Certifications & Awards
-- [ ] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
+- [x] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
 - [ ] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
 - [ ] Phase 12 — Section-Transition Macro-Layer
 - [ ] Phase 13 — 404, Metadata & SEO Pass
@@ -42,6 +43,72 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 10: Skills, Contact, Footer
+**Did:**
+- **`SkillEcosystem`** — the floating ecosystem, **not bars and not cards** (the acceptance
+  criterion PHASE_PLAN says to double-check explicitly). A centred `AI ENGINEER` hub with four
+  core-skill nodes on an inner orbit and the five stack groups on an outer one, each joined to
+  the hub by a thin violet→cyan gradient line whose opacity falls off for the outer orbit —
+  the same line-connection language as `ConstellationCanvas`.
+- **Proficiency drives node diameter and glow**, never a bar: React.js (95%) renders at 80px
+  against HTML/CSS/JS (80%) at 56px, measured. The exact number appears only in the
+  hover/focus panel.
+- Each node is a real `<button>` — keyboard reachable, with `aria-describedby` pointing at an
+  `aria-live="polite"` info panel, so tabbing onto a node announces "Python, Django & FastAPI
+  90% proficiency" rather than the detail being mouse-only.
+- Three fixes that only showed up in screenshots, not in the code:
+  1. Labels were overflowing their circles. The circle is now purely the sized/glowing node
+     and the label sits **outside** it, so a long name can never overflow.
+  2. The connecting lines ended at the button's centre (below the circle). Nodes are now
+     anchored so the *circle* sits on the orbit point.
+  3. At 390px the outer orbit's labels collided with the core ones and clipped off-screen.
+     Below `sm` the five group nodes are dropped in CSS (`hidden sm:block`, so no hydration
+     flash) — nothing is lost, since all of them are listed in full in the tag list directly
+     below. The hub also shrinks below `sm`, because at mobile scale it was large enough to
+     hide the connecting lines underneath itself.
+- Broader stack renders as a plain tag list (no invented proficiencies) and spoken languages
+  as circular badges.
+- **`Contact`** — terminal skin (window chrome, `$ connect --with AbdulQadir` with a blinking
+  caret) over real content. The prompt line is `aria-hidden` decoration; the three contact
+  methods are genuine `mailto:` / `tel:` / LinkedIn links, each in a `MagneticWrapper`.
+  **`contact.formEnabled` is still `false`**, so no form ships — that is PHASE_PLAN's
+  instruction while the question is unanswered, not an oversight.
+- **`Footer`** — a server component: identity block, section nav, social links, copyright and
+  a back-to-top control.
+
+**Verified (via `scripts/cdp.mjs`):** 9 nodes and 9 connecting lines with a centre hub; **no
+percentage text visible at rest**; node diameters 80/72/56/56px tracking 95/90/80/80%; contact
+links resolve to `mailto:abdulqadir12511@gmail.com`, `tel:+9232454224298` and the real
+LinkedIn URL with **zero dead links**; footer has 10 links, none dead, three socials opening in
+new tabs; no `<form>` present; all seven section ids exist; no horizontal overflow.
+Screenshots checked at 1424 and 390.
+
+**Testing note (third instance of the same trap — read this before debugging focus):** the
+headless page reports `document.hasFocus() === false`, so a programmatic `element.focus()`
+sets `activeElement` **without dispatching focus events**, and React's `onFocus` never fires.
+The skills info panel looked broken for exactly this reason. Use
+`scripts/cdp.mjs --press-tab N --then <script>` to move focus with real key events.
+
+**Next up:** **Phase 11 — Scroll Choreography Pass.**
+- Build the shared `Reveal` component (fade + translateY + slight scale via `whileInView`,
+  firing once) and replace the ad hoc per-section reveal logic that has accumulated in About,
+  Services, Projects, Skills and Contact with it.
+- The flagship Hero → About moment: pinned and **scrubbed with GSAP ScrollTrigger**, not
+  Framer Motion's `useScroll`/`useTransform` — the hero visual starts large and centred, then
+  scales down and translates into a corner as About takes focus. `lib/gsap.ts` already has the
+  Lenis wiring this depends on, verified back in Phase 3.
+- Under reduced motion every scroll-linked effect must collapse to a plain fade — no pinning,
+  no parallax. Verify by sampling transforms at several scroll positions in both directions,
+  the way Phases 6 and 8 were verified.
+- **Mobile Safari caution** (`CLAUDE.md` §4): pinning is the most common source of jank there.
+  A fade-based fallback below `sm` is an acceptable, expected simplification — decide and log
+  it rather than shipping a pin that janks.
+
+**Blockers / open questions:** unchanged. Still needed from Abdul: 3 project hero images, 5
+certificate images, 6 award images, the About portrait, the résumé link, the project live/repo
+links, and the contact-form-vs-links decision (the form is a one-flag change now —
+`contact.formEnabled` in `content/data.ts` — plus building the form itself).
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 9: Projects + Certifications & Awards
 **Did:**
@@ -708,6 +775,14 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-21 (Phase 10) — the skills ecosystem is DOM nodes + SVG lines, not one canvas.**
+  `DESIGN_SYSTEM.md` calls Skills "a third context/config" of the constellation's
+  line-connection approach. The *approach* is shared — thin violet→cyan lines, opacity falling
+  off with distance — but the nodes are real `<button>`s rather than canvas paint, because each
+  one is a labelled control that has to be keyboard-reachable and screen-reader-readable, and
+  canvas content is neither. A genuine `ConstellationCanvas` instance (sparse, wide, parallax
+  only, no attraction) still runs behind the section as its ambient field, so the third config
+  does exist. Don't "fix" this by moving the nodes into the canvas.
 - **2026-08-21 (Phase 7) — `lucide-react` v1 has no brand icons.** `CLAUDE.md` §2 makes
   lucide the sole icon set, but v1 removed GitHub / LinkedIn / Instagram marks. Rather than
   map them to unrelated glyphs, `components/ui/icons.ts` simply omits them and socials render

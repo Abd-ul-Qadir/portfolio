@@ -89,6 +89,8 @@ const config: Config = {
         eyebrow: ["0.75rem", { lineHeight: "1", letterSpacing: "0.3em" }],
         /** The contextual label inside the expanded cursor ring. */
         cursor: ["0.5rem", { lineHeight: "1", letterSpacing: "0.15em" }],
+        /** Skill-ecosystem node labels — small enough to sit inside a circular node. */
+        node: ["0.5625rem", { lineHeight: "1.2", letterSpacing: "0.02em" }],
       },
       /** Generous, consistent section rhythm — the whitespace is doing real work here. */
       spacing: {

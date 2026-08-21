@@ -5,16 +5,15 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–10 committed
+Repo status: git initialised, Phases 0–11 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–10 complete — every section of the page now exists.** Currently starting
-> **Phase 11 — Scroll Choreography Pass** (see `docs/PHASE_PLAN.md`). Phases 9/10 are
-> structurally finished but **visually incomplete until the image assets land** — see
-> Blockers.
+> **Phases 0–11 complete.** Currently starting **Phase 12 — Section-Transition
+> Macro-Layer** (see `docs/PHASE_PLAN.md`). Phases 9/10 are structurally finished but
+> **visually incomplete until the image assets land** — see Blockers.
 
 ## Phase checklist
 
@@ -29,7 +28,7 @@ Repo status: git initialised, Phases 0–10 committed
 - [x] Phase 8 — Experience Timeline
 - [x] Phase 9 — Projects Showcase + Certifications & Awards
 - [x] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
-- [ ] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
+- [x] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
 - [ ] Phase 12 — Section-Transition Macro-Layer
 - [ ] Phase 13 — 404, Metadata & SEO Pass
 - [ ] Phase 14 — Performance, Accessibility, Easter Egg & Launch
@@ -43,6 +42,63 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 11: Scroll Choreography Pass
+**Did:**
+- **`Reveal`** — the one entrance reveal for the site: fade + translateY + slight scale on
+  `whileInView`, `once: true`, collapsing to opacity-only under reduced motion. Replaced the
+  ad hoc `whileInView` blocks that had accumulated in Skills and Contact. Anything genuinely
+  *scrubbed* (the timeline rail, the hero transform) stays GSAP and deliberately does not go
+  through this.
+- **The flagship Hero → About transform**, in `HeroChoreography`: the hero pins and its copy
+  is scrubbed directly to scroll position — scaling from 1 to 0.46, lifting, and fading to
+  0.18 as About takes focus. **GSAP ScrollTrigger with `pin` + `scrub`**, not Framer Motion's
+  `useScroll`/`useTransform` (the criterion this phase names explicitly).
+- `Hero` stays a **Server Component**: `HeroChoreography` takes the background layers and the
+  copy as props/children, so the page's LCP element is still server-rendered. The background
+  (constellation, orbs) stays put while the copy transforms away over it.
+- Gating is `gsap.matchMedia()`, which reverts cleanly when a condition stops matching:
+  `(min-width: 640px) and (prefers-reduced-motion: no-preference)`. So **no pin and no scrub
+  at all** under reduced motion, and none below 640px.
+
+**A bug worth remembering:** the first version also applied `xPercent: -18`. With
+`transform-origin: top left`, scaling *already* draws the content toward the corner, so the
+extra translate pushed the heading clean off the left edge — the screenshot showed "bdul
+Qadir" clipped at x=0. The spec says the hero moves *into* a corner, not out of frame. Now
+scale + a small lift only, and the heading's left edge is verified to stay positive
+(161px → 122px → 84px through the scrub).
+
+**Verified (via `scripts/cdp.mjs`):**
+- **Genuinely scrubbed, and reversible:** scale `1.000 → 0.836 → 0.672 → 0.509` scrolling
+  down, and exactly `0.672 → 0.836 → 1.000` scrolling back up, with opacity tracking
+  `1 → 0.75 → 0.50 → 0.25` and back.
+- **No layout shift through the pin:** `document.scrollHeight` (10788) and About's absolute
+  offset (1489) are identical before, during and after the pin, and the browser's own
+  `layout-shift` observer reports **CLS = 0.0018**.
+- **Reduced motion:** transform stays identity at every scroll position and nothing pins.
+- **Mobile (390px):** same — identity transform, no pin, per the documented simplification.
+- Screenshot mid-transform confirms the copy shrinking into the top-left corner, on-screen,
+  over a stationary constellation.
+
+**Next up:** **Phase 12 — Section-Transition Macro-Layer.** Only the four boundary transforms
+remain, and they must all be GSAP ScrollTrigger-scrubbed and collapse to a cross-fade under
+reduced motion:
+- **Hero → About:** a travelling gradient blob folded into the **existing** timeline in
+  `HeroChoreography` — PHASE_PLAN is explicit that this must not be a second, competing
+  timeline.
+- **About → Skills:** the ambient dot grid becomes more defined. `DotGrid` already takes an
+  `intensity` prop and every instance carries a `data-dot-grid` attribute, so scrub its
+  opacity rather than swapping the prop.
+- **Skills → Projects:** carry the ecosystem's connecting-line language into the project
+  grid — a shared visual grammar, explicitly *not* required to be a literal shape morph.
+- **Projects → Contact:** background gradually darkens.
+Then Phase 13 (404, metadata, sitemap, OG) and Phase 14 (perf/a11y/easter egg/deploy).
+
+**Blockers / open questions:** unchanged, and Phase 14 cannot finish without them. Needed from
+Abdul: 3 project hero images, 5 certificate images, 6 award images, the About portrait, the
+résumé link, the project live/repo links, the contact-form-vs-links decision, and — new for
+Phase 13/14 — the **production domain** (`siteUrl` in `content/data.ts` is still the
+placeholder `https://abdulqadir.dev`) plus a Vercel account to deploy to.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 10: Skills, Contact, Footer
 **Did:**
@@ -775,6 +831,12 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-21 (Phase 11) — the flagship hero transform does not pin below 640px.**
+  `CLAUDE.md` §4 names scroll-pinning as the single most common source of jank on mobile
+  Safari and explicitly allows a simpler per-section fallback on small viewports. Mobile gets
+  the hero as a normal, unpinned section; the pin and scrub are gated behind
+  `gsap.matchMedia("(min-width: 640px) and (prefers-reduced-motion: no-preference)")`. If this
+  is ever revisited, test on a real iOS device, not just a narrow desktop window.
 - **2026-08-21 (Phase 10) — the skills ecosystem is DOM nodes + SVG lines, not one canvas.**
   `DESIGN_SYSTEM.md` calls Skills "a third context/config" of the constellation's
   line-connection approach. The *approach* is shared — thin violet→cyan lines, opacity falling

@@ -1,14 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 import { ConstellationMount } from "@/components/effects/ConstellationMount";
+import { Reveal } from "@/components/effects/Reveal";
 import { SkillEcosystem } from "@/components/effects/SkillEcosystem";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { skillGroups, spokenLanguages } from "@/content/data";
-import { useReducedMotion } from "@/lib/hooks";
 
 /**
  * Skills.
@@ -24,8 +22,6 @@ import { useReducedMotion } from "@/lib/hooks";
  * competing with the ecosystem's own nodes.
  */
 export function Skills() {
-  const reducedMotion = useReducedMotion();
-
   return (
     <section
       id="skills"
@@ -49,15 +45,9 @@ export function Skills() {
           The
         </SectionHeading>
 
-        <motion.div
-          className="mt-12"
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: reducedMotion ? 0.2 : 0.8, ease: [0.22, 1, 0.36, 1] }}
-        >
+        <Reveal className="mt-12" amount={0.2}>
           <SkillEcosystem />
-        </motion.div>
+        </Reveal>
 
         {/* The unscored stack. Deliberately a tag list, not bars. */}
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">

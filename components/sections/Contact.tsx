@@ -1,14 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
+import { Reveal } from "@/components/effects/Reveal";
 import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { iconMap } from "@/components/ui/icons";
 import { contact, identity } from "@/content/data";
-import { useReducedMotion } from "@/lib/hooks";
 
 /**
  * Contact, themed as a terminal.
@@ -25,8 +23,6 @@ import { useReducedMotion } from "@/lib/hooks";
  * (`aria-hidden`), and each contact method is a genuine `mailto:` / `tel:` / profile link.
  */
 export function Contact() {
-  const reducedMotion = useReducedMotion();
-
   return (
     <section
       id="contact"
@@ -45,12 +41,9 @@ export function Contact() {
           Let&apos;s build
         </SectionHeading>
 
-        <motion.div
+        <Reveal
           className="mt-12 overflow-hidden rounded-panel glass-surface shadow-elevated"
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: reducedMotion ? 0.2 : 0.7, ease: [0.22, 1, 0.36, 1] }}
+          amount={0.3}
         >
           {/* Terminal chrome. Purely decorative. */}
           <div
@@ -113,7 +106,7 @@ export function Contact() {
               </p>
             )}
           </div>
-        </motion.div>
+        </Reveal>
       </Container>
     </section>
   );

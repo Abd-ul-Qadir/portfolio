@@ -16,6 +16,10 @@ type TokenName = keyof typeof tokens;
 
 const v = (name: TokenName) => `var(--${name})`;
 
+/** Page background at a given alpha, derived from the token rather than restated. */
+const baseAt = (percent: number) =>
+  `color-mix(in srgb, ${v("bg-base")} ${percent}%, transparent)`;
+
 const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
@@ -64,6 +68,10 @@ const config: Config = {
       },
       aspectRatio: {
         portrait: "4 / 5",
+        /** Project card / detail hero. */
+        project: "16 / 11",
+        /** Certificate and award thumbnails — closer to a landscape document. */
+        credential: "4 / 3",
       },
       gridTemplateColumns: {
         /** About: portrait column narrower than the text column. */
@@ -278,6 +286,21 @@ const config: Config = {
           "@media (min-width: 640px)": {
             left: "11px",
           },
+        },
+
+        /** Dimmed, blurred backdrop behind a modal dialog. */
+        ".scrim-backdrop": {
+          backgroundColor: baseAt(80),
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+        },
+
+        /**
+         * Bottom-up scrim on a project card, so the title stays legible over any image.
+         * A gradient rather than a flat tint — a flat one dulls the whole image.
+         */
+        ".project-scrim": {
+          backgroundImage: `linear-gradient(to top, ${baseAt(92)} 0%, ${baseAt(55)} 35%, transparent 70%)`,
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

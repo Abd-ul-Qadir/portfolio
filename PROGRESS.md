@@ -5,15 +5,15 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–8 committed
+Repo status: git initialised, Phases 0–9 committed
 
 ---
 
 ## Current phase
 
-> **Phases 0–8 complete.** **Phase 9 — Projects Showcase + Certifications & Awards** is
-> next, and it is the first phase that is genuinely blocked on assets from Abdul (see
-> Blockers below). Build the structure regardless; every image degrades to a placeholder.
+> **Phases 0–9 complete.** Currently starting **Phase 10 — Skills (floating AI ecosystem),
+> Contact, Footer** (see `docs/PHASE_PLAN.md`). Phase 9 is structurally finished but
+> **visually incomplete until the image assets land** — see Blockers.
 
 ## Phase checklist
 
@@ -26,7 +26,7 @@ Repo status: git initialised, Phases 0–8 committed
 - [x] Phase 6 — About Section (text reveal, portrait-tied constellation)
 - [x] Phase 7 — Services (bento grid, magnetic 3D cards)
 - [x] Phase 8 — Experience Timeline
-- [ ] Phase 9 — Projects Showcase + Certifications & Awards
+- [x] Phase 9 — Projects Showcase + Certifications & Awards
 - [ ] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
 - [ ] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
 - [ ] Phase 12 — Section-Transition Macro-Layer
@@ -42,6 +42,72 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 9: Projects + Certifications & Awards
+**Did:**
+- **`MediaFrame`** — one image slot with one placeholder treatment, used by *every* image on
+  the site. While an asset is `null` it renders a labelled placeholder occupying **exactly**
+  the space the real file will, so dropping images in later cannot shift layout or disturb the
+  animation geometry built on top. `sizes` is a required prop (a wrong one costs real bytes)
+  and everything is `loading="lazy"` except an explicitly `priority` hero.
+- **`ProjectCard`** — the reveal choreography, sequenced with one parent variant's
+  `delayChildren`/`staggerChildren` rather than four hand-tuned delays: image starts zoomed
+  under a dark overlay → overlay fades → title slides in → tech tags stagger. Desktop-only
+  hover parallax shifts the *image* toward the cursor inside the card bounds (max 14px), gated
+  on `usePointerEffectsEnabled` so touch/reduced-motion sessions never attach the listener.
+- **`/projects/[slug]` built this phase.** Next.js 16 removed synchronous `params`, so the page
+  and `generateMetadata` both `await props.params` and use the generated
+  `PageProps<"/projects/[slug]">` helper. `generateStaticParams` prerenders all three — the
+  build output confirms three `● (SSG)` routes. Layout: back control, type eyebrow, gradient
+  title, pitch, priority hero image, Role/Type/Date/Stack as a real `<dl>`, Abstract, and
+  live/repo buttons that are **omitted entirely while null** rather than rendered disabled.
+- **Certifications & awards gallery** with the `All / Projects / Certifications / Awards`
+  tabs, as a real `role="tablist"`, filtering client-side. A credential with a `url` opens it;
+  one without opens `CredentialLightbox` — so neither is ever a dead click.
+- **`CredentialLightbox`** is a real modal dialog, not a styled div: `role="dialog"` +
+  `aria-modal`, focus moved in on open and returned to the trigger on close, Escape closes,
+  Tab is trapped inside, and body scroll is locked while open.
+- Fixed a genuine bug while testing it: the focus effect depended on `onClose`, which is an
+  inline arrow and therefore a new identity every render — so the effect re-ran constantly and
+  re-captured "previously focused" as the dialog itself. `onClose` now lives in a ref and the
+  effect depends on `open` alone.
+- Also moved the placeholder label off the card's bottom edge (`pendingClassName`), because
+  with every image still missing it was colliding with the project title.
+
+**Verified (via `scripts/cdp.mjs`):**
+- Tabs: `All → 3 project articles`, `Projects → 3`, `Certifications → 5`, `Awards → 6`,
+  back to `All → 3`, with `aria-selected` tracking and **`url=/` unchanged throughout** — the
+  grid swaps with no navigation or reload.
+- Lightbox: focus moves into the dialog, body scroll locks, Escape closes, focus returns to
+  the trigger, scroll unlocks.
+  **Testing note for Phase 14:** a scripted `.click()` does not focus the button, so focus
+  restoration reads as broken unless the probe calls `trigger.focus()` first. Same class of
+  artifact as the `:focus-visible` one in Phase 7 — check the harness before believing the
+  failure.
+- Detail page: `title=Pest Eye — Abdul Qadir` (distinct per route, ready for Phase 13), h1,
+  back control, `Role/Type/Date/Stack` all present, **zero anchors without an `href`** — the
+  missing live links degrade to a "Live link coming soon" line rather than a dead button.
+- Grid reflow: 1 column at 390, 3 at 1424, no horizontal overflow at either; cards finish at
+  `opacity: 1` under normal *and* reduced motion (the reveal never leaves content invisible).
+- 14 pending placeholders currently render — 3 project heroes + 5 certificates + 6 awards.
+  That number should drop to 0 as assets arrive.
+
+**Next up:** **Phase 10 — Skills, Contact, Footer.**
+- Skills is the one to be careful with: it must be the **floating orbiting ecosystem**, a third
+  config of `ConstellationCanvas`'s line-connection approach — *not* progress bars and not
+  cards. `DESIGN_SYSTEM.md` explicitly retires the old site's bars, and PHASE_PLAN says to
+  double-check this specifically because bars are the easy default to fall back into. Map
+  `coreSkills[].proficiency` to node size/glow and reveal the number in a hover/info panel;
+  render `skillGroups` as a plain tag list and `spokenLanguages` as circular badges.
+- Contact: `contact.formEnabled` is still `false`, so **ship the three direct links** and keep
+  the form flagged — that is what PHASE_PLAN says to do while the decision is unconfirmed.
+- Footer, then Phases 11–14.
+
+**Blockers / open questions:** unchanged, and now the single biggest gap in the build. Phase 9
+is structurally complete but visually incomplete without: 3 project hero images, 5 certificate
+images, 6 award images, the About portrait, the résumé link, and the project live/repo links.
+Everything degrades gracefully in the meantime. The contact-form-vs-links call is needed before
+Phase 10 finishes.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 8: Experience Timeline
 **Did:**

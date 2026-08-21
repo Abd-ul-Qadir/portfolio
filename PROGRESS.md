@@ -44,6 +44,31 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 1 (cont.) — 2026-08-22 — Hero animations restored to their Phase 14 state
+
+Abdul asked for the hero animations to go back to how they were at the end of the phase work.
+Two post-phase additions were removed:
+
+- the separate **portrait tween** in `HeroChoreography` (portrait lifting/scaling/fading at its
+  own rate), added 2026-08-22;
+- the **About slide-in** in `SectionTransitions`, added the same day.
+
+`HeroChoreography`'s timeline is now byte-identical to `739a560` (Phase 14) — copy scaling to
+`0.46` into the top-left with `yPercent -12` / `opacity 0.18`, plus the one-way blob traverse,
+pinned `+=85%`. `SectionTransitions` is identical to Phase 14 in full, owning only the three
+non-hero boundaries. Confirmed by diffing both files against that commit: the sole remaining
+difference is `HeroChoreography`'s removed `background` prop, which belongs to the shared
+`SiteBackground` work, not to the hero animation.
+
+**Deliberately kept** (they are content/background, not hero animation, and were separately
+requested): the hero portrait image itself, the removed scroll indicator, the site-wide
+constellation, the denser field, and the navbar wordmark. The portrait now simply scales and
+fades with the hero block, since it sits inside the transformed wrapper.
+
+Measured after the change: hero `1424 → 655px`, `opacity 1 → 0.18`; ball one-way `439 → 793`;
+About static at `opacity 1` throughout (no slide-in). Reduced motion: no pin, no inline styles,
+ball at `opacity 0`.
+
 ### Session 1 (cont.) — 2026-08-22 — Hero→About re-choreography: BUILT, THEN REVERTED
 
 Abdul asked for a specific beat order — all hero content into the top-left corner, neon ball

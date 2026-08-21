@@ -31,37 +31,6 @@ export function SectionTransitions() {
     media.add("(prefers-reduced-motion: no-preference)", () => {
       const triggers: ScrollTrigger[] = [];
 
-      /* -- Hero → About: About rises into place as the hero transforms away ---------- */
-      // Paired with the hero shrinking and fading on its own pinned timeline, this reads as
-      // one view handing over to the next rather than the page merely scrolling. It is a
-      // separate ScrollTrigger on purpose: it belongs to About's own entry, and the hero's
-      // timeline is pinned, so folding this into it would tie About's position to the pin.
-      const aboutInner = document.querySelector<HTMLElement>("#about [data-section-inner]");
-      if (aboutInner) {
-        const tween = gsap.fromTo(
-          aboutInner,
-          { yPercent: 14, opacity: 0, scale: 0.985 },
-          {
-            yPercent: 0,
-            opacity: 1,
-            scale: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: document.querySelector("#about") as HTMLElement,
-              // Deliberately *inside* the viewport rather than "top bottom". The hero is
-              // pinned, and its pin spacer means a range starting at the viewport bottom is
-              // consumed while About is still parked off-screen — the tween finishes before
-              // it is ever visible, so it looks like nothing happens.
-              start: "top 88%",
-              end: "top 38%",
-              scrub: true,
-              invalidateOnRefresh: true,
-            },
-          },
-        );
-        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
-      }
-
       /* -- About → Skills: the ambient dot grid becomes more defined ----------------- */
       const grid = document.querySelector<HTMLElement>("[data-transition-dotgrid]");
       const skills = document.querySelector<HTMLElement>("#skills");

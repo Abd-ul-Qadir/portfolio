@@ -80,15 +80,6 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
             0,
           );
 
-          // The portrait leaves at its own rate — lifting and fading faster than the copy,
-          // so the two separate slightly instead of moving as one flat plane. Same timeline,
-          // same ScrollTrigger; only the values differ.
-          timeline.to(
-            "[data-hero-portrait]",
-            { yPercent: -18, scale: 0.9, opacity: 0, ease: "none" },
-            0,
-          );
-
           // Phase 12, Hero → About: a soft gradient blob travels across the screen as the
           // hero gives way, carrying the eye from one section to the next.
           timeline.fromTo(

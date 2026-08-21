@@ -269,7 +269,7 @@ export default function ConstellationCanvas({
 
     // Pause when the tab is hidden — an off-screen rAF loop is pure battery cost.
     const onVisibilityChange = () => {
-      if (document.hidden) stop();
+      if (document.hidden || !onScreen) stop();
       else start();
     };
 
@@ -285,6 +285,20 @@ export default function ConstellationCanvas({
     };
 
     resize();
+
+    // Scrolling a canvas off-screen should stop it too: `visibilitychange` only covers the
+    // whole tab being hidden, so a page with several fields kept every one of them animating
+    // while the reader was somewhere else entirely.
+    let onScreen = true;
+    const viewportObserver = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((entry) => entry.isIntersecting);
+        if (onScreen && !document.hidden) start();
+        else stop();
+      },
+      { rootMargin: "150px" },
+    );
+    viewportObserver.observe(canvas);
 
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
@@ -303,6 +317,7 @@ export default function ConstellationCanvas({
     return () => {
       stop();
       observer.disconnect();
+      viewportObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerleave", onPointerLeave);

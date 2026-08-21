@@ -51,6 +51,17 @@ export function useIsTouchDevice() {
 }
 
 /**
+ * `true` below Tailwind's `sm` breakpoint (640px).
+ *
+ * Used for the deliberate mobile simplifications `CLAUDE.md` §4 expects: the hero does not
+ * pin, and the boot-sequence loader does not play. Defaults to `true` during SSR so the
+ * lighter path is the one that renders first.
+ */
+export function useIsCompactViewport() {
+  return useMediaQuery("(max-width: 639px)", true);
+}
+
+/**
  * `true` when pointer-driven effects (cursor, magnetic pull, tilt, parallax) should run at
  * all. The single check every interactive effect starts with.
  */

@@ -263,7 +263,12 @@ const config: Config = {
          * Stagger comes from an inline `animation-delay` per child.
          */
         ".rise-in": {
-          animation: "rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+          // 0.5s, not 0.7s: this class animates the hero copy, and the tagline is the page's
+          // LCP element. Because `rise-in` starts at `opacity: 0` with `both` fill, the text
+          // is not painted until the animation has progressed, so its duration and delay are
+          // added directly to LCP. Measured at 0.7s + a 0.24s stagger, LCP element render
+          // delay was 1,206ms. Keep this short.
+          animation: "rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
           "@media (prefers-reduced-motion: reduce)": {
             // No animation at all — the element simply renders in its final state.
             animation: "none",
@@ -325,6 +330,21 @@ const config: Config = {
           height: "26rem",
           borderRadius: "9999px",
           filter: "blur(64px)",
+        },
+
+        /**
+         * Loader status lines. All four are rendered up front and revealed by the timeline
+         * setting `data-visible`, so staging them costs a style recalculation rather than a
+         * React re-render — see the performance note in `Loader.tsx`.
+         */
+        ".loader-line": {
+          opacity: "0",
+          transform: "translateY(4px)",
+          transition: "opacity 200ms ease-out, transform 200ms ease-out",
+          '&[data-visible="true"]': {
+            opacity: "1",
+            transform: "translateY(0)",
+          },
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

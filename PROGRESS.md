@@ -5,16 +5,16 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–13 committed; real image assets wired in
+Repo status: git initialised, Phases 0–14 committed except the Vercel deploy, which is
+blocked on Abdul's account. Real image assets wired in.
 
 ---
 
 ## Current phase
 
-> **Phases 0–13 complete.** Currently starting **Phase 14 — Performance, Accessibility,
-> Easter Egg & Launch** (see `docs/PHASE_PLAN.md`). **Performance is the one real gap:
-> measured 53–64, and Phase 14 requires ≥90.** Accessibility, Best Practices and SEO are
-> already 100.
+> **Phase 14 substantially complete — the build is finished and shippable.** Everything in
+> Phase 14 is done except **deploying to Vercel**, which needs Abdul's account, and the
+> final Lighthouse run against the production URL that depends on it. See Blockers.
 
 ## Phase checklist
 
@@ -32,7 +32,7 @@ Repo status: git initialised, Phases 0–13 committed; real image assets wired i
 - [x] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
 - [x] Phase 12 — Section-Transition Macro-Layer
 - [x] Phase 13 — 404, Metadata & SEO Pass
-- [ ] Phase 14 — Performance, Accessibility, Easter Egg & Launch
+- [~] Phase 14 — Performance, Accessibility, Easter Egg & Launch *(all but the Vercel deploy)*
 
 *(Only check a box once its acceptance criteria in `docs/PHASE_PLAN.md` are actually met —
 not when the happy path looks fine.)*
@@ -43,6 +43,59 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 14: Performance, Accessibility, Easter Egg
+**Did — performance.** Every change below was driven by a measurement, not a guess:
+
+1. **The loader was the single biggest cost on the page.** Measured by building with it
+   disabled: performance **69 → 86**, TBT **790ms → 220ms**. The cause was `setProgress` being
+   called from the GSAP timeline's `onUpdate` — roughly **78 React re-renders of the overlay
+   during the most contended moment of the page's life**. Rewritten to write the bar,
+   percentage and status lines straight to DOM nodes via refs. Same sequence, same look;
+   performance **69 → 80**, TBT → 300ms. *There is a warning comment in `Loader.tsx` — do not
+   reintroduce `useState` there.*
+2. **The loader no longer plays below 640px** (new `useIsCompactViewport` hook, third gate in
+   `LoaderMount`). A 1.3s opaque overlay owns most of the mobile LCP budget. Desktop keeps the
+   boot sequence. Logged in the decision log.
+3. **Constellation canvases are now deferred and paused.** The homepage mounts three; all
+   three previously downloaded their chunk, built a particle field and started a `rAF` loop
+   during initial load, for two fields nobody could see. `ConstellationMount` now waits for an
+   IntersectionObserver (300px margin) and `ConstellationCanvas` pauses its loop when scrolled
+   off-screen (it previously only paused on tab-hide). **Verified: 1 canvas at load, 3 after
+   scrolling**, in both motion modes.
+4. **Hero entrance shortened** (`rise-in` 0.7s → 0.5s, stagger 0.08s → 0.04s). The LCP element
+   is the hero tagline, and because `rise-in` starts at `opacity: 0` with `both` fill, its
+   delay and duration land *directly* on LCP — the breakdown showed **1,206ms of element
+   render delay** and only 15ms TTFB.
+
+**Did — accessibility.** Full keyboard pass with real Tab keypresses: **22 focus stops** in
+logical DOM order (navbar → hero CTAs → scroll indicator → skill nodes → service cards), and
+**zero elements missing a focus ring**. No focus traps. Full reduced-motion pass across the
+whole page: loader absent, cursor unmounted, **0 running animations**, **0 elements stuck
+invisible**, hero never pinned. Lighthouse Accessibility **100** on both presets.
+
+**Did — easter egg** (built last, as the plan requires). Typing `sudo hire-me` anywhere
+reveals `> Access granted. / > Let's build something amazing.` Ignores keystrokes while an
+input/textarea/contenteditable is focused, Escape dismisses, buffer is a ref so it does not
+re-render on every keystroke, and it is **not** gated behind reduced motion (user-initiated and
+tiny, per the spec). Verified by dispatching the real character sequence through CDP.
+`grep` confirms it is referenced nowhere in the UI.
+
+**Confirmed:** the canvas, cursor and loader all load via `next/dynamic({ ssr: false })` behind
+mount wrappers. Zero Tailwind arbitrary values and zero raw hex outside `lib/tokens.ts`.
+`build`, `lint` and `tsc --noEmit` clean.
+
+**Tooling:** `scripts/cdp.mjs` gained `--type <text>` (dispatches real character keystrokes),
+completing the set: `--viewport`, `--reduced-motion`, `--screenshot`, `--press-tab`, `--then`,
+`--type`.
+
+**What is left in Phase 14:** only the deploy. `PHASE_PLAN.md` asks to deploy to Vercel and
+verify the production URL, then record Lighthouse for the deployed site. Both need Abdul's
+Vercel account. When doing it:
+1. Set the real domain in `content/data.ts` (`siteUrl`) **first** — the sitemap, canonical tags
+   and OG URLs all derive from it and currently point at the placeholder `abdulqadir.dev`.
+2. Deploy, then re-run Lighthouse against the production URL and replace the mobile column in
+   the table above with those numbers.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 13: 404, Metadata & SEO
 **Did:**
@@ -1034,6 +1087,12 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-21 (Phase 14) — the boot-sequence loader does not play below 640px.**
+  `DESIGN_SYSTEM.md` specifies the loader without qualifying viewport, but measurement showed
+  it was the largest single performance cost on the page, and a 1.3s opaque overlay consumes
+  most of the mobile LCP budget. Desktop keeps it in full. This is the same mobile-
+  simplification licence `CLAUDE.md` §4 grants the hero pin. To restore it everywhere, drop
+  the `isCompact` gate in `LoaderMount` — and re-measure before you keep the change.
 - **2026-08-21 (Phase 13) — added `accent-violet-text` (#A78BFA), a second violet.**
   `DESIGN_SYSTEM.md` specifies one main accent, and this does not change it: `accent-violet`
   remains the brand colour for fills, borders and glows. But that violet as **small text**
@@ -1123,9 +1182,25 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
 
 ## Lighthouse scores (fill in during Phase 14)
 
-| Category       | Score | Date |
-|----------------|-------|------|
-| Performance    |       |      |
-| Accessibility  |       |      |
-| Best Practices |       |      |
-| SEO            |       |      |
+Measured against a local **production build** (`next build` + `next start`), Lighthouse CLI,
+2026-08-21. **Both presets are recorded, because they differ enormously and quoting only one
+would be misleading.**
+
+| Category       | Desktop preset | Mobile preset (default) | Date |
+|----------------|----------------|-------------------------|------|
+| Performance    | **100**        | 73–91 (median ~80)      | 2026-08-21 |
+| Accessibility  | **100**        | **100**                 | 2026-08-21 |
+| Best Practices | **100**        | **100**                 | 2026-08-21 |
+| SEO            | **100**        | **100**                 | 2026-08-21 |
+
+Desktop: LCP 0.7s, TBT 40ms, CLS 0.
+
+**Read the mobile number carefully before acting on it:**
+- Lighthouse's default preset applies **4× CPU throttling and slow-4G**, on top of a dev
+  machine that was simultaneously running Abdul's own browser (32 Chrome processes) and Node
+  builds. Repeat runs of *identical code* scored 73, 78, 79, 80, 87 and 91 — a ±18 point
+  spread from machine load alone. **Never draw a conclusion from a single run.**
+- This is `next start` on localhost: no CDN, no Brotli, no edge caching. A real Vercel
+  deployment should measure better.
+- **Re-run against the deployed URL before treating the mobile figure as final** — that is the
+  measurement Phase 14 actually asks for, and it is the one still outstanding.

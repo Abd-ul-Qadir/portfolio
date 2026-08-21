@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { CursorMount } from "@/components/effects/CursorMount";
+import { EasterEgg } from "@/components/effects/EasterEgg";
 import { LoaderMount } from "@/components/effects/LoaderMount";
 import { NoiseOverlay } from "@/components/effects/NoiseOverlay";
 import { SmoothScrollProvider } from "@/components/effects/SmoothScrollProvider";
@@ -82,6 +83,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <NoiseOverlay />
         {/* Unmounted (never merely hidden) on touch devices and under reduced motion. */}
         <CursorMount />
+        {/* Undocumented on purpose — see DESIGN_SYSTEM.md. */}
+        <EasterEgg />
       </body>
     </html>
   );

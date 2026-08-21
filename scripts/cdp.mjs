@@ -61,6 +61,8 @@ const screenshotPath = flags.includes("--screenshot")
   ? flags[flags.indexOf("--screenshot") + 1]
   : null;
 
+const typeText = flags.includes("--type") ? flags[flags.indexOf("--type") + 1] : null;
+
 const pressTabCount = flags.includes("--press-tab")
   ? Number(flags[flags.indexOf("--press-tab") + 1]) || 0
   : 0;
@@ -238,6 +240,14 @@ try {
   } else {
     const value = result.result.value;
     console.log(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  }
+
+  if (typeText) {
+    for (const ch of typeText) {
+      await send(socket, "Input.dispatchKeyEvent", { type: "keyDown", text: ch, key: ch });
+      await send(socket, "Input.dispatchKeyEvent", { type: "keyUp", key: ch });
+      await delay(20);
+    }
   }
 
   if (pressTabCount > 0) {

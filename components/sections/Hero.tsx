@@ -21,7 +21,9 @@ import { identity } from "@/content/data";
  * client components.
  */
 const rise = (index: number): CSSProperties => ({
-  animationDelay: `${0.08 * index}s`,
+  // Kept small on purpose — every 10ms here lands directly on LCP. See the note on
+  // `.rise-in` in `tailwind.config.ts`.
+  animationDelay: `${0.04 * index}s`,
 });
 
 const [firstName, ...restOfName] = identity.fullName.split(" ");

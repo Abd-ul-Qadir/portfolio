@@ -5,6 +5,7 @@ import { CursorMount } from "@/components/effects/CursorMount";
 import { LoaderMount } from "@/components/effects/LoaderMount";
 import { NoiseOverlay } from "@/components/effects/NoiseOverlay";
 import { SmoothScrollProvider } from "@/components/effects/SmoothScrollProvider";
+import { identity, siteUrl } from "@/content/data";
 import { palette } from "@/lib/tokens";
 
 import "./globals.css";
@@ -22,9 +23,46 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abdul Qadir — Full Stack AI Engineer",
-  description:
-    "Full Stack AI Engineer building scalable, high-performance web applications powered by AI.",
+  // `metadataBase` resolves the relative OG/Twitter image URLs Next generates from
+  // `app/opengraph-image.tsx`. [TODO] Still the placeholder domain — see PROGRESS.md.
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${identity.fullName} — ${identity.roles[0]}`,
+    // Project pages set their own title; this frames it.
+    template: `%s — ${identity.fullName}`,
+  },
+  description: identity.tagline,
+  applicationName: `${identity.fullName} — Portfolio`,
+  authors: [{ name: identity.fullName, url: siteUrl }],
+  creator: identity.fullName,
+  keywords: [
+    "Full Stack AI Engineer",
+    "Machine Learning Engineer",
+    "Agentic AI",
+    "Django",
+    "FastAPI",
+    "React",
+    identity.fullName,
+  ],
+  alternates: { canonical: siteUrl },
+  openGraph: {
+    type: "website",
+    siteName: identity.fullName,
+    title: `${identity.fullName} — ${identity.roles[0]}`,
+    description: identity.tagline,
+    url: siteUrl,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${identity.fullName} — ${identity.roles[0]}`,
+    description: identity.tagline,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
 };
 
 export const viewport: Viewport = {

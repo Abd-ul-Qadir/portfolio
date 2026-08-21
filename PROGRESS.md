@@ -5,15 +5,16 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–12 committed; real image assets wired in
+Repo status: git initialised, Phases 0–13 committed; real image assets wired in
 
 ---
 
 ## Current phase
 
-> **Phases 0–12 complete.** Currently starting **Phase 13 — 404, Metadata & SEO Pass**
-> (see `docs/PHASE_PLAN.md`). All images are wired; the remaining gaps are the résumé link,
-> two project live/repo links, the contact-form decision and the production domain.
+> **Phases 0–13 complete.** Currently starting **Phase 14 — Performance, Accessibility,
+> Easter Egg & Launch** (see `docs/PHASE_PLAN.md`). **Performance is the one real gap:
+> measured 53–64, and Phase 14 requires ≥90.** Accessibility, Best Practices and SEO are
+> already 100.
 
 ## Phase checklist
 
@@ -30,7 +31,7 @@ Repo status: git initialised, Phases 0–12 committed; real image assets wired i
 - [x] Phase 10 — Skills (floating AI ecosystem), Contact, Footer
 - [x] Phase 11 — Scroll Choreography Pass (flagship GSAP hero transform)
 - [x] Phase 12 — Section-Transition Macro-Layer
-- [ ] Phase 13 — 404, Metadata & SEO Pass
+- [x] Phase 13 — 404, Metadata & SEO Pass
 - [ ] Phase 14 — Performance, Accessibility, Easter Egg & Launch
 
 *(Only check a box once its acceptance criteria in `docs/PHASE_PLAN.md` are actually met —
@@ -42,6 +43,83 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Phase 13: 404, Metadata & SEO
+**Did:**
+- **`app/not-found.tsx`** — the lost-in-space / constellation motif tying back to the hero: a
+  sparser, slower `ConstellationMount` config, "Error 404" eyebrow, gradient headline, two CTAs
+  home, and a section nav. A Server Component; only the canvas is client.
+- **Root metadata** rebuilt: `metadataBase`, a title `template` (`%s — Abdul Qadir`), keywords,
+  canonical, full Open Graph and Twitter card blocks, and an explicit `robots` policy.
+- **`app/opengraph-image.tsx`** — 1200×630 social card generated at build time from
+  `lib/tokens.ts`, so it cannot drift from the palette. (Satori supports only a CSS subset —
+  no CSS variables or Tailwind — so this file reads token values directly; it is the one place
+  outside `lib/tokens.ts` allowed to.)
+- **`app/sitemap.ts`** and **`app/robots.ts`** — all four URLs, with the sitemap referenced
+  from robots.txt.
+
+**Two real bugs found by measuring rather than assuming:**
+1. **Doubled titles.** Project pages rendered `Pest Eye — Abdul Qadir — Abdul Qadir`: the page
+   appended the name *and* the new root template did too. The page now returns just
+   `project.title` and lets the template add the suffix.
+2. **404 was advertising itself as indexable.** I removed the page's `robots` override thinking
+   Next's automatic `noindex` made it redundant — but the page then *inherited*
+   `index: true` from the new root config, so it rendered `noindex` **and** `index, follow`,
+   contradicting each other. The override is required, and the comment in the file says why so
+   nobody removes it again.
+
+**Accessibility fixes (Lighthouse-driven):**
+- **Contrast:** `accent-violet` (#7C3AED) as 12px text measured **3.49:1** on `bg-base` and
+  **3.03:1** over the section-heading glow — both below WCAG AA's 4.5:1. `DESIGN_SYSTEM.md`
+  only ever certified the *text* tokens, not the accent used as type. Added
+  **`accent-violet-text` (#A78BFA)** — same hue, **7.31:1 / 6.34:1** — and pointed all 14 files
+  using `text-accent-violet` at it. `bg-accent-violet` / `border-accent-violet` keep the brand
+  accent. See the decision log.
+- **`label-content-name-mismatch`:** the navbar wordmark showed "AQ" but its `aria-label` was
+  "Abdul Qadir — back to top", so the accessible name did not contain the visible text
+  (WCAG 2.5.3). Now `AQ — Abdul Qadir, back to top`.
+
+**Lighthouse (production build, `next start`):**
+
+| Category | Score |
+|---|---|
+| Performance | **53–64** ⚠ |
+| Accessibility | **100** |
+| Best Practices | **100** |
+| SEO | **100** |
+
+Phase 13's criterion is SEO ≥ 95 — met at 100. Accessibility went 97 → **100** after the two
+fixes above.
+
+**⚠ Read this before trusting any Lighthouse number:**
+- An early run reported Performance **91**. It was measured against a **stale server**: the
+  rebuild's `next start` had failed with `EADDRINUSE` (the old one still held port 3100) and
+  the run silently hit the previous build. **Always confirm the served HTML contains your
+  change before believing a score.**
+- Even after fixing that, scores swung 51 → 64 purely on machine load. `scripts/cdp.mjs` was
+  **leaking Chrome processes**: `child.kill()` on Windows kills only the parent and orphans
+  every renderer, so runs accumulated stray processes that competed with Lighthouse. The
+  driver now kills the whole tree with `taskkill /T /F`. Clean up strays by command line
+  (`CommandLine -like '*cdp-profile*'`) — **do not kill all `chrome.exe`**, Abdul's own browser
+  is running.
+- Honest read: Performance really is ~55–65, not 91. **TBT is 1,100 ms+** and LCP ~4.0–4.4 s.
+
+**Next up:** **Phase 14 — Performance, Accessibility, Easter Egg & Launch.** Performance is the
+whole job:
+- TBT is the dominant problem, and the likely cause is how much client JS initialises at once:
+  **three `ConstellationCanvas` instances** each running their own rAF loop (hero, About
+  portrait, Skills), plus GSAP + ScrollTrigger + Framer Motion + Lenis + the loader. Start by
+  measuring which of those actually costs the main-thread time rather than guessing.
+- Confirm every canvas/mouse component is `next/dynamic({ ssr: false })` (most already are),
+  consider pausing off-screen canvases via IntersectionObserver, and check whether Framer
+  Motion and GSAP are both being pulled into the initial chunk.
+- Then: full keyboard-only pass, full reduced-motion pass, the `sudo hire-me` easter egg
+  (built **last**), final Lighthouse with all four ≥ 90 recorded in the table below, and the
+  Vercel deploy.
+
+**Blockers:** résumé link, Pest Eye + Netflix live/repo links, contact-form decision,
+**production domain** (`siteUrl` is still `https://abdulqadir.dev`, so sitemap/canonical/OG
+URLs are all wrong until confirmed), and a Vercel account.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 12: Section-Transition Macro-Layer
 **Did:** all four boundaries, every one GSAP ScrollTrigger-scrubbed.
@@ -956,6 +1034,13 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   PostCSS plugin for `@tailwindcss/postcss`, and moving the `tokens` object in
   `tailwind.config.ts` into an `@theme` block in `globals.css` — worth doing before Phase 2
   adds gradients/shadows/glass utilities on top, and painful after.
+- **2026-08-21 (Phase 13) — added `accent-violet-text` (#A78BFA), a second violet.**
+  `DESIGN_SYSTEM.md` specifies one main accent, and this does not change it: `accent-violet`
+  remains the brand colour for fills, borders and glows. But that violet as **small text**
+  measures 3.49:1 on `bg-base` and 3.03:1 over the heading glow, failing WCAG AA (4.5:1), which
+  Lighthouse flagged. The new token is the same hue at 7.31:1 / 6.34:1 and is used only for
+  type and icons. Accessibility is non-negotiable per `CLAUDE.md` §4, so this wins over strict
+  single-accent purity. Don't revert `text-accent-violet-text` back to `text-accent-violet`.
 - **2026-08-21 (Phase 11) — the flagship hero transform does not pin below 640px.**
   `CLAUDE.md` §4 names scroll-pinning as the single most common source of jank on mobile
   Safari and explicitly allows a simpler per-section fallback on small viewports. Mobile gets

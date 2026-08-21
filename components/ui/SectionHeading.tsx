@@ -38,7 +38,7 @@ export function SectionHeading({
         className="pointer-events-none absolute -left-16 -top-24 h-56 w-56 rounded-pill bg-accent-violet opacity-[0.12] blur-3xl"
       />
       {eyebrow ? (
-        <p className="relative flex items-center gap-2 font-mono text-eyebrow uppercase text-accent-violet">
+        <p className="relative flex items-center gap-2 font-mono text-eyebrow uppercase text-accent-violet-text">
           {sparkle ? <Sparkles aria-hidden className="h-3.5 w-3.5" /> : null}
           {eyebrow}
         </p>

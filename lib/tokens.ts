@@ -23,6 +23,14 @@ export const palette = {
   "text-primary": "#F5F6FA",
   "text-secondary": "#9CA3AF",
   "accent-violet": "#7C3AED",
+  /**
+   * A lighter violet used **only for text and icons**. `accent-violet` is the brand accent for
+   * fills, borders and glows, but at 12px it measures 3.49:1 on `bg-base` and 3.03:1 over the
+   * section-heading glow — both below WCAG AA's 4.5:1, which Lighthouse flagged. This tint is
+   * the same hue at 7.31:1 and 6.34:1 respectively. Use `text-accent-violet` for type; keep
+   * `bg-accent-violet` / `border-accent-violet` for the brand accent itself.
+   */
+  "accent-violet-text": "#A78BFA",
   "accent-indigo": "#6366F1",
   "accent-cyan": "#22D3EE",
   "accent-pink": "#EC4899",

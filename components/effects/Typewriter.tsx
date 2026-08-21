@@ -74,7 +74,7 @@ export function Typewriter({
   return (
     <span className={className}>
       <span aria-hidden>{text}</span>
-      <span aria-hidden className="ml-0.5 inline-block animate-caret-blink text-accent-violet">
+      <span aria-hidden className="ml-0.5 inline-block animate-caret-blink text-accent-violet-text">
         _
       </span>
       {/* One stable, complete label for assistive tech instead of a character stream. */}

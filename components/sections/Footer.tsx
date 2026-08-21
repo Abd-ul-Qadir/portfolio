@@ -18,7 +18,7 @@ export function Footer() {
       <Container className="py-16">
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           <div className="max-w-sm">
-            <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-violet">
+            <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-violet-text">
               {identity.initials}
             </p>
             <p className="mt-4 text-lg font-medium text-text-primary">

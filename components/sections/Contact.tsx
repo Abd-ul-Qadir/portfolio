@@ -82,7 +82,7 @@ export function Contact() {
                         {Icon ? (
                           <Icon
                             aria-hidden
-                            className="h-5 w-5 shrink-0 text-accent-violet"
+                            className="h-5 w-5 shrink-0 text-accent-violet-text"
                           />
                         ) : null}
                         <span className="min-w-0">

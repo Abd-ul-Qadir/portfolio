@@ -141,7 +141,7 @@ export function Experience() {
                   </span>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <p className="font-mono text-eyebrow uppercase text-accent-violet">
+                    <p className="font-mono text-eyebrow uppercase text-accent-violet-text">
                       {entry.period}
                     </p>
                     <Badge tone={isEducation ? "accent" : "neutral"}>

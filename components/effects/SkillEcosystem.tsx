@@ -220,7 +220,7 @@ export function SkillEcosystem() {
         {active ? (
           <div className="rounded-card glass-surface px-4 py-3 text-center shadow-elevated">
             <p className="text-sm font-medium text-text-primary">{active.label}</p>
-            <p className="mt-1 font-mono text-xs text-accent-violet">
+            <p className="mt-1 font-mono text-xs text-accent-violet-text">
               {active.proficiency !== null
                 ? `${active.proficiency}% proficiency`
                 : "Supporting stack"}

@@ -90,7 +90,9 @@ export function Navbar() {
         <a
           href="#hero"
           className="font-mono text-sm tracking-mark text-text-primary"
-          aria-label={`${identity.fullName} — back to top`}
+          // The accessible name must start with the visible text, or it fails WCAG 2.5.3
+          // (label-in-name), which Lighthouse flags as a name/content mismatch.
+          aria-label={`${identity.initials} — ${identity.fullName}, back to top`}
         >
           {identity.initials}
         </a>
@@ -166,7 +168,7 @@ export function Navbar() {
                     className={cn(
                       "block py-2 font-mono text-sm uppercase tracking-label transition-colors",
                       activeId === item.id
-                        ? "text-accent-violet"
+                        ? "text-accent-violet-text"
                         : "text-text-secondary hover:text-text-primary",
                     )}
                   >

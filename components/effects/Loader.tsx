@@ -95,7 +95,7 @@ export default function Loader({ onDone }: LoaderProps) {
         {identity.roles[0]}
       </p>
 
-      <p className="mt-4 font-mono text-sm text-accent-violet" aria-hidden>
+      <p className="mt-4 font-mono text-sm text-accent-violet-text" aria-hidden>
         {"█".repeat(filled)}
         <span className="text-text-secondary">{"░".repeat(BAR_CELLS - filled)}</span>
         <span className="ml-3 text-text-primary">{progress}%</span>

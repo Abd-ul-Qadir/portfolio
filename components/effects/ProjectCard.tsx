@@ -155,7 +155,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
               </h3>
               <ArrowUpRight
                 aria-hidden
-                className="mt-1 h-5 w-5 shrink-0 text-text-secondary transition-all duration-300 ease-smooth group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-violet motion-reduce:transform-none"
+                className="mt-1 h-5 w-5 shrink-0 text-text-secondary transition-all duration-300 ease-smooth group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent-violet-text motion-reduce:transform-none"
               />
             </div>
           </motion.div>

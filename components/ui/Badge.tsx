@@ -12,7 +12,7 @@ interface BadgeProps {
 
 const toneStyles: Record<BadgeTone, string> = {
   neutral: "border-border-subtle text-text-secondary",
-  accent: "border-border-hover text-accent-violet",
+  accent: "border-border-hover text-accent-violet-text",
   positive: "border-border-subtle text-accent-emerald",
 };
 

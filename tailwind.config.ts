@@ -49,6 +49,8 @@ const config: Config = {
         },
         accent: {
           violet: v("accent-violet"),
+          /** Text/icon-safe violet — see the note in `lib/tokens.ts`. */
+          "violet-text": v("accent-violet-text"),
           indigo: v("accent-indigo"),
           cyan: v("accent-cyan"),
           pink: v("accent-pink"),

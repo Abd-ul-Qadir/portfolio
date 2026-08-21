@@ -35,7 +35,9 @@ export async function generateMetadata(
   // Distinct title and description per route — Phase 13's SEO pass depends on this being
   // real per-project copy rather than one global title reused everywhere.
   return {
-    title: `${project.title} — Abdul Qadir`,
+    // Just the project name: the root layout's title template appends
+    // " — Abdul Qadir". Repeating it here produced "Pest Eye — Abdul Qadir — Abdul Qadir".
+    title: project.title,
     description: project.pitch,
     alternates: { canonical: `${siteUrl}/projects/${project.slug}` },
     openGraph: {
@@ -77,7 +79,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
         </Link>
 
         <header className="mt-10 max-w-3xl">
-          <p className="font-mono text-eyebrow uppercase text-accent-violet">
+          <p className="font-mono text-eyebrow uppercase text-accent-violet-text">
             {project.type}
           </p>
           <h1 className="mt-4 text-heading font-semibold text-text-primary">

@@ -51,7 +51,7 @@ export function Hero() {
         <div className="flex flex-col items-start">
           <p
             style={rise(0)}
-            className="rise-in font-mono text-eyebrow uppercase text-accent-violet"
+            className="rise-in font-mono text-eyebrow uppercase text-accent-violet-text"
           >
             {identity.location}
           </p>

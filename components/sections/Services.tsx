@@ -70,7 +70,7 @@ export function Services() {
                       {Icon ? (
                         <span
                           data-depth="near"
-                          className="mb-6 inline-flex rounded-card border border-border-subtle bg-bg-surface p-3 text-accent-violet transition-transform duration-500 ease-smooth group-hover:rotate-6 group-hover:scale-110 motion-reduce:transform-none"
+                          className="mb-6 inline-flex rounded-card border border-border-subtle bg-bg-surface p-3 text-accent-violet-text transition-transform duration-500 ease-smooth group-hover:rotate-6 group-hover:scale-110 motion-reduce:transform-none"
                         >
                           <Icon aria-hidden className="h-6 w-6" />
                         </span>

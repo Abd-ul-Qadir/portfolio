@@ -280,5 +280,17 @@ try {
 
   socket.close();
 } finally {
-  chrome.kill();
+  // `child.kill()` on Windows terminates only the parent process and orphans every renderer
+  // child, which leaks Chrome processes across runs and quietly skews later measurements
+  // (a Lighthouse run competing with a dozen stray renderers scores far worse than the site
+  // deserves). Kill the whole process tree.
+  if (process.platform === "win32" && chrome.pid) {
+    try {
+      spawn("taskkill", ["/PID", String(chrome.pid), "/T", "/F"], { stdio: "ignore" });
+    } catch {
+      chrome.kill();
+    }
+  } else {
+    chrome.kill();
+  }
 }

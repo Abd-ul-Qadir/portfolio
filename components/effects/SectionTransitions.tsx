@@ -31,29 +31,29 @@ export function SectionTransitions() {
     media.add("(prefers-reduced-motion: no-preference)", () => {
       const triggers: ScrollTrigger[] = [];
 
-      /* -- Hero → About: About arrives from the bottom corner, following the ball ------ */
-      // Timed to the hero pin's *second half* — the leg where the neon ball is travelling
-      // back to the left — so About follows it in rather than racing it. The hero pin
-      // carries `refreshPriority: 1`, which is what makes these positions correct: without
-      // it this trigger measured against a layout with no pin spacer and finished while
-      // About was still far below the fold.
+      /* -- Hero → About: About rises into place as the hero transforms away ---------- */
+      // Paired with the hero shrinking and fading on its own pinned timeline, this reads as
+      // one view handing over to the next rather than the page merely scrolling. It is a
+      // separate ScrollTrigger on purpose: it belongs to About's own entry, and the hero's
+      // timeline is pinned, so folding this into it would tie About's position to the pin.
       const aboutInner = document.querySelector<HTMLElement>("#about [data-section-inner]");
-      const aboutSection = document.querySelector<HTMLElement>("#about");
-      if (aboutInner && aboutSection) {
+      if (aboutInner) {
         const tween = gsap.fromTo(
           aboutInner,
-          // Diagonally from the bottom-right, opposing the hero's exit to the top-left.
-          { xPercent: 12, yPercent: 26, opacity: 0, scale: 0.96 },
+          { yPercent: 14, opacity: 0, scale: 0.985 },
           {
-            xPercent: 0,
             yPercent: 0,
             opacity: 1,
             scale: 1,
             ease: "none",
             scrollTrigger: {
-              trigger: aboutSection,
-              start: "top bottom",
-              end: "top 55%",
+              trigger: document.querySelector("#about") as HTMLElement,
+              // Deliberately *inside* the viewport rather than "top bottom". The hero is
+              // pinned, and its pin spacer means a range starting at the viewport bottom is
+              // consumed while About is still parked off-screen — the tween finishes before
+              // it is ever visible, so it looks like nothing happens.
+              start: "top 88%",
+              end: "top 38%",
               scrub: true,
               invalidateOnRefresh: true,
             },

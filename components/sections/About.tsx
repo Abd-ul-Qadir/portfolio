@@ -18,7 +18,7 @@ export function About() {
       className="relative overflow-hidden py-section"
     >
 
-      <Container className="relative">
+      <Container className="relative" data-section-inner>
         <SectionHeading id="about-heading" eyebrow="About" accent="AI Engineer">
           Full Stack
         </SectionHeading>

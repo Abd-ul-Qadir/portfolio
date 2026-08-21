@@ -61,6 +61,8 @@ export interface Identity {
    * a layout change. The portrait-tied constellation runs over it. Drop the file into `public/` and fill this in.
    */
   readonly portrait: ContentImage | null;
+  /** Cut-out variant for the hero. See the note on the value. */
+  readonly portraitCutout: ContentImage | null;
   readonly socials: readonly SocialLink[];
 }
 
@@ -75,6 +77,16 @@ export const identity: Identity = {
   email: "abdulqadir12511@gmail.com",
   phone: "+92 324 542 24298",
   resumeUrl: null,
+  /**
+   * Background-removed variant of the portrait, used by the hero where the subject has to
+   * sit directly on the page with no frame. Generated from `portrait.png` by keying out the
+   * border-connected near-black backdrop (a flood fill, so the black tie and the shadows
+   * inside the jacket stay opaque). The framed About portrait still uses the original.
+   */
+  portraitCutout: {
+    src: "/portrait-cutout.png",
+    alt: "Abdul Qadir, in a suit, photographed in black and white.",
+  },
   portrait: {
     src: "/portrait.png",
     alt: "Abdul Qadir, in a suit, photographed in black and white against a dark background.",

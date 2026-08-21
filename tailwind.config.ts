@@ -79,6 +79,8 @@ const config: Config = {
       gridTemplateColumns: {
         /** About: portrait column narrower than the text column. */
         about: "minmax(0, 0.8fr) minmax(0, 1.2fr)",
+        /** Hero: copy gets the majority, portrait sits beside it. */
+        hero: "minmax(0, 1.15fr) minmax(0, 0.85fr)",
       },
       borderRadius: {
         card: "1rem",
@@ -98,6 +100,8 @@ const config: Config = {
       /** Generous, consistent section rhythm — the whitespace is doing real work here. */
       spacing: {
         section: "clamp(6rem, 12vw, 10rem)",
+        /** Navbar wordmark. Below the artwork's native 156px so it stays sharp at 2x. */
+        wordmark: "124px",
       },
       /**
        * One z-scale for the whole site, so the stacking order is decided here and not by
@@ -231,6 +235,14 @@ const config: Config = {
           opacity: "0.10",
           animationDelay: "-8s",
         },
+        /** Bloom behind the hero portrait. */
+        ".ambient-orb-hero": {
+          width: "30rem",
+          height: "30rem",
+          right: "-4rem",
+          bottom: "-2rem",
+          opacity: "0.13",
+        },
         ".ambient-orb-c": {
           width: "20rem",
           height: "20rem",
@@ -345,6 +357,23 @@ const config: Config = {
             opacity: "1",
             transform: "translateY(0)",
           },
+        },
+
+        /**
+         * Hero portrait treatment. The source photo is a subject on near-black, **not** a
+         * background-removed cutout (its alpha channel is fully opaque). `mix-blend-mode:
+         * screen` composites black to nothing against the dark page, so it reads as a cutout
+         * without keying — which matters because the hair is nearly as dark as the
+         * background and any luminance key would eat it. The mask feathers the crop edges so
+         * it dissolves into the page instead of ending on a hard line.
+         */
+        ".hero-portrait": {
+          // The source is a real cut-out (see `identity.portraitCutout`), so no blend mode is
+          // needed — an earlier `mix-blend-mode: screen` version lifted the image's near-black
+          // rectangle above the page background and left a visible box. This only feathers the
+          // bottom crop so the subject dissolves into the section instead of ending on a line.
+          maskImage: "linear-gradient(to bottom, black 76%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 76%, transparent 100%)",
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */

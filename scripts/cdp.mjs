@@ -195,6 +195,24 @@ try {
   await send(socket, "Page.enable");
   await send(socket, "Runtime.enable");
 
+  // Force the motion preference through CDP rather than a launch flag.
+  //
+  // `--reduced-motion` used to work only by *omitting* `--force-prefers-no-reduced-motion`,
+  // which means it never actually forced anything: it inherited the OS setting. That passed
+  // for months purely because this machine had Windows animations switched off, and silently
+  // became a no-op the moment they were switched back on. `Emulation.setEmulatedMedia` sets
+  // the feature for real, independent of the host.
+  if (!flags.includes("--system-motion")) {
+    await send(socket, "Emulation.setEmulatedMedia", {
+      features: [
+        {
+          name: "prefers-reduced-motion",
+          value: reducedMotion ? "reduce" : "no-preference",
+        },
+      ],
+    });
+  }
+
   // The Chrome profile is reused between runs (it is keyed by port), so its HTTP cache
   // survives too. That silently serves stale images after a file is replaced on disk under
   // the same name, which reads as "my change didn't apply" when the server is in fact

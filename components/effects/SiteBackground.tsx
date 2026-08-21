@@ -38,21 +38,18 @@ export function SiteBackground() {
           it is just the site-wide grid now rather than the Skills section's own. */}
       <DotGrid data-transition-dotgrid />
 
-      {/* The field itself. Counts are tuned for a viewport-sized canvas: dense enough to read
-          as a constellation, sparse enough to stay cheap behind every section. */}
-      {/* Held at 60% and with a shorter connection distance than the old hero-only field.
-          Behind a full page of body copy, a field at full strength reads *through* the text
-          (lines were visibly crossing the service cards' paragraphs) rather than sitting
-          behind it — and `DESIGN_SYSTEM.md` asks for ambience, not a competing layer. */}
+      {/* The field itself. Denser and at full strength, at Abdul's request — the earlier
+          64-particle / 60%-opacity version read as too faint once it was the only backdrop
+          on the page. Particle count is a flat number rather than area-scaled, so the same
+          value reads denser on a laptop than on a large monitor. */}
       <ConstellationMount
-        className="opacity-60"
-        particleCount={64}
-        mobileParticleCount={24}
-        connectionDistance={118}
+        particleCount={130}
+        mobileParticleCount={48}
+        connectionDistance={150}
         minRadius={0.7}
-        maxRadius={2}
+        maxRadius={2.2}
         speed={0.12}
-        glow={5}
+        glow={6}
         parallaxStrength={0.02}
         attractStrength={0}
       />

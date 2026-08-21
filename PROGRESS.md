@@ -44,6 +44,61 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 1 (cont.) — 2026-08-22 — Hero portrait, denser field, logo, hero→about handover
+
+**Constellation density.** Abdul found the unified field too faint: raised to 130 particles
+(48 on mobile), `connectionDistance` 118 → 150, and the `opacity-60` damping removed. It is
+now the page's main visual texture rather than a whisper.
+
+**Hero portrait, as a real cut-out.** The supplied `portrait.png` is *not* background-removed —
+its alpha channel is fully opaque and the backdrop is near-black (sampled RGB 2-7). First
+attempt used `mix-blend-mode: screen`, which left a **visible rectangle**: the page background
+is `#08090D`, not pure black, so screening a near-black image over it lifts the whole frame.
+Generated `public/portrait-cutout.png` instead, with Pillow:
+- a narrow luminance ramp (6 → 30) rather than a mid-grey threshold, because the hair is
+  nearly as dark as the backdrop and a naive key eats it;
+- a **flood fill from the borders**, so only background-*connected* darkness is removed — the
+  black tie and the shadows inside the jacket stay opaque, which a global threshold would have
+  punched holes through;
+- a 0.8px blur on the alpha so the edge is not scissor-cut.
+Result: corners transparent, subject opaque, 15% of the frame keyed out. `identity.portraitCutout`
+holds it; the framed About portrait still uses the original. **The script is not committed — if
+the source photo is ever replaced, re-derive the cut-out.** Better still, a properly
+background-removed PNG from Abdul would beat any key.
+
+**Hero layout.** Two columns (`lg:grid-cols-hero`), copy left / portrait right, portrait hidden
+below `lg` with `sizes` set so phones never download it. It has its own parallax on the hero's
+existing pinned timeline (lifts and fades faster than the copy, so the two planes separate).
+
+**Scroll indicator: removed** at Abdul's request. Before removing it, its position was fixed —
+it was `absolute bottom-8` inside the *transformed content wrapper*, whose height is only the
+copy block, so it anchored mid-hero instead of to the viewport bottom. Worth knowing if it ever
+comes back: it needs to be a direct child of the `<section>`.
+
+**Hero → About handover.** About's content now rises and fades into place (`yPercent 14 → 0`,
+`opacity 0 → 1`, slight scale) scrubbed against its own entry, paired with the hero shrinking
+away on the pinned timeline — so it reads as one view handing over to the next.
+**Note the timing trap:** the first version used `start: "top bottom"`, which the hero's pin
+spacer consumes while About is still parked off-screen, so the tween completed before it was
+ever visible and looked dead. It is now `top 88% → top 38%`. Measured: `y=94px/op 0` at scroll
+0 → `y=70/0.26` → `y=23/0.76` → settled.
+
+**Navbar wordmark.** Now uses Abdul's own `dark-logo.png` (as `public/brand/wordmark.png`) at
+124px wide — under its native 156px so it stays sharp at 2x. **It is a 156×29 raster and looks
+noticeably jagged**; a vector (SVG) or a 2-3x PNG would fix it properly.
+
+**⚠ A third verification hole found and fixed — this one invalidated a lot of claims.**
+`scripts/cdp.mjs --reduced-motion` never forced anything. It merely *omitted*
+`--force-prefers-no-reduced-motion`, so it inherited the OS setting. Every reduced-motion check
+from Phase 3 onward passed only because this machine had Windows animation effects switched
+off; the flag silently became a no-op the moment Abdul switched them on. It now uses
+`Emulation.setEmulatedMedia`, which sets the feature for real.
+**Everything was re-validated against the working flag and the conclusions all still hold:**
+macro layer fully at rest with the hero unpinned and content visible, typewriter static with no
+caret, and the new About handover applying no inline styles at all under reduced motion.
+*Lesson for future phases:* a negative test that can pass for the wrong reason is worse than no
+test. Assert the precondition (`reduceMatches=true`) inside the probe, not just the outcome.
+
 ### Session 1 (cont.) — 2026-08-22 — Two fixes from Abdul's testing + one background rework
 
 **1. CRITICAL, shipped since Phase 3: wheel and trackpad scrolling did nothing.**
@@ -1239,6 +1294,10 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
 
 - ~~Project / certificate / award images, and the About portrait~~ — **all supplied and
   wired 2026-08-21.** Zero image placeholders remain.
+- **Navbar wordmark is a 156x29 raster** and looks jagged. Needs an SVG or a 2-3x PNG from
+  Abdul.
+- **The hero portrait cut-out is derived, not supplied.** Regenerate it if `portrait.png`
+  changes; a real background-removed export would be better than any luminance key.
 - **Loader still appears ~600ms after first paint** when motion is enabled, instead of
   covering the page from the first frame. See the session entry dated 2026-08-21 for the full
   fix (SSR the overlay + an inline `<head>` script setting `data-loader`).

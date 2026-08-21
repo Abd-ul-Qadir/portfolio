@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
+import Image from "next/image";
 import type { CSSProperties } from "react";
 
 import { HeroChoreography } from "@/components/effects/HeroChoreography";
@@ -27,70 +28,90 @@ const rise = (index: number): CSSProperties => ({
 const [firstName, ...restOfName] = identity.fullName.split(" ");
 
 export function Hero() {
+  const portrait = identity.portraitCutout;
+
   return (
     <HeroChoreography
     >
-
       <Container className="relative">
-        <div className="flex flex-col items-start">
-          <p
-            style={rise(0)}
-            className="rise-in font-mono text-eyebrow uppercase text-accent-violet-text"
-          >
-            {identity.location}
-          </p>
+        <div className="grid items-center gap-10 lg:grid-cols-hero lg:gap-8">
+          <div className="flex flex-col items-start">
+            <p
+              style={rise(0)}
+              className="rise-in font-mono text-eyebrow uppercase text-accent-violet-text"
+            >
+              {identity.location}
+            </p>
 
-          <h1
-            id="hero-heading"
-            style={rise(1)}
-            className="rise-in mt-6 text-display font-semibold text-text-primary"
-          >
-            {firstName} <GradientText>{restOfName.join(" ")}</GradientText>
-          </h1>
+            <h1
+              id="hero-heading"
+              style={rise(1)}
+              className="rise-in mt-6 text-display font-semibold text-text-primary"
+            >
+              {firstName} <GradientText>{restOfName.join(" ")}</GradientText>
+            </h1>
 
-          <p
-            style={rise(2)}
-            className="rise-in mt-4 font-mono text-lg text-text-secondary sm:text-xl"
-          >
-            <Typewriter phrases={identity.roles} />
-          </p>
+            <p
+              style={rise(2)}
+              className="rise-in mt-4 font-mono text-lg text-text-secondary sm:text-xl"
+            >
+              <Typewriter phrases={identity.roles} />
+            </p>
 
-          <p
-            style={rise(3)}
-            className="rise-in mt-8 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg"
-          >
-            {identity.tagline}
-          </p>
+            <p
+              style={rise(3)}
+              className="rise-in mt-8 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg"
+            >
+              {identity.tagline}
+            </p>
 
-          <div style={rise(4)} className="rise-in mt-10 flex flex-wrap items-center gap-4">
-            <MagneticWrapper>
-              <Button href="#projects" cursorLabel="EXPLORE">
-                View projects
-                <ArrowRight aria-hidden className="h-4 w-4" />
-              </Button>
-            </MagneticWrapper>
-            <MagneticWrapper>
-              <Button href="#contact" variant="secondary" cursorLabel="OPEN">
-                <Mail aria-hidden className="h-4 w-4" />
-                Get in touch
-              </Button>
-            </MagneticWrapper>
+            <div style={rise(4)} className="rise-in mt-10 flex flex-wrap items-center gap-4">
+              <MagneticWrapper>
+                <Button href="#projects" cursorLabel="EXPLORE">
+                  View projects
+                  <ArrowRight aria-hidden className="h-4 w-4" />
+                </Button>
+              </MagneticWrapper>
+              <MagneticWrapper>
+                <Button href="#contact" variant="secondary" cursorLabel="OPEN">
+                  <Mail aria-hidden className="h-4 w-4" />
+                  Get in touch
+                </Button>
+              </MagneticWrapper>
+            </div>
           </div>
+
+          {/* Portrait. Hidden below `lg`: at narrow widths it would either crowd the copy or
+              shrink to a thumbnail, and it costs bandwidth on exactly the devices least able
+              to spare it. `sizes` reflects that, so phones never download it.
+              `HeroChoreography` gives it its own parallax on the scrubbed hero timeline. */}
+          {portrait ? (
+            <div
+              data-hero-portrait
+              className="relative hidden h-full w-full items-end justify-self-end lg:flex"
+            >
+              {/* Violet bloom behind the subject, so the cutout sits in light rather than
+                  floating on flat black. */}
+              <div aria-hidden className="ambient-orb ambient-orb-hero bg-accent-violet" />
+
+              <div
+                style={rise(2)}
+                className="rise-in relative aspect-portrait w-full max-w-lg"
+              >
+                <Image
+                  src={portrait.src}
+                  alt={portrait.alt}
+                  fill
+                  // Above the fold, and the likely LCP element on desktop.
+                  priority
+                  sizes="(min-width: 1024px) 42vw, 1px"
+                  className="hero-portrait object-contain object-bottom"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       </Container>
-
-      <a
-        href="#about"
-        style={rise(6)}
-        aria-label="Scroll to the about section"
-        className="rise-in absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-text-secondary transition-colors hover:text-text-primary"
-      >
-        <span className="font-mono text-eyebrow uppercase">Scroll</span>
-        <ArrowDown
-          aria-hidden
-          className="h-4 w-4 animate-arrow-nudge motion-reduce:animate-none"
-        />
-      </a>
     </HeroChoreography>
   );
 }

@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
+
 import { identity, navItems } from "@/content/data";
 import { useReducedMotion } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
@@ -87,14 +89,18 @@ export function Navbar() {
           scrolled ? "h-14" : "h-20",
         )}
       >
-        <a
-          href="#hero"
-          className="font-mono text-sm tracking-mark text-text-primary"
-          // The accessible name must start with the visible text, or it fails WCAG 2.5.3
-          // (label-in-name), which Lighthouse flags as a name/content mismatch.
-          aria-label={`${identity.initials} — ${identity.fullName}, back to top`}
-        >
-          {identity.initials}
+        <a href="#hero" aria-label={`${identity.fullName}, back to top`} className="flex items-center">
+          {/* Abdul's own wordmark. The source is 156x29, so it is rendered at 124px wide —
+              under its native size, which keeps it from looking soft on 2x displays. It is
+              light-on-dark artwork already, so no filter is needed. */}
+          <Image
+            src="/brand/wordmark.png"
+            alt={identity.fullName}
+            width={124}
+            height={23}
+            priority
+            className="h-auto w-wordmark"
+          />
         </a>
 
         <ul className="hidden items-center gap-8 md:flex">

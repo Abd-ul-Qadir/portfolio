@@ -166,8 +166,13 @@ const wrap = (source) => `(async () => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const target = Math.max(0, Math.min(y, max));
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      if (window.__lenis) window.__lenis.scrollTo(target, { immediate: true, force: true });
-      else window.scrollTo(0, target);
+      // Record which path moved the page. This helper silently falling back to
+      // `window.scrollTo` is what hid a real bug for nine phases: Lenis was never being
+      // driven, so wheel/trackpad input did nothing, yet every scroll probe passed because
+      // it was quietly using the native path instead. If a probe expects Lenis to be
+      // active, assert on `window.__scrollPath`.
+      if (window.__lenis) { window.__scrollPath = "lenis"; window.__lenis.scrollTo(target, { immediate: true, force: true }); }
+      else { window.__scrollPath = "native"; window.scrollTo(0, target); }
       await frame();
       await frame();
       await sleep(150);
@@ -258,6 +263,26 @@ try {
       await send(socket, "Input.dispatchKeyEvent", { type: "keyUp", key: ch });
       await delay(20);
     }
+  }
+
+  // `--wheel <deltaY>` dispatches a real wheel event through the input pipeline, the way a
+  // trackpad or mouse does. A synthetic `new WheelEvent(...)` is not equivalent: it cannot
+  // trigger the browser's own scrolling, so it cannot distinguish "the page scrolls" from
+  // "a library swallowed the input".
+  if (flags.includes("--wheel")) {
+    const deltaY = Number(flags[flags.indexOf("--wheel") + 1]) || 300;
+    for (let i = 0; i < 6; i += 1) {
+      await send(socket, "Input.dispatchMouseEvent", {
+        type: "mouseWheel",
+        x: 600,
+        y: 400,
+        deltaX: 0,
+        deltaY,
+        pointerType: "mouse",
+      });
+      await delay(80);
+    }
+    await delay(900);
   }
 
   if (pressTabCount > 0) {

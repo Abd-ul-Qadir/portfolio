@@ -1,13 +1,47 @@
 "use client";
 
-import { ReactLenis, type LenisRef } from "lenis/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { ReactLenis, useLenis } from "lenis/react";
+import { useEffect, type ReactNode } from "react";
 
 import { connectLenisToScrollTrigger } from "@/lib/gsap";
 import { useReducedMotion } from "@/lib/hooks";
 
 interface SmoothScrollProviderProps {
   children: ReactNode;
+}
+
+/**
+ * Wires the Lenis instance into GSAP.
+ *
+ * **This must read the instance from context, not from a ref on `<ReactLenis>`.** The
+ * original version did `lenisRef.current?.lenis` inside an effect keyed on `[reducedMotion]`,
+ * and bailed out with `if (!lenis) return`. When the ref was not yet populated on that single
+ * run, the effect never re-ran, so `connectLenisToScrollTrigger` was never called — and with
+ * `autoRaf: false` that means **nothing ever calls `lenis.raf()`**. Lenis then swallows wheel
+ * and trackpad input without ever applying it, while dragging the native scrollbar still
+ * works, because that path never goes through Lenis. That was a real, shipped bug.
+ *
+ * Living inside `<ReactLenis>` and using `useLenis()` removes the timing question entirely:
+ * the hook returns `undefined` until the instance exists and then re-renders with it, and the
+ * effect below is keyed on that value, so the wiring happens exactly once the instance is
+ * real.
+ */
+function LenisGsapBridge() {
+  const lenis = useLenis();
+
+  useEffect(() => {
+    if (!lenis) return;
+
+    // Exposed for `scripts/cdp.mjs` (and manual debugging) so a driver can move the page to
+    // an exact scroll position. Development only — never shipped.
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __lenis?: unknown }).__lenis = lenis;
+    }
+
+    return connectLenisToScrollTrigger(lenis);
+  }, [lenis]);
+
+  return null;
 }
 
 /**
@@ -22,28 +56,15 @@ interface SmoothScrollProviderProps {
  * position rather than a fake scroller.
  */
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
-  const lenisRef = useRef<LenisRef>(null);
   const reducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    const lenis = lenisRef.current?.lenis;
-    if (!lenis) return;
-
-    // Exposed for `scripts/cdp.mjs` (and manual debugging) so a driver can move the page to
-    // an exact scroll position. Development only — never shipped.
-    if (process.env.NODE_ENV !== "production") {
-      (window as unknown as { __lenis?: unknown }).__lenis = lenis;
-    }
-
-    return connectLenisToScrollTrigger(lenis);
-  }, [reducedMotion]);
 
   if (reducedMotion) {
     return <>{children}</>;
   }
 
   return (
-    <ReactLenis root options={{ autoRaf: false }} ref={lenisRef}>
+    <ReactLenis root options={{ autoRaf: false }}>
+      <LenisGsapBridge />
       {children}
     </ReactLenis>
   );

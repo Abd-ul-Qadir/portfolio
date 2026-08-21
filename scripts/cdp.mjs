@@ -183,6 +183,13 @@ try {
   await send(socket, "Page.enable");
   await send(socket, "Runtime.enable");
 
+  // The Chrome profile is reused between runs (it is keyed by port), so its HTTP cache
+  // survives too. That silently serves stale images after a file is replaced on disk under
+  // the same name, which reads as "my change didn't apply" when the server is in fact
+  // correct. Always fetch fresh.
+  await send(socket, "Network.enable");
+  await send(socket, "Network.setCacheDisabled", { cacheDisabled: true });
+
   if (viewport) {
     await send(socket, "Emulation.setDeviceMetricsOverride", {
       width: viewport.width,

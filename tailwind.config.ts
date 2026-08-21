@@ -108,6 +108,14 @@ const config: Config = {
         loader: "45",
         cursor: "50",
       },
+      letterSpacing: {
+        /** Mono UI labels: nav items, badges, button text. */
+        label: "0.15em",
+        /** Wordmark and loader lettering. */
+        mark: "0.2em",
+        /** Section eyebrows. */
+        eyebrow: "0.3em",
+      },
       opacity: {
         /** The grain layer's resting opacity — barely perceptible by design. */
         grain: "0.035",

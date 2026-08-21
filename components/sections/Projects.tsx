@@ -80,7 +80,7 @@ export function Projects() {
                 aria-selected={selected}
                 onClick={() => setFilter(tab.id)}
                 className={cn(
-                  "rounded-pill border px-4 py-2 font-mono text-xs uppercase tracking-[0.15em] transition-all duration-300 ease-smooth",
+                  "rounded-pill border px-4 py-2 font-mono text-xs uppercase tracking-label transition-all duration-300 ease-smooth",
                   selected
                     ? "border-border-hover bg-bg-glass text-text-primary shadow-glow"
                     : "border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary",
@@ -141,9 +141,10 @@ export function Projects() {
                         <h3 className="text-base font-medium text-text-primary">
                           {credential.title}
                         </h3>
-                        <p className="mt-1 font-mono text-xs uppercase tracking-[0.15em] text-text-secondary">
+                        <p className="mt-1 font-mono text-xs text-text-secondary">
                           {credential.issuer ??
                             (credential.kind === "award" ? "Award" : "Certification")}
+                          {credential.date ? ` · ${credential.date}` : ""}
                         </p>
                       </div>
                       {isLink ? (

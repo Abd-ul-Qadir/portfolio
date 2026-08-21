@@ -92,7 +92,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
           ref={frame}
           onPointerMove={handlePointerMove}
           onPointerLeave={resetParallax}
-          className="relative aspect-project overflow-hidden rounded-panel border border-border-subtle transition-colors duration-500 ease-smooth group-hover:border-border-hover group-focus-within:border-border-hover"
+          className="relative aspect-square overflow-hidden rounded-panel border border-border-subtle transition-colors duration-500 ease-smooth group-hover:border-border-hover group-focus-within:border-border-hover"
         >
           {/* The image itself drifts toward the cursor; the frame stays put. */}
           <motion.div
@@ -108,7 +108,7 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
             }}
           >
             <MediaFrame
-              image={project.image}
+              image={project.cardImage}
               pendingLabel="Image pending"
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="h-full w-full"

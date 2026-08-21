@@ -18,7 +18,7 @@ export function Footer() {
       <Container className="py-16">
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           <div className="max-w-sm">
-            <p className="font-mono text-eyebrow uppercase tracking-[0.3em] text-accent-violet">
+            <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-violet">
               {identity.initials}
             </p>
             <p className="mt-4 text-lg font-medium text-text-primary">
@@ -75,7 +75,7 @@ export function Footer() {
           </p>
           <a
             href="#hero"
-            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-label text-text-secondary transition-colors hover:text-text-primary"
           >
             Back to top
             <ArrowUp aria-hidden className="h-4 w-4" />

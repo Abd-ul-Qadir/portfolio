@@ -34,7 +34,7 @@ interface ButtonAsLink extends CommonProps {
 export type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
-  "group relative inline-flex items-center justify-center gap-2 rounded-pill font-mono text-xs uppercase tracking-[0.15em] transition-all duration-300 ease-smooth disabled:pointer-events-none disabled:opacity-40";
+  "group relative inline-flex items-center justify-center gap-2 rounded-pill font-mono text-xs uppercase tracking-label transition-all duration-300 ease-smooth disabled:pointer-events-none disabled:opacity-40";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:

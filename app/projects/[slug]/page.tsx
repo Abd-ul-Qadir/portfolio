@@ -70,7 +70,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
         <Link
           href="/#projects"
           data-cursor-label="BACK"
-          className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.15em] text-text-secondary transition-colors hover:text-text-primary"
+          className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-label text-text-secondary transition-colors hover:text-text-primary"
         >
           <ArrowLeft aria-hidden className="h-4 w-4" />
           Back to projects
@@ -87,7 +87,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
         </header>
 
         <MediaFrame
-          image={project.image}
+          image={project.heroImage}
           pendingLabel="Project hero image pending"
           sizes="(min-width: 1152px) 72rem, 100vw"
           // The only image on the page that should not be lazy.
@@ -138,7 +138,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
                 ) : null}
               </div>
             ) : (
-              <p className="mt-8 font-mono text-xs uppercase tracking-[0.15em] text-text-secondary">
+              <p className="mt-8 font-mono text-xs uppercase tracking-label text-text-secondary">
                 Live link coming soon
               </p>
             )}

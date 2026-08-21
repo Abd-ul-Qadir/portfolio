@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Source image library. `public/` holds the copies the site actually serves; these are the
+# originals Abdul supplied and are not needed for a build.
+/assets

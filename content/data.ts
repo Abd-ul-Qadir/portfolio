@@ -56,9 +56,9 @@ export interface Identity {
   /** `[TODO]` in the brief — no CV link supplied yet. */
   readonly resumeUrl: string | null;
   /**
-   * `[TODO]` — the About-section portrait has not been supplied. While this is `null` the
-   * About section renders a placeholder holding the right aspect ratio, and the portrait-tied
-   * constellation still runs over it. Drop the file into `public/` and fill this in.
+   * The About-section portrait. Supplied 2026-08-21 at 1374x1727, which is almost exactly the
+   * `aspect-portrait` (4:5) token the About layout was built against, so it dropped in without
+   * a layout change. The portrait-tied constellation runs over it. Drop the file into `public/` and fill this in.
    */
   readonly portrait: ContentImage | null;
   readonly socials: readonly SocialLink[];
@@ -75,7 +75,10 @@ export const identity: Identity = {
   email: "abdulqadir12511@gmail.com",
   phone: "+92 324 542 24298",
   resumeUrl: null,
-  portrait: null,
+  portrait: {
+    src: "/portrait.png",
+    alt: "Abdul Qadir, in a suit, photographed in black and white against a dark background.",
+  },
   socials: [
     { label: "GitHub", href: "https://github.com/Abd-ul-Qadir", icon: "github" },
     {
@@ -257,12 +260,21 @@ export interface Project {
   readonly date: string;
   readonly stack: readonly string[];
   readonly abstract: string;
-  /** `[TODO]` — hide the "Live Preview" button while null. */
+  /** Hide the "Live Preview" button while null. */
   readonly liveUrl: string | null;
   /** `[TODO]` — hide the repo link while null. */
   readonly repoUrl: string | null;
-  /** `[TODO]` — hero image not supplied yet; render the placeholder treatment. */
-  readonly image: ContentImage | null;
+  /**
+   * The landing-page card thumbnail: the square system-overview graphic from
+   * `assets/images/portfolio/`. The card frame is square (`aspect-square`) to match, so the
+   * graphic is never cropped.
+   */
+  readonly cardImage: ContentImage | null;
+  /**
+   * The detail-page hero: the wide screenshot of the running application from
+   * `assets/images/project-detail/`.
+   */
+  readonly heroImage: ContentImage | null;
 }
 
 export const projects: readonly Project[] = [
@@ -279,7 +291,14 @@ export const projects: readonly Project[] = [
       "Plants are affected by many pests, one of agriculture's biggest problems — roughly 40% of global crops are lost to pests annually (~$69B in economic loss). Rural farmers often lack the resources for effective pest control, and manual identification is slow, inaccurate, and costly. Pest Eye uses deep learning to classify crop pests from images across a cross-platform system, trained on a large pest dataset for quick identification. By analyzing past pest-attack data it also provides predictive insights to help prevent future infestations — giving farmers without direct expert access pesticide recommendations and automated, history-based notifications.",
     liveUrl: null,
     repoUrl: null,
-    image: null,
+    cardImage: {
+      src: "/projects/pest-eye-card.jpeg",
+      alt: "Diagram of the Pest Eye system: field images feed a leaf-mounted camera node that identifies aphids, ladybird predators and larvae, then reports pest monitoring counts, a predator-to-prey ecosystem balance assessment, and actionable spraying recommendations. Built with React, FastAPI and Firebase.",
+    },
+    heroImage: {
+      src: "/projects/pest-eye-hero.jpg",
+      alt: "The Pest Eye web app's landing screen — the headline \u201cWith AI, identify pests instantly\u201d over a photograph of a tractor in a wheat field at sunset, with Upload Image and View History buttons.",
+    },
   },
   {
     slug: "customer-segmentation-rfm-kmeans",
@@ -292,9 +311,18 @@ export const projects: readonly Project[] = [
     stack: ["Python", "Gradio", "Hugging Face"],
     abstract:
       "Applies RFM (Recency, Frequency, Monetary) analysis combined with KMeans clustering to group customers by purchasing behavior, using the UCI Online Retail dataset. The goal is to surface distinct customer groups for targeted marketing — the pipeline covers data preprocessing, exploratory data analysis, unsupervised learning, model deployment, and feedback collection, with the final model deployed through a Gradio web interface on Hugging Face Spaces. Effectiveness is enhanced through interactive visualizations and iterative improvements based on real user feedback.",
-    liveUrl: null,
+    // Read off the deployment screenshot Abdul supplied and confirmed live (HTTP 200).
+    liveUrl: "https://huggingface.co/spaces/abdulqadir12511/Customer_Segmentation",
     repoUrl: null,
-    image: null,
+    cardImage: {
+      src: "/projects/customer-segmentation-card.jpeg",
+      alt:
+        "Infographic titled “RFM Customer Segmentation”: four customer groups — 34% loyal customers, 21% high spenders, 28% recent and frequent, and 17% at risk — radiating from a central RFM Intelligence Centre, with Python, Gradio and Hugging Face logos along the bottom.",
+    },
+    heroImage: {
+      src: "/projects/customer-segmentation-hero.jpg",
+      alt: "The Customer Segmentation Gradio app running on Hugging Face Spaces, with Recency, Frequency and Monetary input fields, a Predict Segment button, and a bar chart of average RFM values per cluster.",
+    },
   },
   {
     slug: "netflix-stock-price-predictor",
@@ -309,7 +337,15 @@ export const projects: readonly Project[] = [
       "A web application that predicts Netflix's future stock price by training a linear regression model on historical price data, then serving predictions through a Django-backed web app.",
     liveUrl: null,
     repoUrl: null,
-    image: null,
+    cardImage: {
+      src: "/projects/netflix-stock-price-card.jpeg",
+      alt:
+        "Infographic titled “Netflix (NFLX) Stock Predictor” showing a current price of $450.23 USD: subscriber growth, content performance, global market trends and macroeconomic data feed an AI model core that outputs a median forecast of $472.00 with a $430–$495 range, with HTML, CSS, JavaScript and Django logos along the bottom.",
+    },
+    heroImage: {
+      src: "/projects/netflix-stock-price-hero.png",
+      alt: "The Netflix Stock Price Prediction System web app, showing a form for open, high, low and adjusted close price plus volume, over a large red Netflix wordmark on black.",
+    },
   },
 ];
 
@@ -384,105 +420,165 @@ export interface Credential {
   readonly id: string;
   readonly kind: CredentialKind;
   readonly title: string;
-  /** Issuing organisation, where the brief states one legibly. */
+  /** Issuing organisation, transcribed from the certificate itself. */
   readonly issuer: string | null;
+  /** When it was awarded, as printed on the certificate. */
+  readonly date: string | null;
   /** `[TODO]` — open a lightbox instead of navigating while null. */
   readonly url: string | null;
   /** `[TODO]` — certificate/award images not supplied yet. */
   readonly image: ContentImage | null;
 }
 
+/**
+ * Titles, issuers and dates below are transcribed from the certificate images Abdul supplied
+ * on 2026-08-21, which are more precise than the screenshot-derived wording in
+ * `CONTENT_BRIEF.md`. Where the two disagree, the certificate wins — it is the primary source.
+ * Every `url` is a real verification link, checked to return HTTP 200.
+ */
 export const certifications: readonly Credential[] = [
   {
-    id: "python-specialization",
+    id: "python-for-everybody",
     kind: "certification",
-    title: "Python Specialization",
-    issuer: "Coursera",
-    url: null,
-    image: null,
+    // The brief called this "Python Specialization"; the certificate is the individual
+    // course, so the exact course name is used rather than the broader claim.
+    title: "Programming for Everybody (Getting Started with Python)",
+    issuer: "University of Michigan · Coursera",
+    date: "Dec 2023",
+    url: "https://coursera.org/verify/2CCTQBHBYKRE",
+    image: {
+      src: "/credentials/python-for-everybody.jpeg",
+      alt: "Coursera course certificate awarding Abdul Qadir completion of Programming for Everybody (Getting Started with Python), authorised by the University of Michigan, dated 23 December 2023.",
+    },
   },
   {
-    id: "javascript-programming",
+    id: "programming-with-javascript",
     kind: "certification",
-    title: "JavaScript Prog.",
-    issuer: "Meta, via Coursera",
-    url: null,
-    image: null,
+    title: "Programming with JavaScript",
+    issuer: "Meta · Coursera",
+    date: "Aug 2023",
+    url: "https://coursera.org/verify/5NHZQ49GDDUS",
+    image: {
+      src: "/credentials/programming-with-javascript.jpeg",
+      alt: "Coursera course certificate awarding Abdul Qadir completion of Programming with JavaScript, authorised by Meta, dated 16 August 2023.",
+    },
   },
   {
-    id: "django-framework",
+    id: "django-web-framework",
     kind: "certification",
-    title: "Django Framework",
-    issuer: "Meta, via Coursera",
-    url: null,
-    image: null,
+    title: "Django Web Framework",
+    issuer: "Meta · Coursera",
+    date: "Mar 2024",
+    url: "https://coursera.org/verify/AVVJCNWSY23C",
+    image: {
+      src: "/credentials/django-web-framework.jpeg",
+      alt: "Coursera course certificate awarding Abdul Qadir completion of Django Web Framework, authorised by Meta, dated 19 March 2024.",
+    },
   },
   {
     id: "version-control",
     kind: "certification",
     title: "Version Control",
-    issuer: "Meta, via Coursera",
-    url: null,
-    image: null,
+    issuer: "Meta · Coursera",
+    date: "Feb 2024",
+    url: "https://coursera.org/verify/LCVD2YSDVLZM",
+    image: {
+      src: "/credentials/version-control.jpeg",
+      alt: "Coursera course certificate awarding Abdul Qadir completion of Version Control, authorised by Meta, dated 24 February 2024.",
+    },
   },
   {
     id: "n8n-no-code-ai-agent-builder",
     kind: "certification",
     title: "n8n Course: No Code AI Agent Builder",
-    issuer: null,
+    issuer: "Simplilearn SkillUp",
+    date: "Nov 2025",
+    // Simplilearn prints a certificate code (9479107) rather than a verification URL, so this
+    // one opens the image lightbox instead of a link.
     url: null,
-    image: null,
+    image: {
+      src: "/credentials/n8n-no-code-ai-agent-builder.jpg",
+      alt: "Simplilearn SkillUp certificate of completion awarding Abdul Qadir the n8n Course: No Code AI Agent Builder, dated 26 November 2025.",
+    },
   },
 ];
 
+/**
+ * Awards, ordered strongest first — the two wins lead. None of the award certificates carry a
+ * public verification URL, so every one opens the image lightbox.
+ */
 export const awards: readonly Credential[] = [
   {
-    id: "best-developer",
+    id: "air-robotronics-cpp-winner",
     kind: "award",
-    title: "Best Developer",
-    issuer: null,
+    title: "Winner — Programming in C++, AIR ROBOTRONICS '24",
+    issuer: "Robotics & Automation Society, Air University AACK",
+    date: "2024",
     url: null,
-    image: null,
+    image: {
+      src: "/credentials/air-robotronics-cpp-winner.png",
+      alt: "Certificate of appreciation naming Abdul Qadir the winner of Programming in C++ at AIR ROBOTRONICS '24, organised by the Robotics & Automation Society at Air University Aerospace & Aviation Campus Kamra.",
+    },
   },
   {
     id: "hult-prize",
     kind: "award",
-    title: "Certificate of Participation",
-    issuer: "HULT PRIZE",
+    title: "Hult Prize — Winning Team, OnCampus Program",
+    issuer: "Hult Prize Foundation · Air University AACK",
+    date: "Feb 2025",
     url: null,
-    image: null,
+    image: {
+      src: "/credentials/hult-prize-winning-team.png",
+      alt: "Hult Prize certificate recognising Abdul Qadir as a member of the winning team at the 2024-2025 OnCampus Program, Air University Aerospace and Aviation Campus Kamra, dated 27 February 2025.",
+    },
   },
   {
-    id: "data-fest-2024",
+    id: "pbs-data-fest-2024",
     kind: "award",
-    title: "Participation, Data Fest 2024",
-    issuer: "Bureau of Statistics",
+    title: "Certificate of Participation — Data Fest 2024",
+    issuer: "Pakistan Bureau of Statistics",
+    date: "Oct 2024",
     url: null,
-    image: null,
-  },
-  {
-    id: "visio-spark-2024",
-    kind: "award",
-    title: "Certificate of Participation (20th Episode of VisioSpark)",
-    issuer: "Visio Spark 2024",
-    url: null,
-    image: null,
+    image: {
+      src: "/credentials/pbs-data-fest-2024.png",
+      alt: "Pakistan Bureau of Statistics certificate of participation awarded to Abdul Qadir for presenting a project at Data Fest 2024, Pak China Friendship Centre Islamabad, 21 to 22 October 2024.",
+    },
   },
   {
     id: "rebooting-the-future",
     kind: "award",
-    title: "Certificate of Participation (AI competition)",
-    issuer: "Rebooting the Future",
+    title: "Certificate of Participation — Rebooting the Future",
+    issuer: "Air University",
+    date: "May 2025",
     url: null,
-    image: null,
+    image: {
+      src: "/credentials/rebooting-the-future.png",
+      alt: "Air University certificate of participation awarded to Abdul Qadir in recognition of research and presentation at Rebooting the Future, 23 May 2025.",
+    },
+  },
+  {
+    id: "visiospark-2024",
+    kind: "award",
+    title: "Certificate of Participation — 20th Episode of VisioSpark",
+    issuer: "VisioSpark 2024 · COMSATS University Islamabad, Wah Campus",
+    date: "2024",
+    url: null,
+    image: {
+      src: "/credentials/visiospark-2024.png",
+      alt: "VisioSpark 2024 certificate of participation presented to Abdul Qadir for the 20th episode of VisioSpark at COMSATS University Islamabad, Wah Campus.",
+    },
   },
   {
     id: "air-university-appreciation",
     kind: "award",
-    title: "Certificate of Appreciation",
-    issuer: "Air University Aerospace & Aviation Campus",
+    title: "Certificate of Appreciation — Students' Orientation Day",
+    issuer: "Air University Aerospace & Aviation Campus, Kamra",
+    date: "2024",
     url: null,
-    image: null,
+    image: {
+      src: "/credentials/air-university-appreciation.png",
+      alt: "Air University Aerospace & Aviation Campus Kamra certificate of appreciation awarded to Abdul Qadir for assisting in management of the Students' Orientation Day function 2024.",
+    },
   },
 ];
 

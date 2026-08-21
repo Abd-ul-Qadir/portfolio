@@ -5,7 +5,7 @@
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
 Last updated: 2026-08-20
-Repo status: git initialised, Phases 0–11 committed
+Repo status: git initialised, Phases 0–11 committed; real image assets wired in
 
 ---
 
@@ -42,6 +42,72 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 1 (cont.) — 2026-08-21 — Real assets wired in (Abdul supplied images)
+**Did:** Abdul dropped his image library into `assets/` at the repo root. Next only serves
+static files from `public/`, so the ones the site uses were copied across with clean,
+role-stating names and wired into `content/data.ts`. **Every `[TODO]` image placeholder is now
+gone — the count went 14 → 0.**
+
+- **Portrait** → `/portrait.png`. Supplied at 1374x1727, almost exactly the `aspect-portrait`
+  (4:5) token the About layout was already built against, so it dropped in with no layout
+  change. (`homepage/dark-home-image.png` is byte-identical to `profile-image.png` — md5
+  `fe0dbf43` — so only one copy was taken.)
+- **Projects** — each has two images, and **which goes where is Abdul's explicit instruction**:
+  the square graphic from `assets/images/portfolio/` is the **landing-page card**, and the wide
+  app screenshot from `assets/images/project-detail/` is the **detail-page hero**. The `Project`
+  type now has `cardImage` and `heroImage` (named for where they are used, not what they show)
+  and the files are `*-card.*` / `*-hero.*` to match. The card frame changed from `aspect-project`
+  (16:11) to **`aspect-square`**, because the source graphics are 2560x2560 and a 16:11 frame
+  cropped off their titles and bottom panels.
+- **⚠ Two source files are misnamed and were swapped to match their contents.**
+  `portfolio/Customer_Segmentaion.jpeg` actually contains the **Netflix (NFLX) Stock Predictor**
+  graphic, and `portfolio/Netflix_Stock_Price.jpeg` actually contains the **RFM Customer
+  Segmentation** graphic. Confirmed by opening both — and the embedded tech logos settle it
+  (Python/Gradio/Hugging Face on the RFM one, HTML/CSS/JS/Django on the Netflix one). The files
+  in `public/` are named for their *content*, so `customer-segmentation-card.jpeg` really is the
+  RFM graphic. **Do not "fix" this by matching the original filenames.** The originals in
+  `assets/` were left untouched.
+- **Certifications** — images plus **real verification URLs read off the certificates
+  themselves**, each checked to return HTTP 200: Programming for Everybody
+  (`2CCTQBHBYKRE`), Programming with JavaScript (`5NHZQ49GDDUS`), Django Web Framework
+  (`AVVJCNWSY23C`), Version Control (`LCVD2YSDVLZM`). The n8n one is Simplilearn and prints a
+  certificate code rather than a URL, so it stays `url: null` and opens the lightbox.
+- **Awards** — all six wired, with titles/issuers/dates transcribed from the certificates,
+  which are more precise than the screenshot-derived wording in `CONTENT_BRIEF.md`. A `date`
+  field was added to `Credential` and now shows on each card. Ordered strongest first.
+- **Live link recovered:** the Customer Segmentation screenshot shows the Hugging Face Space
+  `abdulqadir12511/Customer_Segmentation`; the URL returns 200 and is now wired as that
+  project's `liveUrl`, so its "Live preview" button is live. The other two remain `null` and
+  correctly render no button.
+- **Favicon** is now Abdul's own mark (`app/favicon.ico` + `app/icon.png`), replacing the
+  placeholder AQ `icon.svg` generated in Phase 0.
+- Assets deliberately **not** used: `logo/dark-logo.png` is a 156x29 raster wordmark (the
+  navbar's typographic "AQ" is crisper at any size), and `svg/linked.svg` + `svg/instagram.svg`
+  are an incomplete social set with **no GitHub mark** — a partial set is worse than the
+  current text labels. They remain in `assets/` if wanted later.
+
+**Also fixed, found while auditing:**
+- `tracking-[0.15em]` / `[0.2em]` / `[0.3em]` were Tailwind **arbitrary values** in eight
+  places, which breaks Phase 2's rule. My earlier audit grep (`\[[a-z-]*:`) only caught the
+  `[property:value]` form and missed bare `[0.15em]`. Added named `letterSpacing` tokens
+  (`tracking-label` / `tracking-mark` / `tracking-eyebrow`). **Use the widened audit from now
+  on:** `grep -rno "tracking-\[[^]]*\]\|leading-\[[^]]*\]\|text-\[[^]]*\]\|w-\[[^]]*\]\|h-\[[^]]*\]" app components`.
+- `scripts/cdp.mjs` now sends `Network.setCacheDisabled`. The driver reuses one Chrome profile
+  per port, so its HTTP cache survived between runs; combined with Next's own
+  `.next/cache/images`, screenshots kept showing the **pre-swap** images long after the server
+  was serving the correct ones. I chased that for several rounds — curl of
+  `/_next/image?...` proved the server right and the screenshot wrong. **If an image change
+  seems not to apply, `rm -rf .next` before doubting the code.**
+
+**Verified:** 15 images on the homepage, **0 broken, 0 without alt text, 0 whose alt is a
+filename**, all lazy, all through `next/image`; all three detail heroes resolve to the correct
+`-hero` file and are eager-loaded; each card now shows its own project's graphic (screenshot
+checked after a full cache clear); certification links resolve to the four verify URLs and the
+n8n entry opens the lightbox; `npm run build`, `npm run lint` and `tsc --noEmit` all clean.
+
+**Next up:** unchanged — **Phase 12 (Section-Transition Macro-Layer)**, then 13 and 14. See the
+Phase 11 entry below for the Phase 12 task breakdown.
 
 ### Session 1 (cont.) — 2026-08-21 — Phase 11: Scroll Choreography Pass
 **Did:**
@@ -882,14 +948,22 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 *Carried over from `CONTENT_BRIEF.md`, not yet actioned — these get formally typed as
 optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
 
-- **Assets needed from Abdul (blocking Phase 9's visuals):** hero images for all three
-  projects (Pest Eye, Customer Segmentation, Netflix Stock Price Predictor); images for all
-  five certificates and all six awards.
-- **Asset needed from Abdul (blocking Phase 6):** the About-section portrait photo — the
-  portrait-tied constellation config is specified against it in `DESIGN_SYSTEM.md`.
-- **Links still `[TODO]`:** résumé/CV link; live + repo links for all three projects
-  (including the Customer Segmentation Hugging Face Space); links for all five
-  certifications. Phase 9 must degrade these gracefully (button hidden/disabled, never a
+- ~~Project / certificate / award images, and the About portrait~~ — **all supplied and
+  wired 2026-08-21.** Zero image placeholders remain.
+- **Confirm with Abdul:** `CONTENT_BRIEF.md` listed a **"Best Developer"** award, but no image
+  matches it. The six award files map to six *other* awards (the strongest being the
+  AIR ROBOTRONICS '24 C++ win), so "Best Developer" was dropped rather than guessed at. If it
+  is a separate award, it needs its own entry; if it was shorthand for the C++ win, nothing to
+  do.
+- **Confirm with Abdul:** several titles now use the certificates' exact wording rather than
+  the brief's. Most notably the brief's "Python Specialization" is really the single course
+  *Programming for Everybody (Getting Started with Python)* (University of Michigan), and both
+  the Hult Prize and Data Fest entries turned out stronger/more specific than the brief said
+  (Hult is a **winning team**, not just participation).
+- **Links still `[TODO]`:** résumé/CV link; live + repo links for **Pest Eye** and **Netflix
+  Stock Price Predictor** (Customer Segmentation's Hugging Face Space was recovered from its
+  screenshot and is wired). All five certification links are now resolved — four Coursera
+  verify URLs, and n8n opens a lightbox as it has no public URL. Phase 9 must degrade these gracefully (button hidden/disabled, never a
   dead click).
 - **Open content question:** `CONTENT_BRIEF.md` ends by asking whether the contact section
   ships a working form (needs Resend or a serverless function) or just the three direct

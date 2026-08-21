@@ -89,7 +89,7 @@ export function Navbar() {
       >
         <a
           href="#hero"
-          className="font-mono text-sm tracking-[0.2em] text-text-primary"
+          className="font-mono text-sm tracking-mark text-text-primary"
           aria-label={`${identity.fullName} — back to top`}
         >
           {identity.initials}
@@ -104,7 +104,7 @@ export function Navbar() {
                   href={item.href}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "relative block py-2 font-mono text-xs uppercase tracking-[0.15em] transition-colors duration-300",
+                    "relative block py-2 font-mono text-xs uppercase tracking-label transition-colors duration-300",
                     isActive
                       ? "text-text-primary"
                       : "text-text-secondary hover:text-text-primary",
@@ -164,7 +164,7 @@ export function Navbar() {
                     onClick={() => setMenuOpen(false)}
                     aria-current={activeId === item.id ? "true" : undefined}
                     className={cn(
-                      "block py-2 font-mono text-sm uppercase tracking-[0.15em] transition-colors",
+                      "block py-2 font-mono text-sm uppercase tracking-label transition-colors",
                       activeId === item.id
                         ? "text-accent-violet"
                         : "text-text-secondary hover:text-text-primary",

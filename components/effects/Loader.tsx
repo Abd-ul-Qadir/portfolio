@@ -88,7 +88,7 @@ export default function Loader({ onDone }: LoaderProps) {
       aria-live="polite"
       className="fixed inset-0 z-loader flex flex-col items-center justify-center gap-6 bg-bg-base"
     >
-      <p className="font-mono text-4xl font-semibold tracking-[0.2em] text-text-primary">
+      <p className="font-mono text-4xl font-semibold tracking-mark text-text-primary">
         {identity.initials}
       </p>
       <p className="font-mono text-eyebrow uppercase text-text-secondary">

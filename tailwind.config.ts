@@ -338,10 +338,12 @@ const config: Config = {
          * arbitrary value in JSX; position and opacity are scrubbed by the hero timeline.
          */
         ".transition-blob": {
-          width: "26rem",
-          height: "26rem",
+          // Smaller and less blurred than the ambient orbs on purpose: at 26rem/64px it read
+          // as a violet wash over half the viewport rather than a travelling ball.
+          width: "17rem",
+          height: "17rem",
           borderRadius: "9999px",
-          filter: "blur(64px)",
+          filter: "blur(38px)",
         },
 
         /**

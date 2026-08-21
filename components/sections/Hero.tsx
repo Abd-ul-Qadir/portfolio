@@ -35,7 +35,7 @@ export function Hero() {
     >
       <Container className="relative">
         <div className="grid items-center gap-10 lg:grid-cols-hero lg:gap-8">
-          <div className="flex flex-col items-start">
+          <div data-hero-copy className="flex flex-col items-start">
             <p
               style={rise(0)}
               className="rise-in font-mono text-eyebrow uppercase text-accent-violet-text"

@@ -44,6 +44,46 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 1 (cont.) — 2026-08-22 — Hero→About re-choreographed to Abdul's sequence
+
+Abdul specified the beat order directly: **all hero content slides up into the top-left
+corner → the neon ball travels right → the ball returns left → the next section slides in from
+the bottom corner, following the ball.** That is now what the pinned timeline does, in four
+tweens on one ScrollTrigger.
+
+Measured across the scrub (1424x805 viewport):
+
+| scroll | hero block | ball centre x | about opacity |
+|---|---|---|---|
+| 0 | w=1424, l=0 | 410 | 0 |
+| 400 | **w=433, l=28, t=96** (parked) | **816** (right) | 0 |
+| 800 | parked | **415** (returned) | 0 |
+| 1200 | leaving | 410 | **1.00** |
+
+**Three things worth keeping in mind if this is touched again:**
+
+1. **`refreshPriority: 1` on the pinned trigger is load-bearing.** Without it, About's entrance
+   measured its start/end against a layout that had no pin spacer yet, so it *completed* while
+   About was still ~1300px below the fold — it looked like the animation was dead when it had
+   simply already finished. Any trigger below a pin needs the pin to refresh first.
+2. **Move the hero block as one unit.** An earlier version sent the portrait to the corner and
+   faded the copy separately; they stacked on the same spot. It is now one tween on the content
+   wrapper. (While that version existed, note that fading the wrapper also faded the portrait
+   inside it — hence the short-lived `data-hero-copy` hook.)
+3. **Corner targeting uses `offsetLeft`/`offsetTop` summed up the `offsetParent` chain, not
+   `getBoundingClientRect()`.** The rect already includes the transform the tween is applying,
+   so reading it mid-flight makes the target chase the element. Values are function-based with
+   `invalidateOnRefresh`, so resizes recompute rather than animating to a stale corner.
+
+Also tuned by looking at frames rather than numbers: the ball was 26rem at 64px blur, which
+read as a violet wash over half the viewport — it is now 17rem at 38px blur, a defined orb. The
+pin shortened from +=120% to +=100% and About settles by `top 55%`, which removed a long dead
+stretch of empty scroll between the hero leaving and About arriving.
+
+Reduced motion and <640px: hero never pins, no inline styles are written to the hero block or
+to About, and the ball stays at opacity 0 — verified with the now-working
+`Emulation.setEmulatedMedia` flag.
+
 ### Session 1 (cont.) — 2026-08-22 — Hero portrait, denser field, logo, hero→about handover
 
 **Constellation density.** Abdul found the unified field too faint: raised to 130 particles

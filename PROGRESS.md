@@ -44,6 +44,45 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 1 (cont.) — 2026-08-21 — Abdul reported "no loader, no typewriter, no constellation movement"
+**Verdict: not a bug — but my verification had two blind spots that let me claim "complete"
+without ever seeing what Abdul sees.**
+
+**Root cause.** This machine has Windows "Animation effects" **OFF**. Confirmed at the OS level
+via `SystemParametersInfo(SPI_GETCLIENTAREAANIMATION)` → `False`, so Chrome reports
+`prefers-reduced-motion: reduce`, and `matchMedia("(prefers-reduced-motion: reduce)").matches`
+is `true` with no flags forced. All three symptoms are the **spec'd** reduced-motion behaviour
+(`CLAUDE.md` §4): loader skipped entirely, typewriter renders `phrases[0]` statically with no
+caret, constellation paints a single static frame. Abdul's screenshot shows the role line with
+no `_` caret, which is exactly the reduced-motion branch of `Typewriter`.
+
+**Proof the features work when motion is allowed** (`--force-prefers-no-reduced-motion`):
+- Typewriter samples over 4s: `"ML Engineer" → "ML E" → "" → "Agenti" → "Agentic AI Builder"`,
+  caret present.
+- Constellation: canvas pixel hash changes across a 1s gap (`canvasAnimating=true`).
+- Loader: screenshotted mid-sequence at 18% with the status lines staging in.
+
+**The two testing blind spots — both now fixed in `scripts/cdp.mjs`:**
+1. **Every run forced `--force-prefers-no-reduced-motion`.** So I only ever tested the
+   motion-enabled path and the explicitly-forced reduced path, never the *machine default*
+   that a real visitor (and Abdul) gets. Added **`--system-motion`**, which passes neither
+   flag. **Use it at least once per phase from now on.**
+2. **The driver waits for `[role="status"]` to disappear before running any script** — i.e. it
+   waits for the loader to finish, by design (the loader stops Lenis, so early scrolling is
+   silently ignored). That made every probe structurally incapable of observing the loader:
+   it always reported "not there", however well it worked. Added **`--no-settle`** to skip the
+   wait.
+
+**A real bug this did surface.** With motion enabled the loader appeared **~840ms after load**,
+on top of a hero that had been painted since 0ms — content first, boot screen dropping over it
+second, which is worse than no boot screen. Cause: `LoaderMount` code-split the loader with
+`dynamic(ssr: false)`, so its chunk was only fetched after hydration. Switched to a static
+import: **840ms → 600ms**. *Still not ideal* — any client-gated overlay necessarily appears
+post-hydration. The complete fix is to render the overlay in the SSR HTML and have a tiny
+inline `<head>` script set `data-loader="skip"` on `<html>` before first paint (the standard
+theme-flash technique), so it covers from the very first frame and never flashes for
+reduced-motion or returning visitors. **Not done — flagged for whoever picks this up.**
+
 ### Session 1 (cont.) — 2026-08-21 — Phase 14: Performance, Accessibility, Easter Egg
 **Did — performance.** Every change below was driven by a measurement, not a guess:
 
@@ -1153,6 +1192,9 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
 
 - ~~Project / certificate / award images, and the About portrait~~ — **all supplied and
   wired 2026-08-21.** Zero image placeholders remain.
+- **Loader still appears ~600ms after first paint** when motion is enabled, instead of
+  covering the page from the first frame. See the session entry dated 2026-08-21 for the full
+  fix (SSR the overlay + an inline `<head>` script setting `data-loader`).
 - **Confirm with Abdul:** `CONTENT_BRIEF.md` listed a **"Best Developer"** award, but no image
   matches it. The six award files map to six *other* awards (the strongest being the
   AIR ROBOTRONICS '24 C++ win), so "Best Developer" was dropped rather than guessed at. If it

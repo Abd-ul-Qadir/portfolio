@@ -105,7 +105,12 @@ const args = [
   "--window-size=1440,900",
   "about:blank",
 ];
-if (!reducedMotion) args.unshift("--force-prefers-no-reduced-motion");
+// `--system-motion` passes neither flag, so Chrome reports whatever the OS says. Use it to
+// reproduce what a real visitor's browser does; the default forces no-reduced-motion, which
+// can hide a bug where the app wrongly concludes reduced motion on its own.
+if (!reducedMotion && !flags.includes("--system-motion")) {
+  args.unshift("--force-prefers-no-reduced-motion");
+}
 
 const chrome = spawn(chromePath, args, { stdio: "ignore" });
 
@@ -217,6 +222,10 @@ try {
   // Wait for the page to settle: hydration, then the boot-sequence loader finishing.
   // The loader calls `lenis.stop()` while it plays, so any scrolling done before it clears
   // is silently ignored — which looks exactly like a broken scroll-spy if you don't wait.
+  // `--no-settle` skips this wait. Everything below exists to let the boot loader finish
+  // before a script runs, which means a normal run can never observe the loader itself —
+  // a probe looking for it will always report "not there" no matter how well it works.
+  if (!flags.includes("--no-settle")) {
   await delay(1500);
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const check = await send(socket, "Runtime.evaluate", {
@@ -227,6 +236,7 @@ try {
     await delay(250);
   }
   await delay(1200);
+  }
 
   const result = await send(socket, "Runtime.evaluate", {
     expression: wrapped,

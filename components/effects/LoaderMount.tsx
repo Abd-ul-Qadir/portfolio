@@ -1,11 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
+import Loader from "@/components/effects/Loader";
 import { useHasSeenLoader, useIsCompactViewport, useReducedMotion } from "@/lib/hooks";
-
-const Loader = dynamic(() => import("@/components/effects/Loader"), { ssr: false });
 
 /**
  * Decides whether the boot sequence plays at all. Two independent gates:
@@ -19,8 +17,12 @@ const Loader = dynamic(() => import("@/components/effects/Loader"), { ssr: false
  *    the same mobile-simplification licence `CLAUDE.md` §4 grants the hero pin, and it is
  *    recorded in PROGRESS.md's decision log.
  *
- * Both gates run before `dynamic()` renders anything, so the loader's chunk is not even
- * fetched when it will not be shown.
+ * **Why this is a static import and not `dynamic()`:** it used to be code-split, which meant
+ * the chunk was only fetched *after* hydration — the loader appeared ~840ms in, on top of a
+ * hero that had already been visible since the first paint. A boot screen that drops over
+ * content the reader is already looking at is worse than no boot screen. Importing it
+ * normally lets it mount during hydration instead. The cost is that its (small) code ships
+ * even to sessions that will not show it; the gates below still prevent it *rendering*.
  */
 export function LoaderMount() {
   const reducedMotion = useReducedMotion();

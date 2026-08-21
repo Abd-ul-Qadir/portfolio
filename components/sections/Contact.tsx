@@ -2,7 +2,6 @@
 
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
 import { Reveal } from "@/components/effects/Reveal";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { iconMap } from "@/components/ui/icons";
@@ -29,7 +28,6 @@ export function Contact() {
       aria-labelledby="contact-heading"
       className="relative overflow-hidden py-section"
     >
-      <RadialOrbs tone="cool" />
 
       <Container className="relative">
         <SectionHeading

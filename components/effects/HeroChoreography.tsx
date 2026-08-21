@@ -5,8 +5,6 @@ import { useRef, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 
 interface HeroChoreographyProps {
-  /** The hero's background layers — constellation, orbs. Not transformed. */
-  background: ReactNode;
   /** The hero's copy and CTAs. This is what scales down into the corner. */
   children: ReactNode;
 }
@@ -37,7 +35,7 @@ interface HeroChoreographyProps {
  * This component exists so `Hero` itself can stay a Server Component: the hero copy is the
  * page's LCP element and is passed in as `children`, already server-rendered.
  */
-export function HeroChoreography({ background, children }: HeroChoreographyProps) {
+export function HeroChoreography({ children }: HeroChoreographyProps) {
   const root = useRef<HTMLElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const blob = useRef<HTMLDivElement>(null);
@@ -109,8 +107,6 @@ export function HeroChoreography({ background, children }: HeroChoreographyProps
       aria-labelledby="hero-heading"
       className="relative flex min-h-screen items-center overflow-hidden"
     >
-      {background}
-
       {/* Phase 12 travelling glow. Decorative, and it starts fully transparent so it is
           invisible unless the scrubbed timeline above is actually running — which means it
           simply never appears under reduced motion or on mobile. */}

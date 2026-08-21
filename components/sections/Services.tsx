@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { Container } from "@/components/ui/Container";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -30,7 +29,6 @@ export function Services() {
       aria-labelledby="services-heading"
       className="relative overflow-hidden py-section"
     >
-      <RadialOrbs tone="cool" />
 
       <Container className="relative">
         {/* Heading wording comes from `CONTENT_BRIEF.md`'s own section title

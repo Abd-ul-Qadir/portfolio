@@ -6,7 +6,6 @@ import { useState } from "react";
 
 import { CredentialLightbox } from "@/components/effects/CredentialLightbox";
 import { ProjectCard } from "@/components/effects/ProjectCard";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { Container } from "@/components/ui/Container";
 import { MediaFrame } from "@/components/ui/MediaFrame";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -51,7 +50,6 @@ export function Projects() {
       aria-labelledby="projects-heading"
       className="relative overflow-hidden py-section"
     >
-      <RadialOrbs />
 
       <Container className="relative">
         <SectionHeading

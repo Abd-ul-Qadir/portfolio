@@ -5,6 +5,7 @@ import { CursorMount } from "@/components/effects/CursorMount";
 import { EasterEgg } from "@/components/effects/EasterEgg";
 import { LoaderMount } from "@/components/effects/LoaderMount";
 import { NoiseOverlay } from "@/components/effects/NoiseOverlay";
+import { SiteBackground } from "@/components/effects/SiteBackground";
 import { SmoothScrollProvider } from "@/components/effects/SmoothScrollProvider";
 import { identity, siteUrl } from "@/content/data";
 import { palette } from "@/lib/tokens";
@@ -75,6 +76,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
+        {/* One continuous constellation field behind every section and route. */}
+        <SiteBackground />
         {/* Lenis is skipped entirely under reduced motion — see SmoothScrollProvider. */}
         <SmoothScrollProvider>{children}</SmoothScrollProvider>
         {/* Skipped entirely under reduced motion, and shown once per browser session. */}

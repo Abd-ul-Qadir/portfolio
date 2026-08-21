@@ -1,10 +1,8 @@
 import { ArrowDown, ArrowRight, Mail } from "lucide-react";
 import type { CSSProperties } from "react";
 
-import { ConstellationMount } from "@/components/effects/ConstellationMount";
 import { HeroChoreography } from "@/components/effects/HeroChoreography";
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { Typewriter } from "@/components/effects/Typewriter";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
@@ -31,22 +29,6 @@ const [firstName, ...restOfName] = identity.fullName.split(" ");
 export function Hero() {
   return (
     <HeroChoreography
-      background={
-        <>
-          {/* Hero-ambient: a loose field with pointer parallax and no attraction. The
-              tighter, node-attracting configuration of this same component belongs to the
-              About portrait (Phase 6), and a third configuration to Skills (Phase 10).
-              These layers stay put while the copy transforms away over them. */}
-          <ConstellationMount
-            particleCount={70}
-            mobileParticleCount={28}
-            connectionDistance={130}
-            parallaxStrength={0.02}
-            glow={6}
-          />
-          <RadialOrbs />
-        </>
-      }
     >
 
       <Container className="relative">

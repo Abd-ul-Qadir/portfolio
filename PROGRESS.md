@@ -44,6 +44,53 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 1 (cont.) — 2026-08-22 — Two fixes from Abdul's testing + one background rework
+
+**1. CRITICAL, shipped since Phase 3: wheel and trackpad scrolling did nothing.**
+Abdul reported that two-finger scrolling had no effect while the pointer was over the page,
+but dragging the scrollbar worked. Root cause in `SmoothScrollProvider`: it read the Lenis
+instance from a ref inside an effect keyed on `[reducedMotion]` and bailed with
+`if (!lenis) return`. When the ref was not populated on that single run the effect never
+re-ran, so `connectLenisToScrollTrigger` was **never called**. With `autoRaf: false` that
+means nothing ever drove `lenis.raf()`, so Lenis accepted wheel input and never applied it.
+The scrollbar kept working because that path bypasses Lenis entirely — which is exactly why
+it looked so strange.
+
+Fixed by moving the wiring into a `LenisGsapBridge` component *inside* `<ReactLenis>` that
+reads the instance with `useLenis()`. The hook re-renders when the instance appears and the
+effect is keyed on it, so there is no timing question left.
+
+**Why nine phases of testing missed it — worth internalising.** `scripts/cdp.mjs`'s `scrollTo`
+helper does `window.__lenis ? lenis.scrollTo(...) : window.scrollTo(...)`. With the wiring
+broken, `__lenis` was never exposed, so **every scroll probe silently used the native
+fallback** and passed. The scrubbed-animation checks in Phases 6, 8, 11 and 12 were all real —
+they just exercised native scrolling, never Lenis. Two hardenings:
+- `--wheel <deltaY>` dispatches a **real** wheel event through the CDP input pipeline. A
+  synthetic `new WheelEvent(...)` cannot trigger browser scrolling, so it cannot tell "the
+  page scrolled" from "a library swallowed the input" — which is why synthetic tests were
+  useless here.
+- `scrollTo` now records `window.__scrollPath` (`"lenis"` / `"native"`). **Assert on it** when
+  a probe expects Lenis to be live. Verified: `scrollPath=lenis` in dev after the fix.
+Verified end to end with real wheel events: `0 → 1799` (dev) and `0 → 1800` (production
+build), with reduced motion still scrolling natively.
+
+**2. One continuous constellation background, replacing the per-section backdrops** — Abdul's
+call: the mix of `RadialOrbs` / `DotGrid` / `ConstellationMount` scattered across sections made
+every boundary a visible change of backdrop. There is now a single `SiteBackground` fixed layer
+in the root layout (`-z-20`, below the Phase 12 darkening layer at `-z-10`), holding one
+constellation canvas, one set of orbs and one dot grid. Removed the per-section layers; the
+only one left is the About portrait's own tied field, which is a distinct feature.
+- It is **cheaper than what it replaced**: one rAF loop and a viewport-sized `fixed` canvas
+  instead of two full-width fields plus several orb/grid layers per section.
+- Held at `opacity-60` with `connectionDistance` reduced 140 → 118. At full strength the lines
+  read *through* body copy — visibly crossing the service cards' paragraphs — and
+  `DESIGN_SYSTEM.md` asks for ambience, not a competing layer.
+- The Phase 12 About→Skills scrub still works; `data-transition-dotgrid` just moved to the
+  site-wide grid.
+
+**Deviation logged:** `DESIGN_SYSTEM.md` says the constellation is "confined to the hero".
+Abdul asked for it site-wide, so that line no longer holds. Don't revert it back.
+
 ### Session 1 (cont.) — 2026-08-21 — Abdul reported "no loader, no typewriter, no constellation movement"
 **Verdict: not a bug — but my verification had two blind spots that let me claim "complete"
 without ever seeing what Abdul sees.**

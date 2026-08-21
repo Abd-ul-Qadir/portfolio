@@ -2,7 +2,6 @@ import { UserRound } from "lucide-react";
 import Image from "next/image";
 
 import { ConstellationMount } from "@/components/effects/ConstellationMount";
-import { DotGrid } from "@/components/effects/DotGrid";
 import { ScrollRevealText } from "@/components/effects/ScrollRevealText";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
@@ -18,7 +17,6 @@ export function About() {
       aria-labelledby="about-heading"
       className="relative overflow-hidden py-section"
     >
-      <DotGrid />
 
       <Container className="relative">
         <SectionHeading id="about-heading" eyebrow="About" accent="AI Engineer">

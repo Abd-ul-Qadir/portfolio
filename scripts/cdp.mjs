@@ -166,11 +166,11 @@ const wrap = (source) => `(async () => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const target = Math.max(0, Math.min(y, max));
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      // Record which path moved the page. This helper silently falling back to
-      // `window.scrollTo` is what hid a real bug for nine phases: Lenis was never being
-      // driven, so wheel/trackpad input did nothing, yet every scroll probe passed because
-      // it was quietly using the native path instead. If a probe expects Lenis to be
-      // active, assert on `window.__scrollPath`.
+      // Record which path moved the page. This helper silently falling back to the native
+      // scroll is what hid a real bug for nine phases: Lenis was never being driven, so
+      // wheel/trackpad input did nothing, yet every scroll probe passed because it quietly
+      // used the native path. If a probe expects Lenis to be active, assert on
+      // window.__scrollPath.
       if (window.__lenis) { window.__scrollPath = "lenis"; window.__lenis.scrollTo(target, { immediate: true, force: true }); }
       else { window.__scrollPath = "native"; window.scrollTo(0, target); }
       await frame();

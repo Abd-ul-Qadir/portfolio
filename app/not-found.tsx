@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 
-import { ConstellationMount } from "@/components/effects/ConstellationMount";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { GradientText } from "@/components/ui/GradientText";
@@ -31,15 +29,6 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <main className="relative flex min-h-screen items-center overflow-hidden">
-      <ConstellationMount
-        particleCount={54}
-        mobileParticleCount={24}
-        connectionDistance={150}
-        speed={0.06}
-        glow={8}
-        parallaxStrength={0.03}
-      />
-      <RadialOrbs tone="cool" />
 
       <Container className="relative">
         <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-violet-text">

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { DotGrid } from "@/components/effects/DotGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -86,7 +85,6 @@ export function Experience() {
       aria-labelledby="experience-heading"
       className="relative overflow-hidden py-section"
     >
-      <DotGrid />
 
       <Container className="relative">
         <SectionHeading id="experience-heading" eyebrow="Career" accent="education">

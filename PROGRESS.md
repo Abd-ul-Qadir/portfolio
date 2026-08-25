@@ -4,9 +4,10 @@
 > stop working, every time — see `CLAUDE.md` §0 for the exact rule. This file is the only
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
-Last updated: 2026-08-20
+Last updated: 2026-08-26
 Repo status: git initialised, Phases 0–14 committed except the Vercel deploy, which is
-blocked on Abdul's account. Real image assets wired in.
+blocked on Abdul's account. Real image assets wired in. The constellation has since been
+replaced by an interactive neural field — see the newest session-log entry.
 
 ---
 
@@ -43,6 +44,106 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 2 — 2026-08-26 — Constellation replaced by an interactive neural field
+
+Abdul's brief: the constellation read as "generic, boring, too slow", and barely reacted to the
+cursor. Replace it with a **dynamic AI neural-network interface** whose cursor behaves like a
+processing core. Everything else — content, sections, layout, GSAP choreography — untouched.
+
+**Stack decision, logged because the brief asked for something that does not exist here.** The
+brief said to use "the existing Three.js/R3F setup if possible", and that R3F/three/drei are
+"fine **if already installed or genuinely useful**". Neither is installed (`package.json` has
+no `three`), and `CLAUDE.md` §2 rules the constellation is a hand-rolled 2D canvas. Both of the
+brief's own conditions therefore point away from WebGL, so this stayed on canvas. The reasons
+are in the header of `lib/neural-field.ts`: the "3D" being asked for is depth-sorted parallax
+and perspective scaling, which is a projection problem, not a GPU one — and this page's
+measured weak point has always been main-thread time. Nothing was added to `package.json`.
+
+**New files.** `lib/neural-field.ts` (the engine — framework-free TypeScript, so no React
+re-render can reach the hot loop), `components/effects/NeuralField.tsx` (lifecycle only) and
+`components/effects/NeuralFieldMount.tsx` (deferral + the touch simplification).
+**`ConstellationCanvas.tsx` and `ConstellationMount.tsx` are deleted** — one engine, per the
+Phase 5 rule against a second implementation. Both consumers were repointed: `SiteBackground`
+and the About portrait.
+
+**What actually fixed the "generic" problem** — the topology, not the styling:
+- **Nodes are anchored and orbit by a few px** instead of drifting freely and wrapping. Because
+  nodes never travel far, connections are **permanent synapses** built once by
+  k-nearest-neighbour with a degree cap, rather than whatever two dots happen to be adjacent
+  this frame. A mesh whose edges flicker at random reads as noise; a stable one reads as a
+  system. This single change is what stops it looking like a star field.
+- Three node tiers (hub / relay / micro) with different degrees, so the mesh has hierarchy.
+- **Motion comes from signal, not drift.** Ambient node motion stays slow so body copy in front
+  of it is readable; the speed the eye reads is data packets travelling edges at 200–320 px/s,
+  plus activation flashes. Packets arriving at a node can re-emit along its other edges, so a
+  firing **cascades** a few hops and dies.
+
+**The cursor.** The old field gave the pointer a 2% parallax eased at `0.05`/frame — about
+twenty frames to converge on a shift too small to see, which is exactly why it felt inert. Now
+the influence field is sampled from the **raw** pointer coordinate every frame (zero lag), and
+it pulls nodes toward it, activates them (rise `0.45` / decay `0.055` — the asymmetry leaves a
+comet-tail of lit nodes behind a moving cursor), lights nearby edges cyan, **injects signal** so
+cascades radiate outward from the cursor, wires tendrils into its nearest nodes, and leaves a
+velocity trail that sprays sparks and raises the firing rate when moved fast.
+
+**Perf work, all of it measured:** squared-distance comparisons, edges built once via a spatial
+hash rather than O(n²) per frame, edges drawn in a handful of **batched** strokes bucketed by
+alpha instead of one `beginPath`/`stroke` per edge, glow via a **cached radial-gradient sprite**
+rather than `ctx.shadowBlur` (the old field set a shadow on every node every frame — one of the
+most expensive things a 2D context can do), pooled packets/sparks so a cascade never allocates,
+and a **delta-timed** step so it no longer runs literally twice as fast on a 120 Hz display.
+
+**Measured (production build, `next start`):**
+
+| check | result |
+|---|---|
+| topology | 150 nodes / ~334 edges desktop |
+| field JS cost per frame | **0.89–1.99 ms** (`window.__neuralDebug`) |
+| frame rate, real GPU, cursor active | **16.7 ms median / 16.8 p95 — locked 60fps** |
+| brightness under cursor vs. at rest | **8.3 vs 0.54 — 15×** |
+| brightness under cursor vs. far away | **31×** |
+| reduced motion | `animating: false`, 0 running animations, mesh still drawn |
+| mobile 390px | 150 → **54 nodes**, 120 edges, no core/pull/trail |
+| About portrait field | **25.2 nodes/100k px² vs 13.2** — 1.9× denser (Phase 6 criterion) |
+
+**⚠ Three verification traps hit this session — all three would have produced a confident wrong
+answer, which is the recurring theme of this file:**
+1. **`--viewport` in `scripts/cdp.mjs` means *mobile*, not "set the window size".** It sets
+   `mobile: true` **and enables touch emulation**. So the first cursor test ran with
+   `useIsTouchDevice()` true — the mount had correctly disabled every pointer behaviour — and
+   touch emulation silently swallowed the dispatched mouse events. The effect looked broken and
+   was working perfectly. **Never pass `--viewport` to a desktop pointer test.**
+2. **`--disable-gpu` makes every frame-rate number meaningless.** The field first measured 15fps
+   (66 ms/frame). The control — the same page under `--reduced-motion`, where the field paints
+   one frame and never loops — ran at a clean 16.7 ms, proving the environment was fine and
+   implying the field cost ~50 ms. It did not: `gpu` reported *Microsoft Basic Render Driver*,
+   i.e. software rasterisation. Added **`--gpu`** to the driver; on the real Intel UHD 620 the
+   same page runs a locked 60 fps. **Always take the control measurement before believing a
+   frame-rate regression.**
+3. **A stale comment claimed a cap that did not exist.** The engine's header said the
+   full-screen field capped its backing ratio "at 1.75 via the React wrapper". Nothing
+   implemented that. Rather than delete the sentence, the cap is now real (`maxDpr`, 1.5 for
+   the site field) — a full-viewport layer of 1px lines gains nothing visible from a 2x backing
+   store and costs ~44% more pixels to fill.
+
+**Tooling:** `scripts/cdp.mjs` gained **`--mouse x,y x,y ...`** (sweeps the real pointer through
+the CDP input pipeline, interpolating between waypoints so the page sees a gesture with genuine
+*velocity* — trail length, sparks and firing rate are all derived from pointer speed, so a
+single jump to a coordinate exercises none of them) and **`--gpu`**.
+
+`npm run build`, `npm run lint`, `tsc --noEmit` clean; zero Tailwind arbitrary values.
+
+**Not done / next up:** unchanged — the **Vercel deploy** is still the only thing left in Phase
+14, and still needs Abdul's account plus the real domain (`siteUrl` is still the placeholder
+`https://abdulqadir.dev`). Lighthouse has **not** been re-run since this change; the field's JS
+is ~1–2 ms/frame and one canvas replaced one canvas, so no regression is expected, but that is a
+prediction, not a measurement — re-run it as part of the deploy step.
+
+Two things deliberately left alone, worth knowing: the site-wide mesh does cross body copy at
+its resting alpha (that is the trade for it being the page's main texture, and `intensity`
+scales only the resting mesh, never the activation), and the navbar wordmark is still the jagged
+156×29 raster flagged in the previous session.
 
 ### Session 1 (cont.) — 2026-08-22 — Hero animations restored to their Phase 14 state
 
@@ -1267,6 +1368,23 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-26 — the constellation is now a neural field, and it stayed on 2D canvas rather
+  than moving to Three.js/R3F.** Abdul's brief asked for an "AI neural-network interface" and
+  said to use "the existing Three.js/R3F setup if possible", with R3F/three/drei "fine if
+  already installed or genuinely useful". Neither is installed, and `CLAUDE.md` §2 mandates a
+  hand-rolled canvas — so both of the brief's own conditions pointed at canvas. The depth in
+  the effect is perspective scaling and layered parallax, which is a projection problem rather
+  than a GPU one, and the measured cost is ~1–2 ms of JS per frame at a locked 60 fps, so there
+  is no performance argument for WebGL either. **Do not "upgrade" this to R3F without a reason
+  that survives those numbers** — it would add several hundred KB to a page whose historic weak
+  point is main-thread time. `ConstellationCanvas`/`ConstellationMount` are deleted; the one
+  engine is `lib/neural-field.ts`.
+- **2026-08-26 — `DESIGN_SYSTEM.md`'s constellation section is now doubly superseded.** It
+  already did not hold on scope (the field is site-wide, not hero-only — Abdul's call, logged
+  2026-08-22). It now also does not hold on *behaviour*: nodes are anchored with a permanent
+  k-nearest topology rather than free-drifting with proximity-based lines, and the pointer is a
+  first-class actor (attraction, activation, signal injection, tendrils, velocity trail) rather
+  than a parallax multiplier. Treat `lib/neural-field.ts`'s header as the spec for this effect.
 - **2026-08-20 — Tailwind pinned to v3.4, not the v4 `create-next-app` installs.**
   `CLAUDE.md` §2 and `PHASE_PLAN.md` Phase 2's acceptance criteria both name
   `tailwind.config.ts` as the single place design tokens may live. Tailwind v4 moves

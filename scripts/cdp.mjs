@@ -14,6 +14,11 @@
  *   node scripts/cdp.mjs <url> <path-to-script.js> [--reduced-motion] [--viewport 390x844]
  *                                                  [--screenshot out.png]
  *                                                  [--press-tab N] [--then after.js]
+ *                                                  [--mouse x,y x,y ...]
+ *
+ * `--mouse` sweeps the real pointer through the input pipeline between waypoints, so the page
+ * sees a gesture with genuine velocity. Anything keyed off pointer *speed* (the neural field's
+ * trail, sparks and firing rate) cannot be exercised by a single jump to a coordinate.
  *
  * `--press-tab N` dispatches N real Tab keypresses through the input pipeline after the main
  * script runs, and `--then` evaluates a second script afterwards. Real key events are the
@@ -95,9 +100,13 @@ if (!chromePath) {
 }
 
 const port = 9222 + Math.floor(Math.random() * 500);
+// `--disable-gpu` forces canvas rasterisation onto SwiftShader/Basic Render Driver, which is
+// perfectly fine for correctness probes but makes any frame-rate reading meaningless — a
+// full-screen canvas costs tens of milliseconds to rasterise in software that a real GPU
+// composites for free. Pass `--gpu` when the number being measured is frame rate.
 const args = [
   "--headless=new",
-  "--disable-gpu",
+  ...(flags.includes("--gpu") ? [] : ["--disable-gpu"]),
   `--remote-debugging-port=${port}`,
   "--no-first-run",
   "--no-default-browser-check",
@@ -301,6 +310,40 @@ try {
       await delay(80);
     }
     await delay(900);
+  }
+
+  // `--mouse x1,y1 x2,y2 ...` sweeps the real pointer through the input pipeline, interpolating
+  // between the given waypoints so the page sees a continuous, *velocity-bearing* gesture
+  // rather than a teleport.
+  //
+  // Velocity matters: the neural field's trail length, spark emission and firing rate are all
+  // derived from pointer speed, so a single jump to a coordinate would exercise none of them
+  // and would wrongly report those features as dead. Interpolating at a fixed cadence is the
+  // only way to produce a speed the page can measure.
+  if (flags.includes("--mouse")) {
+    const points = [];
+    for (let i = flags.indexOf("--mouse") + 1; i < flags.length; i += 1) {
+      const match = /^(\d+),(\d+)$/.exec(flags[i]);
+      if (!match) break;
+      points.push({ x: Number(match[1]), y: Number(match[2]) });
+    }
+    for (let leg = 1; leg < points.length; leg += 1) {
+      const from = points[leg - 1];
+      const to = points[leg];
+      const steps = 24;
+      for (let s = 1; s <= steps; s += 1) {
+        const t = s / steps;
+        await send(socket, "Input.dispatchMouseEvent", {
+          type: "mouseMoved",
+          x: Math.round(from.x + (to.x - from.x) * t),
+          y: Math.round(from.y + (to.y - from.y) * t),
+          pointerType: "mouse",
+          buttons: 0,
+        });
+        await delay(12);
+      }
+    }
+    await delay(120);
   }
 
   if (pressTabCount > 0) {

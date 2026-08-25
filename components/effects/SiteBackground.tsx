@@ -1,7 +1,7 @@
 "use client";
 
-import { ConstellationMount } from "@/components/effects/ConstellationMount";
 import { DotGrid } from "@/components/effects/DotGrid";
+import { NeuralFieldMount } from "@/components/effects/NeuralFieldMount";
 import { RadialOrbs } from "@/components/effects/RadialOrbs";
 
 /**
@@ -38,20 +38,36 @@ export function SiteBackground() {
           it is just the site-wide grid now rather than the Skills section's own. */}
       <DotGrid data-transition-dotgrid />
 
-      {/* The field itself. Denser and at full strength, at Abdul's request — the earlier
-          64-particle / 60%-opacity version read as too faint once it was the only backdrop
-          on the page. Particle count is a flat number rather than area-scaled, so the same
-          value reads denser on a laptop than on a large monitor. */}
-      <ConstellationMount
-        particleCount={130}
-        mobileParticleCount={48}
-        connectionDistance={150}
-        minRadius={0.7}
-        maxRadius={2.2}
-        speed={0.12}
-        glow={6}
-        parallaxStrength={0.02}
-        attractStrength={0}
+      {/* The neural field itself — the page's primary visual texture.
+
+          Tuning notes, because these numbers are the whole character of the effect:
+
+          - The **resting** mesh is deliberately quiet. `intensity` scales only the base
+            violet/indigo mesh, not activation, so the network stays behind body copy at rest
+            and lights up cyan only where the cursor actually is. That is what lets it be both
+            dense and readable — the earlier field had to be dimmed globally because its lines
+            were equally bright everywhere, including across the service cards' paragraphs.
+          - `influenceRadius` at 250px with `pullStrength` 0.34 is the headline interaction:
+            the mesh visibly bends toward the cursor within about 130ms.
+          - `maxPackets` is a hard ceiling on data in flight, so a long cursor sweep across the
+            page cannot cascade into unbounded work. */}
+      <NeuralFieldMount
+        nodeCount={150}
+        mobileNodeCount={54}
+        linkRadius={132}
+        minRadius={1}
+        maxRadius={2.6}
+        driftRadius={11}
+        influenceRadius={250}
+        pullStrength={0.34}
+        parallaxDepth={18}
+        maxPackets={90}
+        intensity={1}
+        scrollDrift={60}
+        // A full-viewport layer of 1px lines and soft glows gains nothing visible from a 2x
+        // backing store, and costs ~44% more pixels to fill on every frame.
+        maxDpr={1.5}
+        core
       />
     </div>
   );

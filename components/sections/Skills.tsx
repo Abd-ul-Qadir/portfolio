@@ -16,9 +16,8 @@ import { skillGroups, spokenLanguages } from "@/content/data";
  *    inventing one would be making up content.
  * 3. Spoken languages as circular badges.
  *
- * The ambient particle field behind all of it is the third `ConstellationCanvas` config:
- * sparse and wide, with parallax but no attraction, so it reads as background rather than
- * competing with the ecosystem's own nodes.
+ * This section mounts no field of its own: the ambience behind it is the one site-wide
+ * `NeuralField` in `SiteBackground`, which the whole page scrolls over.
  */
 export function Skills() {
   return (

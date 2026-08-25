@@ -20,9 +20,8 @@ import { cn } from "@/lib/utils";
  * *Why the nodes are DOM elements and the lines are SVG, rather than one canvas:* every node
  * here is a real labelled control that has to be reachable by keyboard and readable by a
  * screen reader, and canvas content is neither. The line-connection *approach* is shared with
- * `ConstellationCanvas` (thin lines, distance-driven opacity, violet on dark); the ambient
- * particle field behind this ecosystem is a real `ConstellationCanvas` instance. Logged in
- * PROGRESS.md's decision log.
+ * the `NeuralField` engine (thin lines, distance-driven opacity, violet on dark); the ambience
+ * behind this ecosystem is the site-wide field itself. Logged in PROGRESS.md's decision log.
  */
 
 /** Orbit geometry, as a fraction of the container's half-width/height. */

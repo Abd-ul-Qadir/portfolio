@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+import { useReducedMotion } from "@/lib/hooks";
+import { NeuralField as Engine, type NeuralFieldConfig } from "@/lib/neural-field";
+import { cn } from "@/lib/utils";
+
+export type { NeuralFieldConfig };
+
+interface NeuralFieldProps extends NeuralFieldConfig {
+  className?: string;
+}
+
+/**
+ * React shell around the neural-field engine in `lib/neural-field.ts`.
+ *
+ * Everything this component owns is lifecycle — mounting, sizing, pausing, teardown. The
+ * simulation itself lives outside React entirely, so no parent re-render can reach the
+ * animation loop, and an inline config object on the caller cannot re-seed the field.
+ *
+ * Lifecycle rules it enforces for every consumer (`CLAUDE.md` §4):
+ * - under `prefers-reduced-motion` it paints **one static frame and never starts a loop**, and
+ *   never attaches a pointer listener,
+ * - the loop stops when the tab is hidden **and** when the canvas scrolls out of view,
+ * - the engine is destroyed and every listener removed on unmount.
+ */
+export default function NeuralField({ className, ...config }: NeuralFieldProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  // Config is read once when the engine is built. Holding it in a ref that is updated in its
+  // own effect (never during render) means a parent re-rendering with an equivalent inline
+  // object does not tear down and re-seed the whole field.
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let engine: Engine;
+    try {
+      engine = new Engine(canvas, configRef.current);
+    } catch {
+      // No 2D context (very old or hardened browser): the field is pure decoration, so
+      // rendering nothing is the correct outcome, not an error.
+      return;
+    }
+
+    let onScreen = true;
+    const sync = () => {
+      if (reducedMotion) return;
+      if (onScreen && !document.hidden) engine.start();
+      else engine.stop();
+    };
+
+    if (!engine.resize()) {
+      // Zero-sized at mount (a display:none ancestor, or a not-yet-laid-out grid cell). The
+      // ResizeObserver below will call back with real dimensions.
+      canvas.dataset.nodes = "0";
+    }
+    if (reducedMotion) engine.renderStatic();
+
+    /* -- sizing ------------------------------------------------------------ */
+    // The canvas is `position: fixed` for the site-wide field and `absolute` inside a card for
+    // the portrait one, so its viewport rect is cached and refreshed rather than measured on
+    // every pointer sample — the old field called `getBoundingClientRect()` inside
+    // `pointermove`, which is a forced layout read on every mouse event.
+    let rect = canvas.getBoundingClientRect();
+    const refreshRect = () => {
+      rect = canvas.getBoundingClientRect();
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (engine.resize()) {
+        refreshRect();
+        if (reducedMotion) engine.renderStatic();
+      }
+    });
+    resizeObserver.observe(canvas);
+
+    /* -- pause when unseen -------------------------------------------------- */
+    const viewportObserver = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((entry) => entry.isIntersecting);
+        sync();
+      },
+      { rootMargin: "150px" },
+    );
+    viewportObserver.observe(canvas);
+
+    const onVisibility = () => sync();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    /* -- pointer and scroll -------------------------------------------------- */
+    let lastMove = 0;
+    const onPointerMove = (event: PointerEvent) => {
+      const now = event.timeStamp || performance.now();
+      const dt = lastMove ? Math.min((now - lastMove) / 1000, 0.1) : 0;
+      lastMove = now;
+      engine.setPointer(event.clientX - rect.left, event.clientY - rect.top, dt);
+    };
+    const onPointerLeave = () => {
+      lastMove = 0;
+      engine.clearPointer();
+    };
+
+    let scrollQueued = false;
+    const onScroll = () => {
+      if (scrollQueued) return;
+      scrollQueued = true;
+      // rAF-throttled: `getBoundingClientRect()` on every scroll event of a Lenis-smoothed
+      // page is a lot of layout reads for a value that only needs to be right once per frame.
+      window.requestAnimationFrame(() => {
+        scrollQueued = false;
+        refreshRect();
+        engine.setScroll(window.scrollY);
+      });
+    };
+
+    if (!reducedMotion) {
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      document.addEventListener("pointerleave", onPointerLeave);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      sync();
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      viewportObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("scroll", onScroll);
+      engine.destroy();
+    };
+  }, [reducedMotion]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden
+      data-neural-field
+      className={cn("pointer-events-none absolute inset-0 h-full w-full", className)}
+    />
+  );
+}

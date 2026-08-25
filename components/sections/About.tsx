@@ -1,7 +1,7 @@
 import { UserRound } from "lucide-react";
 import Image from "next/image";
 
-import { ConstellationMount } from "@/components/effects/ConstellationMount";
+import { NeuralFieldMount } from "@/components/effects/NeuralFieldMount";
 import { ScrollRevealText } from "@/components/effects/ScrollRevealText";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
@@ -50,17 +50,30 @@ export function About() {
                 </div>
               )}
 
-              <ConstellationMount
-                particleCount={46}
-                mobileParticleCount={26}
-                connectionDistance={62}
+              {/* The portrait-tied field (Phase 6): the same engine as the site-wide one, at a
+                  tighter scale and with a much more pronounced reaction directly over the
+                  image — a shorter `linkRadius` against a similar node count makes the mesh
+                  visibly denser, and `pullStrength` here is half again the background's.
+
+                  `core` is off and `scrollDrift` is 0 on purpose: this field lives inside a
+                  card, so it must not drift out of alignment with the frame, and a second
+                  processing core drawn inside the portrait would compete with the one the
+                  site-wide field already draws under the cursor. */}
+              <NeuralFieldMount
+                nodeCount={46}
+                mobileNodeCount={26}
+                linkRadius={78}
                 minRadius={1}
                 maxRadius={2.6}
-                speed={0.12}
-                glow={12}
-                parallaxStrength={0}
-                attractStrength={0.55}
-                attractRadius={130}
+                driftRadius={7}
+                influenceRadius={150}
+                pullStrength={0.5}
+                parallaxDepth={8}
+                maxPackets={22}
+                touchPackets={8}
+                intensity={1.15}
+                scrollDrift={0}
+                core={false}
               />
             </div>
 

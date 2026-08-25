@@ -372,6 +372,51 @@ const config: Config = {
             "linear-gradient(to bottom, black 0%, black 45%, transparent 100%)",
         },
 
+        /**
+         * The cinematic reel stage.
+         *
+         * **`display: contents` is the whole trick.** The track and stage wrappers are always
+         * in the DOM — rendering them conditionally would mean the server and the client
+         * disagree about the markup — but by default they are `display: contents`, so the
+         * browser lays the sections out exactly as if the wrappers were not there. Below
+         * 1024px, and under reduced motion, that is all that ever happens: normal document
+         * flow, normal scrolling, no pinning.
+         *
+         * At 1024px and up with motion allowed, the wrappers become real: the track is a tall
+         * scroll area, the stage sticks to the top of the viewport for the whole of it, and
+         * every section is absolutely layered inside that one stage. The browser is still
+         * scrolling vertically; the sections are moving through a fixed frame.
+         *
+         * Sticky rather than GSAP `pin`: the pin spacer GSAP inserts is exactly what this
+         * layout already provides with the track's own height, and sticky costs no JS.
+         */
+        "[data-reel-track], [data-reel-stage]": {
+          display: "contents",
+        },
+        "@media (min-width: 1024px) and (prefers-reduced-motion: no-preference)": {
+          "[data-reel-track]": {
+            display: "block",
+            position: "relative",
+          },
+          "[data-reel-stage]": {
+            display: "block",
+            position: "sticky",
+            top: "0",
+            height: "100vh",
+            overflow: "hidden",
+          },
+          "[data-reel-stage] > section": {
+            position: "absolute",
+            inset: "0",
+            overflow: "hidden",
+            // Each section is its own layer in the stage. Non-active ones are faded and
+            // untouchable; the timeline restores both as a section takes focus.
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          },
+        },
+
         /** Dimmed, blurred backdrop behind a modal dialog. */
         ".scrim-backdrop": {
           backgroundColor: baseAt(80),

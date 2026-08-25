@@ -37,7 +37,7 @@ export function Services() {
           What I
         </SectionHeading>
 
-        <ul className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul data-stagger-group className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, index) => {
             const Icon = iconMap[service.icon];
 

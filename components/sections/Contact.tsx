@@ -63,7 +63,7 @@ export function Contact() {
               <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-caret-blink bg-accent-violet motion-reduce:animate-none" />
             </p>
 
-            <ul className="mt-8 flex flex-col gap-4">
+            <ul data-stagger-group className="mt-8 flex flex-col gap-4">
               {contact.methods.map((method) => {
                 const Icon = iconMap[method.icon];
                 return (

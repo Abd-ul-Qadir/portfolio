@@ -1,3 +1,4 @@
+import { ReelStage } from "@/components/effects/ReelStage";
 import { SectionChoreography } from "@/components/effects/SectionChoreography";
 import { SectionTransitions } from "@/components/effects/SectionTransitions";
 import { About } from "@/components/sections/About";
@@ -22,13 +23,19 @@ export default function Home() {
       <SectionChoreography />
       <Navbar />
       <main id="main">
-        <Hero />
-        <About />
-        <Skills />
-        <Services />
-        <Experience />
-        <Projects />
-        <Contact />
+        {/* Desktop with motion allowed: a tall scroll area with a sticky stage, every section
+            layered inside it and moved by one scrubbed master timeline. Below 1024px and under
+            reduced motion the wrappers are `display: contents`, so this is ordinary document
+            flow and the sections scroll normally. */}
+        <ReelStage>
+          <Hero />
+          <About />
+          <Skills />
+          <Services />
+          <Experience />
+          <Projects />
+          <Contact />
+        </ReelStage>
       </main>
       <Footer />
     </>

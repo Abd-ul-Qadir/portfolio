@@ -267,7 +267,15 @@ export function SectionChoreography() {
 
     // Reduced motion is absent from both queries, so under it nothing here is ever created and
     // every section renders at its natural position with no inline styles at all.
-    media.add("(min-width: 768px) and (prefers-reduced-motion: no-preference)", build(false));
+    //
+    // **Both are capped below 1024px**, where `ReelStage` takes over: at desktop widths the
+    // sections are absolutely layered inside one pinned stage and the reel's master timeline
+    // owns their transforms entirely. Two systems transforming the same elements would fight.
+    // So: phones get the flattened choreography, tablets the full one, desktop the reel.
+    media.add(
+      "(min-width: 768px) and (max-width: 1023px) and (prefers-reduced-motion: no-preference)",
+      build(false),
+    );
     media.add("(max-width: 767px) and (prefers-reduced-motion: no-preference)", build(true));
 
     return () => media.revert();

@@ -8,6 +8,7 @@ import Image from "next/image";
 
 import { identity, navItems } from "@/content/data";
 import { useReducedMotion } from "@/lib/hooks";
+import { getReel, subscribeReel } from "@/lib/reel";
 import { cn } from "@/lib/utils";
 
 /** Section ids the scroll-spy watches, in document order. */
@@ -31,6 +32,15 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const reducedMotion = useReducedMotion();
 
+  // `ReelStage` builds after this component mounts, so the spy has to be rebuilt when the reel
+  // takes over rather than deciding once on first render.
+  const [reelActive, setReelActive] = useState(false);
+  useEffect(() => {
+    const sync = () => setReelActive(getReel().active);
+    sync();
+    return subscribeReel(sync);
+  }, []);
+
   /**
    * Scroll-spy plus the transparent -> glass switch.
    *
@@ -40,10 +50,30 @@ export function Navbar() {
    * offsets while scrolling, and cached offsets would silently go stale.
    */
   useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    // In reel mode every section is absolutely layered inside one pinned stage, so they all
+    // intersect the viewport at once and an IntersectionObserver reports nonsense. The reel
+    // publishes which section holds the stage; subscribing costs one render per change rather
+    // than one per scrolled frame.
+    if (getReel().active) {
+      const sync = () => setActiveId(getReel().activeId);
+      sync();
+      const unsubscribe = subscribeReel(sync);
+      return () => {
+        unsubscribe();
+        window.removeEventListener("scroll", onScroll);
+      };
+    }
+
     const sections = SPY_IDS.map((id) => document.getElementById(id)).filter(
       (element): element is HTMLElement => element !== null,
     );
-    if (sections.length === 0) return;
+    if (sections.length === 0) {
+      return () => window.removeEventListener("scroll", onScroll);
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -57,15 +87,11 @@ export function Navbar() {
 
     sections.forEach((section) => observer.observe(section));
 
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-
     return () => {
       observer.disconnect();
       window.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [reelActive]);
 
   // Close the mobile menu on Escape, and whenever a link is followed.
   useEffect(() => {

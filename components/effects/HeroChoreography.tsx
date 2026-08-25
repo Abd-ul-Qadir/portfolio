@@ -47,8 +47,12 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
     () => {
       const media = gsap.matchMedia();
 
+      // Capped below 1024px: at desktop widths `ReelStage` pins a single stage and owns the
+      // hero's exit (it travels off to the left as About arrives from the right). A second pin
+      // inside that stage would fight it. Tablets and large phones keep this scale-into-the-
+      // corner transform; reduced motion gets neither.
       media.add(
-        "(min-width: 640px) and (prefers-reduced-motion: no-preference)",
+        "(min-width: 640px) and (max-width: 1023px) and (prefers-reduced-motion: no-preference)",
         () => {
           // One timeline, one ScrollTrigger, owning the hero transform.
           const timeline = gsap.timeline({

@@ -45,6 +45,91 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — Reel architecture: pinned stage, sections layered
+
+Abdul asked for the page to stop being a stack of sections and become a **cinematic reel**: one
+pinned stage, sections layered inside it, each entering from a deliberate direction while the
+previous one leaves in another, overlapping, with scroll position as the timeline.
+
+**A conflict in the brief, surfaced before coding rather than discovered halfway.** A pinned
+stage holds exactly one viewport. Measured against the real content: **four of seven sections
+are taller than the viewport on desktop, six of seven on mobile**, and Selected Work is
+**2.88 viewports on desktop and 7.04 on mobile** (3 cards + filter tabs + 5 certifications +
+6 awards). "Layer every section in a viewport-height stage" and "keep all my content, with
+enough scroll distance to read it" cannot both be literally true. Abdul chose:
+1. **tall sections pan their content inside the stage** (all content kept), and
+2. **phones keep normal scrolling** — the reel is ≥1024px only.
+
+**Architecture — `components/effects/ReelStage.tsx`.**
+- The track and stage wrappers are **always rendered** and are `display: contents` by default,
+  so below 1024px and under reduced motion the browser lays the sections out exactly as if the
+  component were not there. Conditional markup would have meant a hydration mismatch. A media
+  query in `tailwind.config.ts` promotes them to a real track + sticky stage.
+- Pinning is **CSS `position: sticky`, not GSAP `pin`**: GSAP's pin works by inserting a spacer
+  of exactly the height this layout already has, so sticky gets the same result with no JS and
+  no spacer to keep in sync.
+- One scrubbed master timeline. **Overlap is structural**: section `i+1`'s entrance is placed at
+  exactly the timeline position where section `i`'s exit begins, so it cannot drift apart as
+  content changes.
+- Choreography as specified: hero → LEFT; About enters RIGHT, exits TOP; Capabilities enters
+  BOTTOM as one composition, exits TOP; Services enters BOTTOM (cards staggered), exits
+  TOP-RIGHT; Experience enters BOTTOM, exits TOP-LEFT; Selected Work enters RIGHT (projects one
+  by one), exits fully LEFT; Contact enters RIGHT (elements one by one), exits TOP-RIGHT.
+
+**Four systems had to be rewired**, because with every section stacked in one box they all
+stopped working:
+- **navbar scroll-spy** — an IntersectionObserver over sections that now all intersect at once;
+- **anchor links** — `#about` pointed at a box every section shares;
+- **the neural field's story** — one ScrollTrigger per section, all keyed off an identical
+  `top top`; it now pulls the position from the reel inside its own animation frame
+  (`setStorySource`), rather than a second rAF loop copying a number;
+- **`HeroChoreography` and `SectionChoreography`** — both now capped below 1024px, or two
+  systems would transform the same elements.
+`lib/reel.ts` is the shared store. It notifies only on *coarse* changes, so the navbar
+re-renders a handful of times per page rather than sixty times a second.
+
+**⚠ Two real bugs found by measuring, not by looking.**
+
+1. **Panning stopped short and content was permanently unreadable.** Overflow was computed from
+   `section.scrollHeight`, which counts content overflowing *below* a box but **not above it** —
+   and a centred flex child overflows in both directions. Measured on Selected Work: when the
+   hold ended, the bottom of the awards grid was still **399px below the stage**, i.e. never
+   visible at any scroll position. Fixed by measuring the inner container. Verified with a probe
+   that sweeps the whole reel and asks, per section, whether the content's top *and* bottom each
+   ever enter the stage: **all seven now READABLE**, Selected Work's 2307px included.
+
+2. **Seven full-viewport layers cost a whole vsync step.** Opacity on a full-viewport layer needs
+   `will-change` or it re-rasters — but promoting all seven permanently is worse: an opacity-0
+   layer is still a layer and is still composited every frame. Scroll frame time was a bimodal
+   **49.4ms / 33.35ms** (20fps / 30fps) against HEAD's rock-steady 33.4ms. Fix: promote only the
+   active section and its two neighbours, and set **`visibility: hidden`** on the rest so they
+   are not painted at all. Result: **33.3, 33.4, 33.4, 33.4, 33.4, 33.4 — identical to HEAD's
+   33.4 × 6, same zero variance.** The reel now costs nothing measurable.
+
+*On the measurement itself:* HEAD's zero variance across six runs is what made this diagnosable.
+Two samples would have been useless — the reel's own numbers alternated between two values.
+**Take enough samples to see the distribution, not the mean.**
+
+**Accessibility trade, made deliberately.** A `visibility: hidden` section's links leave the tab
+order. That is the same contract as any carousel, and nothing becomes unreachable: the navbar
+links to every section and drives the reel there. Sections within the active window keep opacity
+only (never `visibility: hidden`), and a `focusin` handler on the stage moves the reel to
+whatever receives focus. Reduced motion and phones bypass the reel entirely, so both get the
+plain document.
+
+**Verified (desktop, production build):** 10 of 27 scroll samples show two sections on stage at
+once, each pair matching the specified directions; reversibility drift **0** at every sampled
+position; all seven sections fully readable; navbar spy tracks About → Skills → Services →
+Experience → Projects → Contact; `#projects` anchor lands with the section at opacity 1; footer
+reachable at the bottom; project cards arrive **1 → 2 → 3** (x offsets 52→15→2, then 79→28→6,
+then 46→13→1); Services and Contact groups stagger (opacities `0.99, 0.89, 0.59, 0`). Mobile and
+reduced motion both report `display: contents`, sections unstacked, no track height.
+`build`, `lint`, `tsc --noEmit` clean.
+
+**Note for whoever picks this up:** the reel makes the document ~12.7k px tall against ~10.2k
+before. Contact exits the stage as specified, so there is a brief empty stage before the footer.
+If that reads badly, shorten `EXIT` for the last beat in `ReelStage`.
+
 ### Session 2 (cont.) — 2026-08-26 — Cinematic section choreography (content, not just background)
 
 Abdul: the background now evolves per section, but the *sections themselves* still scroll like a
@@ -1570,6 +1655,22 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-26 — the homepage is a pinned reel above 1024px, not a scrolling document.**
+  This goes well beyond the scroll-jacking Phase 11 declined, and beyond the per-section
+  choreography logged below. Abdul asked for it explicitly after seeing that version. Sections
+  are absolutely layered in one sticky stage and moved by a single scrubbed master timeline;
+  see `components/effects/ReelStage.tsx`. **Below 1024px and under reduced motion none of this
+  exists** — the wrappers are `display: contents` and the page is an ordinary document, which
+  is also the accessible fallback. Four systems depend on this decision and are gated on the
+  same media query (`REEL_MEDIA` in `lib/reel.ts`): the navbar spy, anchor links, the neural
+  field's story, and both older choreography layers. **Change that breakpoint in one place
+  only.**
+- **2026-08-26 — off-stage reel sections are `visibility: hidden`, which removes their links
+  from the tab order.** Necessary, not incidental: seven full-viewport composited layers cost a
+  whole vsync step (20fps vs 30fps). Mitigated by the navbar linking to every section and
+  driving the reel there, by keeping the active window opacity-only, and by a `focusin` handler
+  that moves the reel to whatever gains focus. If this is ever revisited, re-measure before
+  removing it — the numbers are in the session log.
 - **2026-08-26 — full per-section scroll choreography, which Phase 11 deliberately declined.**
   `PHASE_PLAN.md` Phase 11 argues against choreographing every boundary and says: "If after
   seeing it you want the full scroll-jack treatment everywhere, that's a straightforward

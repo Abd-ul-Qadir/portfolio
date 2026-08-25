@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { ScrollTrigger } from "@/lib/gsap";
 import { useReducedMotion } from "@/lib/hooks";
+import { getReel, REEL_MEDIA } from "@/lib/reel";
 import {
   NeuralField as Engine,
   STORY_SECTIONS,
@@ -144,6 +145,17 @@ export default function NeuralField({ className, story, ...config }: NeuralField
      */
     const storyTriggers: ScrollTrigger[] = [];
     const buildStory = () => {
+      // In reel mode every section is absolutely layered inside one pinned stage, so they all
+      // share a box and `trigger: section, start: "top top"` would be identical for all seven.
+      // `ReelStage` publishes the story position from its master timeline instead; subscribing
+      // is both correct and cheaper than seven triggers.
+      if (window.matchMedia(REEL_MEDIA).matches) {
+        // Pulled inside the engine's existing animation frame rather than pushed from a second
+        // `requestAnimationFrame` loop — one extra function call per frame, no extra loop.
+        engine.setStorySource(() => getReel().story);
+        return;
+      }
+
       const sections = STORY_SECTIONS.map((id) => document.getElementById(id));
       for (let i = 0; i < sections.length - 1; i += 1) {
         const current = sections[i];

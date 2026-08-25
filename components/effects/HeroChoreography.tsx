@@ -20,14 +20,18 @@ interface HeroChoreographyProps {
  * criteria call this out specifically. The Lenis↔ScrollTrigger wiring it depends on lives in
  * `lib/gsap.ts` and was verified in Phase 3.
  *
- * **Phase 12 note:** the travelling gradient blob is a second tween on **this same timeline**,
- * sharing its one ScrollTrigger — `PHASE_PLAN.md` is explicit that it must not be a second,
- * competing timeline. Add anything else that belongs to this boundary here too.
+ * **The Hero → About boundary is no longer carried by a travelling gradient blob.** That blob
+ * — a 26rem violet circle that crossed the screen on this timeline — was removed at Abdul's
+ * request: it read as a generic glowing ball rather than as anything to do with the portfolio,
+ * and it was the only thing making this boundary feel like an event. The continuity now comes
+ * from the site-wide neural field, which morphs its whole topology continuously across every
+ * section (see `lib/neural-field.ts`, "The scroll story"). If you add something else to this
+ * boundary, add it to this timeline rather than creating a second one.
  *
  * **Gating is done with `gsap.matchMedia()`**, which both scopes the animation and reverts it
  * cleanly when a condition stops matching:
- * - `prefers-reduced-motion: reduce` → no pin, no scrub, no blob travel. The hero is a plain
- *   section and the page scrolls normally.
+ * - `prefers-reduced-motion: reduce` → no pin, no scrub. The hero is a plain section and the
+ *   page scrolls normally.
  * - Below 640px → also no pin. `CLAUDE.md` §4 names pinning as the most common source of
  *   jank on mobile Safari, and a fade-based fallback is an expected simplification. Logged in
  *   PROGRESS.md's decision log.
@@ -38,7 +42,6 @@ interface HeroChoreographyProps {
 export function HeroChoreography({ children }: HeroChoreographyProps) {
   const root = useRef<HTMLElement>(null);
   const inner = useRef<HTMLDivElement>(null);
-  const blob = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -47,7 +50,7 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
       media.add(
         "(min-width: 640px) and (prefers-reduced-motion: no-preference)",
         () => {
-          // ONE timeline, ONE ScrollTrigger, driving both the hero transform and the blob.
+          // One timeline, one ScrollTrigger, owning the hero transform.
           const timeline = gsap.timeline({
             scrollTrigger: {
               trigger: root.current,
@@ -80,15 +83,6 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
             0,
           );
 
-          // Phase 12, Hero → About: a soft gradient blob travels across the screen as the
-          // hero gives way, carrying the eye from one section to the next.
-          timeline.fromTo(
-            blob.current,
-            { xPercent: -30, yPercent: 10, opacity: 0 },
-            { xPercent: 55, yPercent: -15, opacity: 1, ease: "none" },
-            0,
-          );
-
           return () => {
             timeline.kill();
           };
@@ -107,16 +101,6 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
       aria-labelledby="hero-heading"
       className="relative flex min-h-screen items-center overflow-hidden"
     >
-      {/* Phase 12 travelling glow. Decorative, and it starts fully transparent so it is
-          invisible unless the scrubbed timeline above is actually running — which means it
-          simply never appears under reduced motion or on mobile. */}
-      <div
-        ref={blob}
-        aria-hidden
-        data-hero-blob
-        className="transition-blob pointer-events-none absolute left-1/4 top-1/3 bg-accent-violet opacity-0"
-      />
-
       <div ref={inner} className="relative w-full origin-top-left will-change-transform">
         {children}
       </div>

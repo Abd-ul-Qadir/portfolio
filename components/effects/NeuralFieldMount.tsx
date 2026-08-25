@@ -32,11 +32,18 @@ interface NeuralFieldMountProps extends NeuralFieldConfig {
   className?: string;
   /** Packet budget on touch devices. */
   touchPackets?: number;
+  /**
+   * Drive the stage story from scroll. Kept on for touch: morphing the layout is one lerp per
+   * node per frame, so it costs essentially nothing, and it is the entire narrative — dropping
+   * it on mobile would leave phones with a static mesh rather than a simplified journey.
+   */
+  story?: boolean;
 }
 
 export function NeuralFieldMount({
   className,
   touchPackets = 14,
+  story,
   ...config
 }: NeuralFieldMountProps) {
   const holder = useRef<HTMLDivElement>(null);
@@ -83,7 +90,7 @@ export function NeuralFieldMount({
       aria-hidden
       className={cn("pointer-events-none absolute inset-0", className)}
     >
-      {active ? <NeuralField {...resolved} /> : null}
+      {active ? <NeuralField {...resolved} story={story} /> : null}
     </div>
   );
 }

@@ -68,6 +68,11 @@ export function SiteBackground() {
         // backing store, and costs ~44% more pixels to fill on every frame.
         maxDpr={1.5}
         core
+        // The scroll story: the field's whole topology morphs continuously from section to
+        // section — ambient → lattice → clusters → hub → timeline → pipeline → converge. See
+        // `lib/neural-field.ts`. Only this field takes it; the About portrait's is local
+        // decoration and stays in its resting layout.
+        story
       />
     </div>
   );

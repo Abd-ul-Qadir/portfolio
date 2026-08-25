@@ -387,17 +387,6 @@ const config: Config = {
         },
 
         /**
-         * The Phase 12 Hero -> About travelling glow. Size lives here rather than as an
-         * arbitrary value in JSX; position and opacity are scrubbed by the hero timeline.
-         */
-        ".transition-blob": {
-          width: "26rem",
-          height: "26rem",
-          borderRadius: "9999px",
-          filter: "blur(64px)",
-        },
-
-        /**
          * Loader status lines. All four are rendered up front and revealed by the timeline
          * setting `data-visible`, so staging them costs a style recalculation rather than a
          * React re-render — see the performance note in `Loader.tsx`.

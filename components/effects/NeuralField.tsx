@@ -2,14 +2,24 @@
 
 import { useEffect, useRef } from "react";
 
+import { ScrollTrigger } from "@/lib/gsap";
 import { useReducedMotion } from "@/lib/hooks";
-import { NeuralField as Engine, type NeuralFieldConfig } from "@/lib/neural-field";
+import {
+  NeuralField as Engine,
+  STORY_SECTIONS,
+  type NeuralFieldConfig,
+} from "@/lib/neural-field";
 import { cn } from "@/lib/utils";
 
 export type { NeuralFieldConfig };
 
 interface NeuralFieldProps extends NeuralFieldConfig {
   className?: string;
+  /**
+   * Drive the field's stage story from scroll position. Only the site-wide field sets this —
+   * the About portrait's own field is a local decoration and stays in its resting layout.
+   */
+  story?: boolean;
 }
 
 /**
@@ -25,7 +35,7 @@ interface NeuralFieldProps extends NeuralFieldConfig {
  * - the loop stops when the tab is hidden **and** when the canvas scrolls out of view,
  * - the engine is destroyed and every listener removed on unmount.
  */
-export default function NeuralField({ className, ...config }: NeuralFieldProps) {
+export default function NeuralField({ className, story, ...config }: NeuralFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
 
@@ -121,14 +131,57 @@ export default function NeuralField({ className, ...config }: NeuralFieldProps) 
       });
     };
 
+    /* -- the scroll story ----------------------------------------------------- */
+    /**
+     * One ScrollTrigger per section boundary, each scrubbed, reporting a fractional stage
+     * position into the engine. Section-aligned rather than a single trigger over the whole
+     * page, because the sections have very different heights — a flat `scrollY / maxScroll`
+     * mapping would race through the short ones and crawl through the tall ones, and the scene
+     * would stop agreeing with the content it is meant to be describing.
+     *
+     * GSAP ScrollTrigger rather than a scroll listener because this is scrubbed work
+     * (`CLAUDE.md` §2), and it inherits the Lenis wiring from `lib/gsap.ts`.
+     */
+    const storyTriggers: ScrollTrigger[] = [];
+    const buildStory = () => {
+      const sections = STORY_SECTIONS.map((id) => document.getElementById(id));
+      for (let i = 0; i < sections.length - 1; i += 1) {
+        const current = sections[i];
+        const next = sections[i + 1];
+        if (!current || !next) continue;
+        storyTriggers.push(
+          ScrollTrigger.create({
+            trigger: current,
+            start: "top top",
+            endTrigger: next,
+            end: "top top",
+            scrub: true,
+            // The hero pins, which changes the offsets of everything below it. Without this
+            // these triggers would measure against a layout that has no pin spacer in it yet.
+            refreshPriority: -1,
+            onUpdate: (self) => engine.setStory(i + self.progress),
+          }),
+        );
+      }
+    };
+
     if (!reducedMotion) {
       window.addEventListener("pointermove", onPointerMove, { passive: true });
       document.addEventListener("pointerleave", onPointerLeave);
       window.addEventListener("scroll", onScroll, { passive: true });
+      if (story) {
+        // Deferred a frame: this component is dynamically imported, so the sections it needs
+        // to measure may not be laid out at the moment it mounts.
+        requestAnimationFrame(() => {
+          buildStory();
+          ScrollTrigger.refresh();
+        });
+      }
       sync();
     }
 
     return () => {
+      storyTriggers.forEach((trigger) => trigger.kill());
       resizeObserver.disconnect();
       viewportObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -137,7 +190,9 @@ export default function NeuralField({ className, ...config }: NeuralFieldProps) 
       window.removeEventListener("scroll", onScroll);
       engine.destroy();
     };
-  }, [reducedMotion]);
+    // `story` is constant per call site in practice, but it genuinely changes what this effect
+    // builds, so it belongs in the dependency list rather than being suppressed.
+  }, [reducedMotion, story]);
 
   return (
     <canvas

@@ -158,13 +158,79 @@ const DEFAULTS: Required<NeuralFieldConfig> = {
   maxDpr: 2,
 };
 
+/**
+ * The scroll story: one layout per section, in **page order**.
+ *
+ * The field does not play an animation at each boundary and stop. Every node holds a target
+ * position for each of these stages, precomputed once at seed time, and the scroll position
+ * interpolates continuously between the two it currently sits between — so there is no moment
+ * where the scene is "between animations", and scrubbing back up retraces exactly.
+ *
+ * Note the order follows `app/page.tsx`, where **Experience precedes Projects**.
+ *
+ * | stage      | section    | reads as                                              |
+ * |------------|------------|-------------------------------------------------------|
+ * | `ambient`  | Hero       | a loose neural environment, the system at rest         |
+ * | `lattice`  | About      | it reorganises — structure and interconnection emerge  |
+ * | `clusters` | Skills     | nodes gather into technology clusters                  |
+ * | `hub`      | Services   | clusters resolve into hub-and-spoke capabilities       |
+ * | `timeline` | Experience | the network straightens into a connected path          |
+ * | `pipeline` | Projects   | feed-forward layers: input → hidden → hidden → output  |
+ * | `converge` | Contact    | everything settles into concentric order               |
+ */
+export const STORY_SECTIONS = [
+  "hero",
+  "about",
+  "skills",
+  "services",
+  "experience",
+  "projects",
+  "contact",
+] as const;
+
+const STAGE_COUNT = STORY_SECTIONS.length;
+
+/**
+ * Per-stage character, interpolated alongside the geometry.
+ *
+ * - `drift` scales each node's orbit radius, so the field is restless at the top of the page
+ *   and progressively stiller as it resolves — motion calming down *is* the narrative.
+ * - `rate` scales ambient firing, peaking at `pipeline` where the section is about throughput.
+ * - `flow` biases packet direction left→right. At 0 signal spreads in every direction; at 1 it
+ *   marches forward, which is what turns the `pipeline` layout from "a diagram of a network"
+ *   into "a network actually processing something".
+ */
+const STAGE_PROFILE: readonly { drift: number; rate: number; flow: number }[] = [
+  { drift: 1.0, rate: 1.0, flow: 0 }, // ambient
+  { drift: 0.86, rate: 1.15, flow: 0.15 }, // lattice
+  { drift: 0.72, rate: 1.25, flow: 0.2 }, // clusters
+  { drift: 0.64, rate: 1.3, flow: 0.35 }, // hub
+  { drift: 0.58, rate: 1.25, flow: 0.75 }, // timeline
+  { drift: 0.5, rate: 1.75, flow: 1 }, // pipeline
+  { drift: 0.42, rate: 0.7, flow: 0.2 }, // converge
+];
+
+/** Smoothstep — takes the linear scroll mapping off the geometry so morphs ease in and out. */
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
 /** 0 = micro (the fabric), 1 = relay, 2 = hub. Drives degree, size and glow. */
 type Tier = 0 | 1 | 2;
 
 interface Node {
-  /** Anchor — fixed for the node's life. Motion is an offset from here, never a walk. */
+  /**
+   * Base anchor — the `ambient` layout, fixed for the node's life and the position the
+   * topology was built against. Every other stage layout is a deformation of this.
+   */
   ax: number;
   ay: number;
+  /** Anchor for *this frame*: the morph between the two stages scroll currently sits between. */
+  cx: number;
+  cy: number;
+  /** Two stable per-node hashes in [0,1), so every layout can vary a node deterministically. */
+  k: number;
+  k2: number;
   /** Resolved screen position for this frame (anchor + orbit + pull + parallax + scroll). */
   x: number;
   y: number;
@@ -192,10 +258,20 @@ interface Edge {
   b: number;
   /** Resting length at seed time, used to normalise packet speed to px/s. */
   len: number;
-  /** Resting alpha bucket, assigned once — the mesh's base brightness never changes. */
+  /** Resting alpha bucket, assigned once from the edge's length at seed time. */
   bucket: number;
   /** Activation alpha for this frame, 0..1. */
   aa: number;
+  /**
+   * How much this edge is drawn this frame, 0..1. Stage layouts compress the field in
+   * different directions, so a synapse that is short in `ambient` can be stretched several
+   * times its resting length in `pipeline` or `converge`. Rather than draw a screen-crossing
+   * line, an over-stretched edge fades out — which also reads correctly: a connection that no
+   * longer makes sense in the current arrangement should not be asserted.
+   */
+  fade: number;
+  /** `bucket` scaled by `fade`, or -1 to skip. Keeps the batched draw a single pass. */
+  drawBucket: number;
 }
 
 interface Packet {
@@ -264,6 +340,19 @@ export class NeuralField {
 
   private scrollY = 0;
   private fieldOffsetY = 0;
+
+  /**
+   * All stage layouts, flat: node `i`'s stage `s` is at `[(i * STAGE_COUNT + s) * 2]`.
+   * 150 nodes x 7 stages x 2 floats is ~8KB, computed once — cheap enough that the per-frame
+   * cost of the whole story is a single lerp per node.
+   */
+  private layouts = new Float32Array(0);
+  /** Where scroll wants the story to be, in [0, STAGE_COUNT - 1]. */
+  private storyTarget = 0;
+  /** Where it actually is — eased toward the target, which adds a little cinematic inertia. */
+  private storyPos = 0;
+  /** This frame's interpolated stage character. */
+  private profile = { ...STAGE_PROFILE[0] };
 
   private time = 0;
   private lastFrame = 0;
@@ -344,9 +433,16 @@ export class NeuralField {
         const z = Math.random();
         const tierScale = tier === 2 ? 1.7 : tier === 1 ? 1.2 : 1;
 
+        const ax = (col + 0.5) * cw + (Math.random() - 0.5) * cw * 0.78;
+        const ay = (row + 0.5) * ch + (Math.random() - 0.5) * ch * 0.78;
+
         this.nodes.push({
-          ax: (col + 0.5) * cw + (Math.random() - 0.5) * cw * 0.78,
-          ay: (row + 0.5) * ch + (Math.random() - 0.5) * ch * 0.78,
+          ax,
+          ay,
+          cx: ax,
+          cy: ay,
+          k: Math.random(),
+          k2: Math.random(),
           x: 0,
           y: 0,
           z,
@@ -369,6 +465,7 @@ export class NeuralField {
     }
 
     this.buildEdges();
+    this.buildLayouts();
 
     this.packets = Array.from({ length: this.cfg.maxPackets }, () => ({
       alive: false,
@@ -474,6 +571,8 @@ export class NeuralField {
             Math.floor((1 - len / radius) * EDGE_BUCKETS),
           ),
           aa: 0,
+          fade: 1,
+          drawBucket: 0,
         });
         degree[i] += 1;
         degree[j] += 1;
@@ -500,6 +599,167 @@ export class NeuralField {
     }
     this.adjStart = starts;
     this.adjEdge = flat;
+  }
+
+  /* ----------------------------------------------------------------- story */
+
+  /**
+   * Precompute every stage layout.
+   *
+   * **Every layout is a continuous deformation of the base positions, never a reshuffle.**
+   * That constraint is what makes the whole story possible with one topology: because a node's
+   * target in each stage is derived from where it already *is* — nearest cluster, column from
+   * its base x, ring angle from its base angle — neighbours stay neighbours, so the edges built
+   * once against the ambient layout stay short and meaningful in all seven. Assigning nodes to
+   * clusters or columns at random would look identical at rest and tear the mesh into a cat's
+   * cradle of screen-length lines the moment it morphed.
+   */
+  private buildLayouts() {
+    const n = this.nodes.length;
+    const W = this.width;
+    const H = this.height;
+    const minSide = Math.min(W, H);
+    this.layouts = new Float32Array(n * STAGE_COUNT * 2);
+
+    const cxCentre = W / 2;
+    const cyCentre = H / 2;
+
+    // Skills: five technology clusters, spread so they read as distinct groups.
+    const clusters = [
+      [0.14, 0.32],
+      [0.33, 0.66],
+      [0.52, 0.27],
+      [0.71, 0.63],
+      [0.88, 0.35],
+    ].map(([u, v]) => [u * W, v * H] as const);
+    const clusterR = minSide * 0.115;
+
+    // Services: three hubs, each with radiating spokes.
+    const hubs = [
+      [0.22, 0.4],
+      [0.52, 0.6],
+      [0.8, 0.36],
+    ].map(([u, v]) => [u * W, v * H] as const);
+    const SPOKES = 7;
+    const hubR = minSide * 0.16;
+
+    // Projects: a four-layer feed-forward net — input, two hidden, output.
+    const columns = [0.14, 0.38, 0.62, 0.86];
+
+    const nearest = (points: readonly (readonly [number, number])[], x: number, y: number) => {
+      let best = 0;
+      let bestD = Infinity;
+      for (let p = 0; p < points.length; p += 1) {
+        const dx = points[p][0] - x;
+        const dy = points[p][1] - y;
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = p;
+        }
+      }
+      return best;
+    };
+
+    for (let i = 0; i < n; i += 1) {
+      const node = this.nodes[i];
+      const bx = node.ax;
+      const by = node.ay;
+      const u = W > 0 ? bx / W : 0.5;
+      const v = H > 0 ? by / H : 0.5;
+      const k = node.k;
+      const k2 = node.k2;
+      let o = i * STAGE_COUNT * 2;
+
+      const put = (x: number, y: number) => {
+        this.layouts[o] = x;
+        this.layouts[o + 1] = y;
+        o += 2;
+      };
+
+      /* 0 — ambient: the field as seeded. */
+      put(bx, by);
+
+      /* 1 — lattice: pulled most of the way onto a coarse grid, so the same field reads as
+         deliberate and structured rather than scattered. */
+      const gx = (Math.round(u * 9) / 9) * W;
+      const gy = (Math.round(v * 6) / 6) * H;
+      put(lerp(bx, gx, 0.6), lerp(by, gy, 0.6));
+
+      /* 2 — clusters: gathered onto the nearest of five attractors, on a ring around it. */
+      const ci = nearest(clusters, bx, by);
+      const cAngle = k * TAU;
+      const cRad = clusterR * (0.3 + 0.7 * k2);
+      put(clusters[ci][0] + Math.cos(cAngle) * cRad, clusters[ci][1] + Math.sin(cAngle) * cRad);
+
+      /* 3 — hub: nearest of three hubs, angle quantised to a spoke so the result radiates
+         instead of blobbing — hub-and-spoke, the shape of a service topology. */
+      const hi = nearest(hubs, bx, by);
+      const rawAngle = Math.atan2(by - hubs[hi][1], bx - hubs[hi][0]);
+      const step = TAU / SPOKES;
+      const spoke = Math.round(rawAngle / step) * step;
+      const hRad = hubR * (0.22 + 0.9 * k);
+      put(hubs[hi][0] + Math.cos(spoke) * hRad, hubs[hi][1] + Math.sin(spoke) * hRad);
+
+      /* 4 — timeline: a shallow serpentine spine crossing the viewport, nodes branching off
+         it — a path with events hanging from it. */
+      const spineX = W * (0.1 + 0.8 * u);
+      const spineY = H * (0.5 + 0.2 * Math.sin(u * Math.PI * 1.7));
+      put(spineX, spineY + (k - 0.5) * H * 0.26);
+
+      /* 5 — pipeline: four vertical layers. Column comes from the node's own x, so the mesh
+         folds into layers rather than being redealt. */
+      const col = Math.min(columns.length - 1, Math.max(0, Math.floor(u * columns.length)));
+      put(
+        W * columns[col] + (k - 0.5) * minSide * 0.035,
+        H * (0.12 + 0.76 * v) + (k2 - 0.5) * minSide * 0.02,
+      );
+
+      /* 6 — converge: concentric rings. The angle is the node's own bearing from centre, so
+         the field contracts inward rather than scrambling on the way to its final state. */
+      const bearing = Math.atan2(by - cyCentre, bx - cxCentre);
+      const ring = Math.floor(k * 3);
+      const rRad = minSide * (0.15 + ring * 0.105);
+      put(cxCentre + Math.cos(bearing) * rRad, cyCentre + Math.sin(bearing) * rRad);
+    }
+  }
+
+  /**
+   * Set the story position, in `[0, STAGE_COUNT - 1]`. Fractional values are the whole point:
+   * `2.4` means "40% of the way from Skills to Services".
+   */
+  setStory(position: number) {
+    this.storyTarget = Math.max(0, Math.min(STAGE_COUNT - 1, position));
+  }
+
+  /** Resolve `storyPos` into this frame's anchors and stage character. */
+  private applyStory(dt: number) {
+    // Eased toward the scroll target rather than snapped to it: scroll already drives this
+    // directly, and the small lag reads as the scene having mass.
+    this.storyPos += (this.storyTarget - this.storyPos) * Math.min(1, dt * 6);
+
+    const maxStage = STAGE_COUNT - 1;
+    const clamped = Math.max(0, Math.min(maxStage, this.storyPos));
+    const from = Math.min(maxStage, Math.floor(clamped));
+    const to = Math.min(maxStage, from + 1);
+    const t = smoothstep(clamped - from);
+
+    const a = STAGE_PROFILE[from];
+    const b = STAGE_PROFILE[to];
+    this.profile.drift = lerp(a.drift, b.drift, t);
+    this.profile.rate = lerp(a.rate, b.rate, t);
+    this.profile.flow = lerp(a.flow, b.flow, t);
+
+    if (this.layouts.length === 0) return;
+
+    for (let i = 0; i < this.nodes.length; i += 1) {
+      const node = this.nodes[i];
+      const base = i * STAGE_COUNT * 2;
+      const fi = base + from * 2;
+      const ti = base + to * 2;
+      node.cx = lerp(this.layouts[fi], this.layouts[ti], t);
+      node.cy = lerp(this.layouts[fi + 1], this.layouts[ti + 1], t);
+    }
   }
 
   /* ---------------------------------------------------------------- pointer */
@@ -562,10 +822,22 @@ export class NeuralField {
 
     let sent = 0;
     const offset = Math.floor(Math.random() * degree);
+    const flow = this.profile.flow;
+
     for (let k = 0; k < degree && sent < fanout; k += 1) {
       const edgeIndex = this.adjEdge[start + ((offset + k) % degree)];
       const edge = this.edges[edgeIndex];
-      this.spawnPacket(edgeIndex, edge.a === nodeIndex ? 0 : 1, hop);
+      let dir: 0 | 1 = edge.a === nodeIndex ? 0 : 1;
+
+      // Directional bias. At `flow: 1` (the Projects pipeline) the packet is launched from
+      // whichever end is further left regardless of which node fired, so signal marches
+      // input → output across the layers instead of diffusing. That is the difference between
+      // a picture of a feed-forward network and one that is visibly running.
+      if (flow > 0 && Math.random() < flow) {
+        dir = this.nodes[edge.a].cx <= this.nodes[edge.b].cx ? 0 : 1;
+      }
+
+      this.spawnPacket(edgeIndex, dir, hop);
       sent += 1;
     }
   }
@@ -590,6 +862,7 @@ export class NeuralField {
 
   private step(dt: number) {
     this.time += dt;
+    this.applyStory(dt);
     const cfg = this.cfg;
     const pointerOn = cfg.influenceRadius > 0 && this.pActive;
     const R = cfg.influenceRadius;
@@ -624,18 +897,20 @@ export class NeuralField {
     for (let i = 0; i < this.nodes.length; i += 1) {
       const node = this.nodes[i];
 
-      // Orbit: two out-of-phase sinusoids around a fixed anchor. Bounded by construction, so
-      // the topology built at seed time stays valid forever.
-      const ox = Math.sin(this.time * node.sa + node.ph) * node.ra;
-      const oy = Math.cos(this.time * node.sb + node.ph * 1.7) * node.rb;
+      // Orbit: two out-of-phase sinusoids around the node's current anchor. Bounded by
+      // construction, so the topology built at seed time stays valid in every stage. The
+      // amplitude is scaled by the stage profile, so the field visibly settles as the story
+      // resolves.
+      const ox = Math.sin(this.time * node.sa + node.ph) * node.ra * this.profile.drift;
+      const oy = Math.cos(this.time * node.sb + node.ph * 1.7) * node.rb * this.profile.drift;
 
       const depthPar = 1 - node.z * 0.72;
       let tx = 0;
       let ty = 0;
 
       if (pointerOn) {
-        const bx = node.ax + ox;
-        const by = node.ay + oy;
+        const bx = node.cx + ox;
+        const by = node.cy + oy;
         const ddx = this.px - bx;
         const ddy = this.py - by;
         const d2 = ddx * ddx + ddy * ddy;
@@ -683,15 +958,15 @@ export class NeuralField {
       node.act -= node.act * Math.min(1, dt * 4.2);
       if (node.cool > 0) node.cool -= dt;
 
-      node.x = node.ax + ox + node.dx + parX * depthPar;
-      node.y = node.ay + oy + node.dy + parY * depthPar + this.fieldOffsetY;
+      node.x = node.cx + ox + node.dx + parX * depthPar;
+      node.y = node.cy + oy + node.dy + parY * depthPar + this.fieldOffsetY;
     }
 
     // Ambient signal, so the network is alive before the cursor ever arrives.
     if (cfg.maxPackets > 0) {
       this.ambientTimer -= dt;
       if (this.ambientTimer <= 0) {
-        this.ambientTimer = 0.28 + Math.random() * 0.4;
+        this.ambientTimer = (0.28 + Math.random() * 0.4) / Math.max(this.profile.rate, 0.05);
         const i = Math.floor(Math.random() * this.nodes.length);
         if (this.nodes[i] && this.nodes[i].cool <= 0) this.fire(i, 1, 1);
       }
@@ -770,9 +1045,24 @@ export class NeuralField {
     const R = cfg.influenceRadius;
 
     /* -- edges: resting mesh, batched into a few strokes ------------------- */
+    // Squared-ratio thresholds, so no square root is needed in a per-edge loop: an edge is
+    // drawn in full up to ~1.3x its resting length and gone by ~2.8x.
+    const FADE_FULL = 1.69;
+    const FADE_GONE = 7.84;
+
     for (const edge of this.edges) {
       const a = this.nodes[edge.a];
       const b = this.nodes[edge.b];
+
+      const ex = a.x - b.x;
+      const ey = a.y - b.y;
+      const stretch = (ex * ex + ey * ey) / Math.max(edge.len * edge.len, 1);
+      edge.fade =
+        stretch <= FADE_FULL
+          ? 1
+          : Math.max(0, (FADE_GONE - stretch) / (FADE_GONE - FADE_FULL));
+      edge.drawBucket = edge.fade <= 0.02 ? -1 : Math.round(edge.bucket * edge.fade);
+
       let activation = Math.max(a.act, b.act);
 
       if (pointerOn) {
@@ -789,7 +1079,7 @@ export class NeuralField {
           activation = Math.max(activation, f * f * f * 0.8);
         }
       }
-      edge.aa = activation;
+      edge.aa = activation * edge.fade;
     }
 
     ctx.lineWidth = 1;
@@ -799,7 +1089,7 @@ export class NeuralField {
       ctx.beginPath();
       let any = false;
       for (const edge of this.edges) {
-        if (edge.bucket !== bucket) continue;
+        if (edge.drawBucket !== bucket) continue;
         const a = this.nodes[edge.a];
         const b = this.nodes[edge.b];
         ctx.moveTo(a.x, a.y);
@@ -843,6 +1133,8 @@ export class NeuralField {
         const y = from.y + (to.y - from.y) * t;
         // A short streak behind the head reads as travel rather than a blinking dot.
         const tailT = Math.max(0, t - 0.16);
+        // A packet is only as visible as the connection carrying it.
+        ctx.globalAlpha = edge.fade;
         ctx.strokeStyle = rgba(CYAN, 0.5);
         ctx.beginPath();
         ctx.moveTo(from.x + (to.x - from.x) * tailT, from.y + (to.y - from.y) * tailT);
@@ -853,6 +1145,7 @@ export class NeuralField {
         ctx.beginPath();
         ctx.arc(x, y, 1.5, 0, TAU);
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
     }
 
@@ -1050,7 +1343,14 @@ export class NeuralField {
    */
   renderStatic() {
     this.pActive = false;
+    // The `ambient` layout, not whatever the story last resolved to: under reduced motion no
+    // scroll triggers are created at all, so the field simply is its resting arrangement.
+    this.storyPos = 0;
+    this.storyTarget = 0;
+    this.profile = { ...STAGE_PROFILE[0] };
     for (const node of this.nodes) {
+      node.cx = node.ax;
+      node.cy = node.ay;
       node.x = node.ax;
       node.y = node.ay;
       node.act = 0;

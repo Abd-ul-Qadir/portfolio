@@ -45,6 +45,83 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — The scroll story: one continuous morph, neon ball removed
+
+Abdul: the 3D scroll animation only really happened Hero → next section, felt generic and
+disconnected from the portfolio, and leaned on a neon glowing ball. He wanted a continuous
+AI-themed journey where the scene evolves with each section, and the ball gone.
+
+**The neon ball is gone.** It was `.transition-blob` — a 26rem violet circle with a 64px blur
+that travelled across the screen on the hero's pinned timeline (Phase 12's Hero → About
+boundary). Removed in full: the tween, the element, the `data-hero-blob` hook and the Tailwind
+component class. Nothing references it.
+
+**What replaced it: a stage story inside the existing field, not a new system.** No second
+canvas and no second animation layer — the site-wide `NeuralField` now morphs its entire
+topology continuously across the page. Every node holds **seven precomputed layouts**, one per
+section, and scroll interpolates between the two it currently sits between:
+
+| stage | section | reads as |
+|---|---|---|
+| `ambient` | Hero | loose neural environment, system at rest |
+| `lattice` | About | reorganises onto a grid — structure emerges |
+| `clusters` | Skills | five technology clusters |
+| `hub` | Services | hub-and-spoke capabilities (angle quantised to spokes) |
+| `timeline` | Experience | a serpentine spine with nodes branching off it |
+| `pipeline` | Projects | four-layer feed-forward net, signal marching input → output |
+| `converge` | Contact | concentric rings — the system settles |
+
+**Stage order follows `app/page.tsx`, where Experience precedes Projects** — Abdul's brief
+listed Projects first, but the animation has to match what you actually scroll past.
+
+**The one idea that makes this work with a single topology:** every layout is a **continuous
+deformation of the base positions, never a reshuffle**. A node's cluster is the nearest
+attractor *to where it already is*; its pipeline column comes from its own x; its converge
+angle is its own bearing from centre. So neighbours stay neighbours and the edges built once
+against the ambient layout stay short and meaningful in all seven. Random assignment would look
+identical at rest and tear the mesh into screen-length lines the moment it morphed. Where a
+layout does stretch an edge past ~1.3x its resting length it fades out, gone by ~2.8x.
+
+Geometry is not the only thing that morphs — a per-stage profile lerps alongside it: `drift`
+(orbit amplitude) falls from 1.0 to 0.42 so the field visibly *calms* as the story resolves,
+`rate` peaks at `pipeline`, and `flow` biases packet direction left→right, reaching 1 at
+`pipeline` so signal marches through the layers instead of diffusing. That is what makes it
+read as a network running rather than a diagram of one.
+
+Driven by **one ScrollTrigger per section boundary**, scrubbed, created inside `NeuralField`
+itself so there is no cross-component wiring. Section-aligned rather than one trigger over the
+whole page: the sections differ hugely in height, and a flat `scrollY / maxScroll` mapping
+would race through the short ones and crawl through the tall ones, so the scene would stop
+agreeing with the content it is describing.
+
+**Also changed:** the Phase 12 Projects → Contact darkening layer now scrubs to **0.72, not 1**.
+It sits at `-z-10`, above the field at `-z-20`, so at full opacity it completely buried the
+`converge` stage — which is the *ending* of the story. It still darkens decisively; the
+resolved network stays legible behind it.
+
+**Verified (production build, real GPU):**
+
+| check | result |
+|---|---|
+| continuity | all 6 mid-boundary samples distinct from **both** neighbours — the scene changes *between* sections, not only at them |
+| genuinely scrubbed | retrace error scrolling back up: **0.003–0.047** (contact 0.125↔0.124, projects 0.263↔0.258) |
+| the narrative is measurable | horizontal spread contracts 0.283 (hero) → **0.125** (contact); `sdy` bottoms out at `hub` (0.117) and reopens for `pipeline` |
+| perf mid-story, cursor active | field JS **1.70 ms**, **16.8 ms median (60fps)** |
+| reduced motion | field byte-identical at top and at Contact (`n: 772`, `sdx: 0.284`), **0 ScrollTriggers, 0 running animations** |
+| mobile 390px | story runs (sdy 0.25 → 0.109), 54 nodes, no pointer behaviour |
+
+*Measurement note:* the observable is a spatial signature of the canvas's lit pixels (centroid +
+spread). An early continuity check used only `cx`/`sdx` and flagged `services→experience mid` as
+a duplicate; it differs by 44% in `sdy`. **The metric was too narrow, not the animation** — the
+full 4-D signature shows all six midpoints distinct. Worth remembering: a signature that
+collapses the wrong axis will confidently report a working morph as dead.
+
+`build`, `lint`, `tsc --noEmit` clean.
+
+**Not done:** Lighthouse still not re-run since these three sessions of changes (see the Vercel
+note below) — the field's JS is ~1.7 ms/frame and no canvas was added, so no regression is
+expected, but that remains a prediction.
+
 ### Session 2 (cont.) — 2026-08-26 — Navbar readability, and a site-wide `backdrop-filter` bug
 
 Abdul: "apply this background to whole project and blur the navbar its totally like glass and
@@ -1420,6 +1497,20 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-26 — the Phase 12 Hero → About travelling blob is deleted, and the macro-layer is
+  largely superseded by the field's scroll story.** `PHASE_PLAN.md` Phase 12 specifies a
+  travelling gradient blob folded into the hero timeline. Abdul asked for it removed: it read
+  as a generic glowing ball with nothing to do with an AI portfolio, and it was the only thing
+  making that boundary feel like an event. Continuity now comes from the neural field morphing
+  its whole topology continuously across all seven sections, which satisfies Phase 12's actual
+  goal ("one continuous scroll rather than sections stacking") far better than four
+  boundary-local tweens did. The other three boundaries in `SectionTransitions` are **kept** —
+  they still work and they reinforce the field rather than competing with it. **Do not
+  reinstate the blob.**
+- **2026-08-26 — the Projects → Contact darkening layer scrubs to 0.72, not 1.** Phase 12 says
+  "background gradually darkens", and it still does. But that layer is at `-z-10`, above the
+  field at `-z-20`, so full opacity blacked out the `converge` stage — the ending of the scroll
+  story. Capping it keeps the darkening and the payoff.
 - **2026-08-26 — the navbar is no longer fully transparent over the hero.**
   `DESIGN_SYSTEM.md` specifies transparent-over-hero → glass-on-scroll. The transition is
   intact, but the at-rest state now carries `.nav-veil`, a masked blur+darken band behind the

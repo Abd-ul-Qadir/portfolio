@@ -45,6 +45,58 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — Navbar readability, and a site-wide `backdrop-filter` bug
+
+Abdul: "apply this background to whole project and blur the navbar its totally like glass and
+the text isnt readable."
+
+**The background was already on every route** — `SiteBackground` lives in the root layout, so
+`/`, `/projects/[slug]` and the 404 all render the same fixed field. Verified on
+`/projects/pest-eye`: field present, 150 nodes. Nothing to do. (Noted while checking: **project
+detail pages have no `Navbar` or `Footer`** — both are mounted in `app/page.tsx` only, so those
+routes have just a "Back to projects" link. That is pre-existing and was left alone; it is a
+scope decision, not a bug.)
+
+**⚠ The real find: `backdrop-filter` was being stripped from the production CSS, site-wide.**
+Chasing the navbar complaint turned up that `getComputedStyle(...).backdropFilter` was `none`
+on `.glass-surface` too — **every glass surface on the site had zero blur**: the nav, cards,
+the contact panel, the credential lightbox, the skills hub, secondary buttons.
+
+Cause: each glass class declared **both** `backdropFilter` and a hand-written
+`WebkitBackdropFilter`. The production minifier deduplicated them down to *only*
+`-webkit-backdrop-filter` and dropped the standard property. Chrome still honours the `-webkit-`
+alias, so it rendered correctly in every screenshot ever taken of this site — but **Firefox does
+not support that alias at all**, so Firefox users have been getting flat translucent films this
+whole time. The fix is to declare *only* the standard property and let autoprefixer emit the
+prefix; a manually written prefix is what the minifier collapses onto. Confirmed in the built
+CSS — both properties now present — and via computed style: `.glass-surface` is `blur(16px)`,
+the nav is `blur(20px) saturate(1.4)`.
+
+*Lesson, and the reason this is written up rather than just fixed:* the effect looked correct in
+Chrome, in every screenshot, for the entire project. **A visual check in one engine cannot
+detect a dropped standard property.** There is now a warning comment above `addComponents` in
+`tailwind.config.ts` with the exact `grep` to re-check the built CSS.
+
+**The navbar itself.** It used `.glass-surface` — a 4%-**white** film. That works over the calm
+card surfaces it was designed for, but the bar sits over the live neural field, and a white wash
+cannot stop a lit cyan connection reading through 12px mono labels. Two new component classes,
+both tinting *down* toward the page background instead:
+- **`.glass-nav`** (scrolled): `bg-base` at 72% + `blur(20px) saturate(140%)`. `.glass-surface`
+  was deliberately **not** changed — 8 card/button consumers depend on it.
+- **`.nav-veil`** (at rest over the hero): a masked gradient on its own element behind the nav
+  content. `DESIGN_SYSTEM.md` asks for the bar to be transparent over the hero, but transparent
+  cannot mean illegible; this keeps the intent (no border, no edge, hero still full-bleed) while
+  darkening and blurring just the band behind the labels. **It has to be its own element** — a
+  mask applies to an element's children too, so on `<header>` it would have faded out the bottom
+  of the nav text. Cross-faded with `.glass-nav` on opacity so it hands over smoothly rather
+  than popping at the 24px scroll threshold.
+
+**Verified:** readable at the top even with the cursor core firing directly beneath the bar;
+`blur(12px)` veil at rest, `blur(20px) saturate(1.4)` scrolled, veil at opacity 0 when scrolled;
+correct under reduced motion (0 running animations — the veil is a static readability layer, not
+motion) and on mobile. **No perf regression: still 16.7 ms median (locked 60fps), field JS
+1.58 ms.** `build`, `lint`, `tsc --noEmit` clean.
+
 ### Session 2 — 2026-08-26 — Constellation replaced by an interactive neural field
 
 Abdul's brief: the constellation read as "generic, boring, too slow", and barely reacted to the
@@ -1368,6 +1420,15 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-26 — the navbar is no longer fully transparent over the hero.**
+  `DESIGN_SYSTEM.md` specifies transparent-over-hero → glass-on-scroll. The transition is
+  intact, but the at-rest state now carries `.nav-veil`, a masked blur+darken band behind the
+  labels. Reason: the bar sits over the live neural field, and with a genuinely transparent bar
+  the mesh's lit connections crossed the nav text and made it unreadable — Abdul reported it.
+  Accessibility outranks the doc here (`CLAUDE.md` §4). The veil fades out before the element
+  ends, so the bar still reads as transparent rather than as a solid strip. To go back to a
+  fully transparent bar, delete the veil element in `Navbar.tsx` — and re-check readability
+  over a lit cascade before keeping it.
 - **2026-08-26 — the constellation is now a neural field, and it stayed on 2D canvas rather
   than moving to Three.js/R3F.** Abdul's brief asked for an "AI neural-network interface" and
   said to use "the existing Three.js/R3F setup if possible", with R3F/three/drei "fine if

@@ -177,11 +177,25 @@ const config: Config = {
       });
 
       addComponents({
+        /**
+         * **Never hand-write a `WebkitBackdropFilter` alongside `backdropFilter` here.**
+         *
+         * Every glass class used to declare both. The production minifier deduplicated them
+         * down to **only `-webkit-backdrop-filter`** and dropped the standard property — which
+         * Chrome still honours (so it looked fine in every screenshot) but Firefox does not
+         * support at all, leaving every glass surface on the site — nav, cards, the contact
+         * panel, the lightbox, the skills hub — as a flat translucent film with no blur for
+         * those users. Declaring only the standard property lets autoprefixer add whatever
+         * prefix the browserslist targets actually need, and it cannot be deduped away.
+         *
+         * If you change one of these, re-check the built CSS, not just Chrome:
+         *   grep -o "\.glass-surface{[^}]*}" .next/static/chunks/*.css
+         */
+
         /** Glass only where it earns its place: cards and the nav bar. */
         ".glass-surface": {
           backgroundColor: v("bg-glass"),
           backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
           borderWidth: "1px",
           borderStyle: "solid",
           borderColor: v("border-subtle"),
@@ -318,11 +332,50 @@ const config: Config = {
           },
         },
 
+        /**
+         * The navbar's scrolled state.
+         *
+         * Deliberately **not** `.glass-surface`, which is a 4%-*white* film: that works over
+         * the calm card surfaces it was designed for, but the nav bar sits over a live neural
+         * mesh whose activated connections are bright cyan, and a white wash at 16px blur does
+         * not stop a lit line reading straight through 12px mono labels. This tints *down*
+         * toward the page background instead, so the labels always have a dark ground.
+         * `saturate` keeps the blurred violet/cyan behind it from going grey and lifeless.
+         */
+        ".glass-nav": {
+          backgroundColor: baseAt(72),
+          backdropFilter: "blur(20px) saturate(140%)",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+        },
+
+        /**
+         * The navbar's at-rest state over the hero.
+         *
+         * `DESIGN_SYSTEM.md` asks for the bar to be transparent there, but transparent cannot
+         * mean illegible. This keeps the design intent — no border, no visible edge, the hero
+         * still reads as full-bleed — while blurring and darkening just enough behind the
+         * labels.
+         *
+         * The mask is what makes it invisible as a band: both the tint *and* the backdrop blur
+         * fade to nothing before the element ends, so there is no hard edge where the blur
+         * stops. It must therefore live on its own element rather than on `<header>` — a mask
+         * applies to an element's children too, and on the header it would fade out the bottom
+         * of the nav text itself.
+         */
+        ".nav-veil": {
+          backdropFilter: "blur(12px)",
+          backgroundImage: `linear-gradient(to bottom, ${baseAt(88)} 0%, ${baseAt(50)} 55%, transparent 100%)`,
+          maskImage: "linear-gradient(to bottom, black 0%, black 45%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black 0%, black 45%, transparent 100%)",
+        },
+
         /** Dimmed, blurred backdrop behind a modal dialog. */
         ".scrim-backdrop": {
           backgroundColor: baseAt(80),
           backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
         },
 
         /**

@@ -14,8 +14,12 @@ import { cn } from "@/lib/utils";
 const SPY_IDS = ["hero", ...navItems.map((item) => item.id)];
 
 /**
- * Transparent over the hero, glass once scrolled — plus a scroll-spy active-section
- * indicator and an animated underline on the current item.
+ * Veiled over the hero, glass once scrolled — plus a scroll-spy active-section indicator and
+ * an animated underline on the current item.
+ *
+ * Both states tint *down* toward the page background rather than washing white, because the
+ * bar sits over the live neural field: see `.glass-nav` / `.nav-veil` in `tailwind.config.ts`
+ * for why `.glass-surface` is the wrong treatment here.
  *
  * Framer Motion, deliberately: this is a **discrete state transition** (transparent → glass)
  * and a `layoutId` underline, not a timeline scrubbed to scroll position, so it is not
@@ -78,14 +82,31 @@ export function Navbar() {
       className={cn(
         "fixed inset-x-0 top-0 z-nav transition-all duration-500 ease-smooth",
         scrolled || menuOpen
-          ? "glass-surface border-x-0 border-t-0 shadow-elevated"
+          ? "glass-nav border-x-0 border-t-0 shadow-elevated"
           : "border-transparent bg-transparent",
       )}
     >
+      {/* At rest over the hero the bar carries no surface of its own, which left the nav
+          labels sitting directly on the neural mesh — bright cyan connections crossed the
+          12px mono text and made it unreadable. This veil darkens and blurs just the band
+          behind the labels and fades out before it ends, so the bar still reads as
+          transparent over the hero rather than as a solid strip.
+
+          Cross-faded rather than conditionally rendered, so it hands over to `.glass-nav`
+          smoothly instead of popping at the 24px scroll threshold. */}
+      <div
+        aria-hidden
+        className={cn(
+          "nav-veil pointer-events-none absolute inset-x-0 top-0 h-32 transition-opacity duration-500 ease-smooth",
+          scrolled || menuOpen ? "opacity-0" : "opacity-100",
+        )}
+      />
+
       <nav
         aria-label="Primary"
         className={cn(
-          "mx-auto flex max-w-6xl items-center justify-between px-6 transition-height duration-500 ease-smooth sm:px-8",
+          // `relative` so the nav paints above the absolutely-positioned veil behind it.
+          "relative mx-auto flex max-w-6xl items-center justify-between px-6 transition-height duration-500 ease-smooth sm:px-8",
           scrolled ? "h-14" : "h-20",
         )}
       >
@@ -162,7 +183,7 @@ export function Navbar() {
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
             transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden md:hidden"
+            className="relative overflow-hidden md:hidden"
           >
             <ul className="flex flex-col gap-1 px-6 pb-6 sm:px-8">
               {navItems.map((item) => (

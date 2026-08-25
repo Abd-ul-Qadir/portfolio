@@ -45,6 +45,79 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — Cinematic section choreography (content, not just background)
+
+Abdul: the background now evolves per section, but the *sections themselves* still scroll like a
+normal website. He wanted each section's content to fly in from one direction, take focus, and
+leave in another — scrubbed, reversible, varied per boundary.
+
+**New: `components/effects/SectionChoreography.tsx`**, mounted once in `app/page.tsx`. Renders
+nothing; it finds each section's `[data-section-inner]` container (a `data-` attribute added to
+the existing `<Container>` in all six sections — no markup restructuring, no content change).
+
+**The rule that keeps it readable: there is a settled zone.** Enter finishes at `top 42%`, exit
+does not begin until `bottom 62%`, and in between the content sits at an identity transform and
+does not move at all. Text that translates while you read it is hard to read and a known
+motion-sickness trigger — `PHASE_PLAN.md` Phase 11 argues exactly this against scroll-jacking
+every boundary. The brief asks for "appear → become the focus → exit", and *become the focus*
+means holding still. Verified: all six sections measure `op=1 tx=0 scale=1` at reading position.
+(The zone is safe for any section taller than 20% of the viewport; all are far taller.)
+
+**It transforms the inner container, never the `<section>`.** Three independent reasons, each of
+which would be a real bug:
+1. the neural field's story measures sections with `start: "top top"` and the navbar scroll-spy
+   observes them — moving a section moves the triggers that describe it;
+2. `#about`-style anchor links jump to the section box;
+3. **`CredentialLightbox` is `position: fixed` and lives inside the Projects `<section>`.** A
+   transform on an ancestor makes a fixed element position against that ancestor instead of the
+   viewport. It is a sibling of the container, so transforming only the container leaves it
+   alone. (This is also why `perspective` is set on the container via `transformPerspective`
+   rather than as CSS on the section — `perspective` creates a containing block just like
+   `transform` does.)
+
+**Choreography** (hero is excluded — its pinned scale-into-the-corner *is* its exit, so About
+answers it from the opposite corner): About enters bottom-right → exits left; Skills enters
+bottom-left → exits top-right; Services enters right → exits top-left; Experience enters left →
+exits right; Projects enters bottom-right → exits top-left; **Contact enters and stays** — it is
+the last section and the footer follows, so animating it away would end the page on empty space.
+Direct children get 30% of the parent's travel, staggered; because the timeline is scrubbed,
+`stagger` spreads across scroll *progress*, which is what produces "heading first, then the
+paragraph, then the buttons". Mobile keeps the choreography but flattens it: no rotation, 42% of
+the travel (measured 0/6/19px vs 0/42/131px on desktop).
+
+**⚠ The perf work here is the important part of this entry.**
+
+**`will-change` is load-bearing and was measured, not assumed.** Animating `opacity` on these
+containers cost ~50% more frame time during scroll — **median 33 ms → 50 ms, long frames 23 →
+31**. The transforms were free; opacity was the entire regression. These subtrees are full-width
+and several viewports tall, and changing opacity on one forces the whole subtree to be
+re-rasterised into an offscreen buffer every frame. Adding
+`will-change: "transform, opacity"` lets the compositor keep it on its own layer and apply
+opacity there: **median 33.4 ms, long frames 24 — identical to having no choreography at all.**
+Do not remove it, and do not assume opacity is cheap because transform is.
+
+**⚠ And a measurement trap that cost most of the debugging time.** The first perf run showed
+33 ms where an earlier session had measured 16.8 ms, and it looked like a catastrophic
+regression. Three hypotheses were tested and all three were wrong: `force3D: true` (no change),
+3D vs pure 2D (no change), and finally the choreography unmounted entirely (**still 33 ms**).
+Stashing to the committed HEAD — the exact code that had measured 16.8 ms — also gave 33 ms.
+**The machine had simply gotten busier** (Abdul's own Chrome, 38 processes, sharing the Intel
+UHD 620). PROGRESS has warned about this since Phase 13 and I walked into it anyway.
+*The rule:* an absolute frame-rate number from a previous session is not a baseline. **A/B on
+one build, in one sitting, is the only valid comparison** — and it is what eventually isolated
+opacity as the real cost.
+
+**Also fixed:** the hero pin now carries `refreshPriority: 1`. Every trigger below it — this
+choreography and the field's story — measures against a layout whose height depends on the pin
+spacer. This is the one-line fix flagged in the 2026-08-22 entry and never applied.
+
+**Verified (final build):** settled zones exact for all six; scrub **identical** down and up at
+every sampled position (`op 0.73/tx 42` and `op 0.169/tx 131` both ways); **nothing stranded**
+(no section centred in the viewport with unreadable content) across a full-page sweep; scroll
+perf median 33.8 ms / 26 long frames, matching the no-choreography baseline; reduced motion has
+**zero transforms, zero inline styles, zero running animations** at three scroll positions.
+`build`, `lint`, `tsc --noEmit` clean.
+
 ### Session 2 (cont.) — 2026-08-26 — The scroll story: one continuous morph, neon ball removed
 
 Abdul: the 3D scroll animation only really happened Hero → next section, felt generic and
@@ -1497,6 +1570,14 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-26 — full per-section scroll choreography, which Phase 11 deliberately declined.**
+  `PHASE_PLAN.md` Phase 11 argues against choreographing every boundary and says: "If after
+  seeing it you want the full scroll-jack treatment everywhere, that's a straightforward
+  extension of the same pattern per section — flag it as a scope change in `PROGRESS.md`'s
+  decision log." Abdul asked for it; this is that flag. The objection is answered rather than
+  ignored: there is a **settled zone** in every section where content is at an identity
+  transform and completely still, so the page never animates text while it is being read, and
+  nothing is pinned except the hero. Under reduced motion the entire layer does not exist.
 - **2026-08-26 — the Phase 12 Hero → About travelling blob is deleted, and the macro-layer is
   largely superseded by the field's scroll story.** `PHASE_PLAN.md` Phase 12 specifies a
   travelling gradient blob folded into the hero timeline. Abdul asked for it removed: it read

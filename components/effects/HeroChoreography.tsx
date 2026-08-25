@@ -65,6 +65,13 @@ export function HeroChoreography({ children }: HeroChoreographyProps) {
               scrub: true,
               // Recalculate against the real, post-font-load layout.
               invalidateOnRefresh: true,
+              // Refresh this one FIRST. Every trigger below the hero — the section
+              // choreography, the neural field's story — measures against a layout whose
+              // height depends on this pin's spacer. Without an explicit priority they can
+              // refresh before the spacer exists and cache start/end values that are a full
+              // viewport out, which shows up as an animation that completes while its section
+              // is still far below the fold. Flagged in PROGRESS.md's 2026-08-22 entry.
+              refreshPriority: 1,
             },
           });
 

@@ -30,7 +30,7 @@ export function Services() {
       className="relative overflow-hidden py-section"
     >
 
-      <Container className="relative">
+      <Container className="relative" data-section-inner>
         {/* Heading wording comes from `CONTENT_BRIEF.md`'s own section title
             ("Services / What I Do"). No invented marketing copy — `CLAUDE.md` §1. */}
         <SectionHeading id="services-heading" eyebrow="Services" accent="do" sparkle>

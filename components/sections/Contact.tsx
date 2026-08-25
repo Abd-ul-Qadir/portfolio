@@ -29,7 +29,7 @@ export function Contact() {
       className="relative overflow-hidden py-section"
     >
 
-      <Container className="relative">
+      <Container className="relative" data-section-inner>
         <SectionHeading
           id="contact-heading"
           eyebrow="Get in touch"

@@ -28,7 +28,7 @@ export function Skills() {
     >
 
 
-      <Container className="relative">
+      <Container className="relative" data-section-inner>
         <SectionHeading id="skills-heading" eyebrow="Capabilities" accent="ecosystem">
           The
         </SectionHeading>

@@ -84,6 +84,29 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Hero portrait colour-graded onto the dark page
+
+Abdul: the normal hero photo "is much brighter and doesnt look good on dark background".
+
+**Measured before choosing a fix, and the obvious reading was wrong.** The subject's mean
+luminance is only 66 — it is not a bright image overall. The problem is the top end: **p99 was
+236 and 5% of the subject sat above 200**, against a page at luminance 9. The shirt and lit skin
+were blowing out, which is what made the cut-out read as pasted on rather than lit by the scene.
+Pulling the whole image down would have muddied the face and missed the cause.
+
+So `scripts/cutout.py` gained a `grade()` step that **compresses highlights and leaves midtones
+nearly alone**: a Reinhard-style rolloff above a 0.45 knee, a small exposure trim, a little
+desaturation, and a slight cool bias toward the page's blue-violet. Chosen by rendering four
+knee settings side by side on the real background — 0.35 was visibly flattening the face.
+
+**Result: p99 236 → 154, nothing above 200 at all, mean 66 → 54**, face fully legible.
+
+**The robotic variant is deliberately left ungraded** and the call is worth keeping: it is meant
+to read as lit from within, it is only ever seen inside the reveal, and dimming it would defeat
+the effect. Grading the photo actually *increased* the contrast between the two, so the AI
+version now pops harder than before. About is untouched — it uses the raw photo with its
+background, per Abdul.
+
 ### Session 2 (cont.) — 2026-08-26 — The cursor gets a fixed appearance (third attempt, correct one)
 
 Two wrong fixes preceded this, both from misreading the same report. What Abdul's screenshots

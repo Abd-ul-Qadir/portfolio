@@ -58,7 +58,31 @@ band = int(H * 0.10)
 fade[H - band:] = np.linspace(1, 0, band)
 alpha *= fade[:, None]
 
-def emit(path_in, path_out, erode_px=0):
+def grade(rgb01):
+    """
+    Settle the photograph onto the page's near-black background.
+
+    The problem is not overall brightness — the subject's mean luminance is only 66 — it is the
+    top end: p99 was 236 and 5% of the subject sat above 200 against a page at luminance 9, so
+    the shirt and lit skin blew out and the cut-out read as pasted on rather than lit by the
+    scene. Pulling everything down would have muddied the face, so this compresses the
+    highlights instead and leaves the midtones nearly alone.
+
+    Reinhard-style rolloff above a knee, a small exposure trim, a touch of desaturation, and a
+    slight cool bias toward the page's blue-violet. Measured after: p99 236 -> 154, nothing above
+    200 at all, mean 66 -> 54, with the face still fully legible (a harder knee of 0.35 was
+    tried and started flattening it).
+    """
+    knee, exposure, cool, desat = 0.45, 0.88, 0.04, 0.92
+    y = np.where(rgb01 <= knee, rgb01, knee + (rgb01 - knee) / (1.0 + (rgb01 - knee) / (1.0 - knee)))
+    y = y * exposure
+    lum = (y * np.array([0.2126, 0.7152, 0.0722], np.float32)).sum(-1, keepdims=True)
+    y = lum + (y - lum) * desat
+    y = y * np.array([1.0 - cool, 1.0 - cool * 0.55, 1.0], np.float32)
+    return np.clip(y, 0.0, 1.0)
+
+
+def emit(path_in, path_out, erode_px=0, do_grade=False):
     """Apply the matte to an image and write an RGBA PNG."""
     rgb_src = Image.open(path_in).convert("RGB")
     if rgb_src.size != (W, H):
@@ -71,12 +95,15 @@ def emit(path_in, path_out, erode_px=0):
         # where the normal photo underneath covers the seam.
         a = ndimage.grey_erosion(a, size=(erode_px * 2 + 1, erode_px * 2 + 1))
         a = ndimage.gaussian_filter(a, 0.8)
-    data = np.dstack([np.asarray(rgb_src, np.uint8), (a * 255).astype(np.uint8)])
+    pixels = np.asarray(rgb_src, np.float32) / 255.0
+    if do_grade:
+        pixels = grade(pixels)
+    data = np.dstack([(pixels * 255).astype(np.uint8), (a * 255).astype(np.uint8)])
     Image.fromarray(data, "RGBA").save(path_out, optimize=True)
     return data
 
 
-out = emit("public/portrait2.jpeg", "public/portrait2-cutout.png")
+out = emit("public/portrait2.jpeg", "public/portrait2-cutout.png", do_grade=True)
 img = Image.fromarray(out, "RGBA")
 
 # The robotic variant is keyed with the **same matte**, not its own.
@@ -86,6 +113,8 @@ img = Image.fromarray(out, "RGBA")
 # its shoulders are broader -- so the reveal would show robot pixels sitting outside the human
 # outline, which is exactly the "spilling outside the profile image" the effect must not do.
 # Sharing one matte makes the two silhouettes pixel-identical and the containment structural.
+# Deliberately ungraded: the AI variant is meant to read as lit from within, and it is only
+# ever seen inside the reveal, where dimming it would defeat the effect.
 emit("public/robotic_portrait.jpeg", "public/robotic-portrait-cutout.png", erode_px=4)
 
 # Preview on the real page background so the silhouette can be judged in context.

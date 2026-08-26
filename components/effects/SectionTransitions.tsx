@@ -8,9 +8,9 @@ import { gsap, useGSAP } from "@/lib/gsap";
  * The Phase 12 section-transition macro-layer: the boundaries between finished sections,
  * stitched into one continuous scroll rather than sections merely stacking.
  *
- * This owns three of the four boundaries. The fourth — **Hero → About** — deliberately lives
- * in `HeroChoreography`, folded into the pinned timeline built in Phase 11, because
- * `PHASE_PLAN.md` requires it to share that timeline rather than compete with it.
+ * This owns three boundaries. There is deliberately **no Hero → About transform any more**:
+ * the hero's pinned scrub was removed at Abdul's request, and the continuity across that
+ * boundary now comes from the site-wide neural field, which morphs section to section.
  *
  * Everything here is **GSAP ScrollTrigger with `scrub`**, tied directly to scroll position,
  * and the whole layer is gated behind `gsap.matchMedia("(prefers-reduced-motion:

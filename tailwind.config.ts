@@ -158,7 +158,10 @@ const config: Config = {
          * packets. The line is 40 viewBox units long, so the offset sweeps that full distance.
          */
         "synapse-flow": {
-          from: { strokeDashoffset: "40" },
+          // Distance comes from `--flow-span`, set per connection from its measured length —
+          // the segments are no longer all the same length now that they stop at each circle's
+          // edge and the circles differ in size.
+          from: { strokeDashoffset: "var(--flow-span, 40)" },
           to: { strokeDashoffset: "0" },
         },
         /**

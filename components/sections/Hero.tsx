@@ -2,7 +2,6 @@ import { ArrowRight, Mail } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
-import { HeroChoreography } from "@/components/effects/HeroChoreography";
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
 import { Typewriter } from "@/components/effects/Typewriter";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +10,12 @@ import { GradientText } from "@/components/ui/GradientText";
 import { identity } from "@/content/data";
 
 /**
+ * The hero has **no scroll animation** — removed at Abdul's request. It previously pinned and
+ * scrubbed its content down into the top-left corner (`HeroChoreography`, Phase 11's flagship
+ * moment), which is why this section used to be wrapped in a client component at all. With the
+ * pin gone the wrapper had nothing left to do, so the section is inlined here and the component
+ * deleted: one fewer client component, and no GSAP on the page's LCP element.
+ *
  * Stagger for the entrance. The `.rise-in` class is a CSS animation, not Framer Motion —
  * see the note on `.rise-in` in `tailwind.config.ts` and the decision log in `PROGRESS.md`:
  * a Framer entrance would server-render `opacity: 0` onto the page's LCP element.
@@ -31,7 +36,10 @@ export function Hero() {
   const portrait = identity.portraitCutout;
 
   return (
-    <HeroChoreography
+    <section
+      id="hero"
+      aria-labelledby="hero-heading"
+      className="relative flex min-h-screen items-center overflow-hidden"
     >
       <Container className="relative">
         <div className="grid items-center gap-10 lg:grid-cols-hero lg:gap-8">
@@ -83,8 +91,7 @@ export function Hero() {
 
           {/* Portrait. Hidden below `lg`: at narrow widths it would either crowd the copy or
               shrink to a thumbnail, and it costs bandwidth on exactly the devices least able
-              to spare it. `sizes` reflects that, so phones never download it.
-              `HeroChoreography` gives it its own parallax on the scrubbed hero timeline. */}
+              to spare it. `sizes` reflects that, so phones never download it. */}
           {portrait ? (
             <div
               data-hero-portrait
@@ -112,6 +119,6 @@ export function Hero() {
           ) : null}
         </div>
       </Container>
-    </HeroChoreography>
+    </section>
   );
 }

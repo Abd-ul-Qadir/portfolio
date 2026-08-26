@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { coreSkills } from "@/content/data";
 import { useReducedMotion } from "@/lib/hooks";
@@ -41,6 +41,12 @@ import { cn } from "@/lib/utils";
 // full, with their individual technologies, in the tag list below this ecosystem. Removing that
 // ring is also what removes the label collisions the two rings caused between them.
 const ORBIT_RADIUS = 0.4;
+
+/** Breathing room, in viewBox units, between a connection's end and the circle it meets. */
+const LINE_GAP = 1.1;
+
+/** The node button's own padding (`p-1`), in rem. Offsets the circle from the button's top. */
+const BUTTON_PAD = 0.25;
 
 interface EcosystemNode {
   id: string;
@@ -117,11 +123,45 @@ export function SkillEcosystem() {
   const reducedMotion = useReducedMotion();
   const [activeId, setActiveId] = useState<string | null>(null);
   const gradientId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const hubRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The SVG works in a 0–100 viewBox while the hub and the nodes are sized in `rem`, so the
+   * connections can only stop at their real edges if the two are related by an actual
+   * measurement. Both the container and the hub are responsive (`max-w-2xl`, `h-20 sm:h-28
+   * lg:h-32`), so this is re-measured on resize rather than assumed.
+   *
+   * `offsetWidth`, not `getBoundingClientRect()`: the latter reports a *rotated* bounding box,
+   * and this component now spins.
+   */
+  const [box, setBox] = useState({ width: 0, hub: 0, rem: 16 });
+  useEffect(() => {
+    const root = rootRef.current;
+    const hub = hubRef.current;
+    if (!root || !hub) return;
+    const measure = () =>
+      setBox({
+        width: root.offsetWidth,
+        hub: hub.offsetWidth,
+        rem: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
+      });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(hub);
+    return () => observer.disconnect();
+  }, []);
+
+  /** viewBox units per CSS pixel. 0 until the first measurement lands. */
+  const unit = box.width > 0 ? 100 / box.width : 0;
+  /** Where a connection starts: the hub's edge, plus a little air. */
+  const hubEdge = (box.hub / 2) * unit + LINE_GAP;
 
   const active = nodes.find((node) => node.id === activeId) ?? null;
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-2xl">
+    <div ref={rootRef} className="relative mx-auto aspect-square w-full max-w-2xl">
       {/* Local well in the background field — see `.ecosystem-scrim`. Sits behind everything
           this component draws but above the site-wide field, which is `fixed` at `-z-20`. */}
       <div aria-hidden className="ecosystem-scrim pointer-events-none absolute -inset-16" />
@@ -176,14 +216,27 @@ export function SkillEcosystem() {
         />
 
         {nodes.map((node, index) => {
-          const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
-          const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
+          const dx = Math.cos(node.angle);
+          const dy = Math.sin(node.angle);
+          // A connection runs from the hub's edge to the node's edge, never centre to centre:
+          // ending at the centres put the line *through* both circles.
+          const nodeEdge =
+            ORBIT_RADIUS * 100 - ((nodeSize(node.proficiency) * box.rem) / 2) * unit - LINE_GAP;
+          const x1 = 50 + dx * hubEdge;
+          const y1 = 50 + dy * hubEdge;
+          const x = 50 + dx * nodeEdge;
+          const y = 50 + dy * nodeEdge;
+          // Length of the visible segment, so the travelling dash covers exactly it.
+          const span = Math.max(nodeEdge - hubEdge, 0);
           const isActive = activeId === node.id;
+          // Nothing to draw until the first measurement lands; the lines are decorative and
+          // `aria-hidden`, so a single frame without them costs nothing.
+          if (span <= 0) return null;
           return (
             <g key={node.id}>
               <line
-                x1="50"
-                y1="50"
+                x1={x1}
+                y1={y1}
                 x2={x}
                 y2={y}
                 stroke={`url(#${gradientId})`}
@@ -199,17 +252,24 @@ export function SkillEcosystem() {
                   per-frame work — and it stops dead under reduced motion. Each connection is
                   delayed so they never pulse in unison. */}
               <line
-                x1="50"
-                y1="50"
+                x1={x1}
+                y1={y1}
                 x2={x}
                 y2={y}
                 stroke="var(--accent-cyan)"
                 strokeWidth={isActive ? 1 : 0.7}
                 strokeLinecap="round"
-                strokeDasharray="2 38"
+                // Dash and travel distance both derive from the measured span, so the pulse
+                // sweeps exactly the visible segment however long it happens to be.
+                strokeDasharray={`2 ${Math.max(span - 2, 1)}`}
                 opacity={isActive ? 0.95 : 0.7}
                 className="animate-synapse-flow transition-all duration-500 ease-smooth motion-reduce:animate-none motion-reduce:opacity-0"
-                style={{ animationDelay: `${index * 0.8}s` }}
+                style={
+                  {
+                    animationDelay: `${index * 0.8}s`,
+                    "--flow-span": span,
+                  } as CSSProperties
+                }
               />
             </g>
           );
@@ -230,15 +290,30 @@ export function SkillEcosystem() {
               className="absolute -translate-x-1/2"
               // The connecting lines end at the orbit point, and the circle — not the
               // button's centre — is what should sit there. The label hangs below it, so the
-              // button is pulled up by half the circle's diameter.
-              style={{ left: `${x}%`, top: `${y}%`, marginTop: `-${size / 2}rem` }}
+              // button is pulled up by half the circle's diameter *plus* the button's own
+              // padding, which is what put the circle a few pixels low before.
+              style={{
+                left: `${x}%`,
+                top: `${y}%`,
+                marginTop: `-${size / 2 + BUTTON_PAD}rem`,
+              }}
             >
               {/* Counter-rotation, on its own element so it cannot collide with the Framer
                   transform the button below uses for its float. It cancels the orbit's spin
                   exactly — same duration, same linear timing, opposite direction — so the node
                   travels around the hub while its circle and label stay upright. Drop this and
-                  every label reads upside down halfway round. */}
-              <div className="animate-ecosystem-counterspin motion-reduce:animate-none">
+                  every label reads upside down halfway round.
+
+                  **The origin is the circle's centre, not this element's.** By default a
+                  transform pivots about the element's own middle — and this element wraps the
+                  circle *and* the label below it, so its middle sits well under the circle.
+                  Spinning about that swung each circle off the end of its connection as the
+                  orbit turned, which is exactly the drift Abdul reported. The circle's centre
+                  is one button-padding plus half a diameter down from the top. */}
+              <div
+                className="animate-ecosystem-counterspin motion-reduce:animate-none"
+                style={{ transformOrigin: `50% ${BUTTON_PAD + size / 2}rem` }}
+              >
               <motion.button
                 type="button"
                 aria-describedby={active?.id === node.id ? "skill-info-panel" : undefined}
@@ -304,7 +379,10 @@ export function SkillEcosystem() {
       </div>
 
       {/* The centre node. */}
-      <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill glass-surface text-center shadow-glow sm:h-28 sm:w-28 lg:h-32 lg:w-32">
+      <div
+        ref={hubRef}
+        className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill glass-surface text-center shadow-glow sm:h-28 sm:w-28 lg:h-32 lg:w-32"
+      >
         <span className="px-3 font-mono text-eyebrow uppercase text-text-primary">
           AI Engineer
         </span>

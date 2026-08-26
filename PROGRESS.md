@@ -84,6 +84,46 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Connector geometry, and the hero scroll animation removed
+
+**Hero scroll animation removed, at Abdul's request.** The pinned scrub that scaled the hero
+copy down into the top-left corner — Phase 11's flagship moment — is gone. `HeroChoreography`
+existed only to hold that timeline, so with the pin removed the wrapper had nothing left to do:
+the `<section>` is inlined into `Hero.tsx` and **the component is deleted**. Net effect is one
+fewer client component and no GSAP touching the page's LCP element. Verified: `heroTop` tracks
+`-scrollY` exactly at every position, the transform stays identity, and **no pin spacer exists**.
+Stale references in `SectionTransitions` and `app/page.tsx` updated — neither describes a
+Hero → About transform any more.
+
+**Two connector bugs in the ecosystem, both reported by Abdul and both real.**
+
+1. **Circles drifted off the ends of their connections while the orbit spun.** The
+   counter-rotation element wraps the button, which is circle *plus* label — so its centre sits
+   well below the circle. A transform pivots about its element's own middle by default, so the
+   circle swung away from the orbit point as it turned. Fixed by setting `transform-origin` to
+   the circle's actual centre (`50% ${BUTTON_PAD + size / 2}rem`). Measured drift is now **6px**,
+   which is entirely the intentional ±8px Framer float.
+2. **Connections ran centre-to-centre**, so each line passed straight through both circles.
+   They now stop at the hub's edge and at each node's edge with a consistent gap. This needs a
+   real measurement, not a constant: the SVG works in a 0–100 viewBox while the hub and nodes are
+   sized in `rem`, and both are responsive (`max-w-2xl`, `h-20 sm:h-28 lg:h-32`). A
+   `ResizeObserver` supplies container width, hub width and the root font size.
+   **`offsetWidth`, never `getBoundingClientRect()`** — the latter reports a *rotated* bounding
+   box, and this component spins. (That same trap inflated the first verification probe's pixel
+   figures; the ratios were what proved the geometry correct.)
+
+   The travelling pulse now derives its dash and distance from each connection's measured span
+   via a `--flow-span` custom property, since the segments are no longer all the same length.
+
+**Also this pass:** nodes were `bg-bg-glass` — a 4% white film that rendered them as dark holes;
+they now carry a radial fill scaled by the same proficiency the size and glow track. Added a
+faint dashed orbit ring, and a cyan `synapse-flow` dash that travels each connection inward to
+the hub (pure CSS on an SVG stroke, `motion-reduce:animate-none`).
+
+**Verified:** connections start 10.6 viewBox units out against a 9.5-unit hub radius, and stop at
+33.0 against a 34.1-unit node edge — a clean 1.1-unit gap at both ends; circle centres sit at
+263–272px against a 269px orbit. `build`, `lint`, `tsc --noEmit` clean.
+
 ### Session 2 (cont.) — 2026-08-26 — Ecosystem brought in line with PHASE_PLAN Phase 10
 
 Abdul: "not according to design i described check phaseplan.md phase 10". He was right about two

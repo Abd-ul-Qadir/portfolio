@@ -353,8 +353,6 @@ export class NeuralField {
   private storyPos = 0;
   /** This frame's interpolated stage character. */
   private profile = { ...STAGE_PROFILE[0] };
-  /** Optional per-frame source for the story position — see `setStorySource`. */
-  private storySource: (() => number) | null = null;
 
   private time = 0;
   private lastFrame = 0;
@@ -734,21 +732,8 @@ export class NeuralField {
     this.storyTarget = Math.max(0, Math.min(STAGE_COUNT - 1, position));
   }
 
-  /**
-   * Pull the story position from a source each frame instead of having it pushed in.
-   *
-   * Used in reel mode, where `ReelStage`'s master timeline owns the position: reading it inside
-   * the loop that already runs costs one call per frame, where pushing it would mean a second
-   * `requestAnimationFrame` loop whose only job is to copy a number.
-   */
-  setStorySource(source: (() => number) | null) {
-    this.storySource = source;
-  }
-
   /** Resolve `storyPos` into this frame's anchors and stage character. */
   private applyStory(dt: number) {
-    if (this.storySource) this.setStory(this.storySource());
-
     // Eased toward the scroll target rather than snapped to it: scroll already drives this
     // directly, and the small lag reads as the scene having mass.
     this.storyPos += (this.storyTarget - this.storyPos) * Math.min(1, dt * 6);

@@ -63,6 +63,8 @@ export interface Identity {
   readonly portrait: ContentImage | null;
   /** Cut-out variant for the hero. See the note on the value. */
   readonly portraitCutout: ContentImage | null;
+  /** AI/robotic counterpart of the hero cut-out, revealed under the cursor. */
+  readonly portraitRobotic: ContentImage | null;
   readonly socials: readonly SocialLink[];
 }
 
@@ -91,17 +93,24 @@ export const identity: Identity = {
     alt: "Abdul Qadir, wearing a grey suit and navy tie.",
   },
   /**
-   * The framed About portrait. **Also the cut-out, not the raw photo.**
+   * The AI/robotic counterpart of the hero cut-out, revealed under the cursor by
+   * `HeroPortraitReveal`. Keyed with the **same matte** as `portraitCutout` (eroded a few px),
+   * so the two silhouettes cannot disagree and the reveal can never paint outside the subject.
+   */
+  portraitRobotic: {
+    src: "/robotic-portrait-cutout.png",
+    alt: "Abdul Qadir reimagined as an AI: chrome plating and cyan circuitry over the same portrait.",
+  },
+  /**
+   * The framed About portrait — the **raw photo, background intact**, at Abdul's request.
    *
-   * The source's backdrop is a mid-grey (L~100), which against `bg-base` reads as a bright
-   * rectangle punched into a dark page — and, more concretely, it hid the portrait-tied
-   * constellation that Phase 6 layers over this frame: violet nodes on light grey are invisible.
-   * With the background keyed out the subject sits on the glass panel, the frame stays dark, and
-   * that field is legible again.
+   * The trade being accepted: the backdrop is a mid-grey (L~100), so the portrait-tied
+   * constellation Phase 6 layers over this frame is close to invisible against it. The frame
+   * provides the edge, so nothing spills.
    */
   portrait: {
-    src: "/portrait2-cutout.png",
-    alt: "Abdul Qadir, wearing a grey suit and navy tie.",
+    src: "/portrait2.jpeg",
+    alt: "Abdul Qadir, wearing a grey suit and navy tie, against a grey studio backdrop.",
   },
   socials: [
     { label: "GitHub", href: "https://github.com/Abd-ul-Qadir", icon: "github" },

@@ -84,6 +84,52 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Hero portrait: cursor-following AI reveal
+
+Abdul supplied `robotic_portrait.jpeg` — the same pose, chrome-plated with cyan circuitry — and
+asked for it revealed under the cursor inside the hero portrait, never as a hover swap. New
+`components/effects/HeroPortraitReveal.tsx`.
+
+**Containment is structural, not enforced by the mask.** The robotic source has an opaque grey
+backdrop, so revealing a circle of it near the silhouette's edge would paint a grey patch outside
+the subject. `scripts/cutout.py` now keys it with the **same matte** as the normal cut-out
+(eroded 4px, since the robot's body is broader in places and the shared matte otherwise let a
+band of its backdrop through along the arms). Verified `alpha identical: True` before the erode —
+the two silhouettes cannot disagree.
+
+**No React state.** Pointer position, radius and openness are written as CSS custom properties
+(`--rx`/`--ry`/`--rr`/`--ro`) from a rAF loop that starts on pointer entry and **stops itself**
+once the window has eased shut, so an idle hero costs nothing. Position eases at 0.22/frame and
+radius at 0.12, which is the deliberate slight lag. Gated by `usePointerEffectsEnabled()` —
+verified that on touch and under reduced motion the component renders nothing and the robotic
+image is **not even downloaded**.
+
+**⚠ Two bugs worth recording, both found by looking at a screenshot rather than the code.**
+
+1. **`radial-gradient(circle <percentage>)` is invalid CSS.** An explicit `circle` radius must be
+   a `<length>`; percentages are only legal on `ellipse`. The first version drove `--rr` as a
+   percentage, which made the whole `mask-image` declaration invalid — and **an invalid mask
+   fails *open***, so instead of hiding the layer it painted the entire box: a solid cyan
+   rectangle over the portrait. The radius is now computed in px from the measured box (a
+   `ResizeObserver` keeps it current). *An invalid mask does not degrade quietly — it shows you
+   everything.*
+2. **The rim and scanline layers were not clipped to the subject.** They are plain boxes; only
+   the robotic image carried the silhouette alpha. Near an edge they painted cyan crescents into
+   the empty space beside the shoulder — Abdul reported this as "edges are not smooth", and it
+   was spill, not aliasing. Fixed by masking the **container** with the cut-out
+   (`mask-size: contain`, `mask-position: bottom center`, mirroring the images'
+   `object-contain object-bottom`), which clips the whole subtree at once and will keep clipping
+   anything added there later.
+
+The reveal edge also gained a five-stop feather, and the rim was cut to a narrow annulus at 0.2
+opacity — at its first width it read as a bold cyan donut and its screen blend tinted the whole
+revealed area.
+
+**About is unchanged and uses the raw photo**, background intact, per Abdul.
+
+`build`, `lint`, `tsc --noEmit` clean (the one warning is the pre-existing unused
+`spokenLanguages` from Abdul's own edit to `Skills.tsx`).
+
 ### Session 2 (cont.) — 2026-08-26 — New portrait, keyed and wired into both slots
 
 Abdul dropped `public/portrait2.jpeg` (832x1248) and asked for it used, background removed if

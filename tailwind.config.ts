@@ -465,6 +465,81 @@ const config: Config = {
          * background and any luminance key would eat it. The mask feathers the crop edges so
          * it dissolves into the page instead of ending on a hard line.
          */
+        /**
+         * The hero portrait's cursor-following AI reveal.
+         *
+         * The window is a `radial-gradient` mask driven by four custom properties that
+         * `HeroPortraitReveal` writes from a rAF loop — `--rx`/`--ry` for the cursor, `--rr`
+         * for the radius, `--ro` for how far open it is. Masking rather than clipping is what
+         * gives the soft edge: the gradient's middle stop feathers the boundary over ~40% of
+         * the radius, so the two versions of the subject dissolve into each other instead of
+         * meeting on a hard circle.
+         *
+         * **`--rr` is a length, never a percentage.** An explicit radius on a `circle` gradient
+         * must be a `<length>`; percentages are only valid for `ellipse`. Writing a percentage
+         * makes the whole `mask-image` declaration invalid, and an invalid mask does not fail
+         * closed — it fails *open*, so the entire layer paints unmasked. The component computes
+         * the radius in px from the measured box for exactly this reason.
+         *
+         * `--rr: 0px` at rest collapses the window to nothing, so the layer is invisible until
+         * the pointer arrives without needing a separate opacity switch.
+         */
+        ".portrait-reveal": {
+          "--rx": "50%",
+          "--ry": "50%",
+          "--rr": "0px",
+          "--ro": "0",
+          position: "absolute",
+          inset: "0",
+          // **The silhouette clip, applied once to the whole subtree.**
+          //
+          // The robotic image is alpha-limited to the subject, but the rim and scanline layers
+          // are plain boxes — nothing stopped them painting into the empty space beside the
+          // shoulder, which showed up as cyan crescents floating outside the portrait whenever
+          // the cursor neared an edge. Masking the container clips every child at once, so
+          // containment holds for anything added here later too.
+          //
+          // `contain` / `bottom center` mirror the `object-contain object-bottom` the images
+          // inside are laid out with, so the mask lands exactly on the rendered subject.
+          maskImage: "url('/robotic-portrait-cutout.png')",
+          WebkitMaskImage: "url('/robotic-portrait-cutout.png')",
+          maskSize: "contain",
+          WebkitMaskSize: "contain",
+          maskPosition: "bottom center",
+          WebkitMaskPosition: "bottom center",
+          maskRepeat: "no-repeat",
+          WebkitMaskRepeat: "no-repeat",
+        },
+        ".portrait-reveal-layer, .portrait-reveal-rim, .portrait-reveal-scan": {
+          position: "absolute",
+          inset: "0",
+          pointerEvents: "none",
+          maskImage:
+            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), black 0%, black 42%, rgba(0,0,0,0.75) 62%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,0.1) 92%, transparent 100%)",
+          WebkitMaskImage:
+            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), black 0%, black 42%, rgba(0,0,0,0.75) 62%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,0.1) 92%, transparent 100%)",
+        },
+        /** A thin cyan seam where the AI version meets the photograph. */
+        ".portrait-reveal-rim": {
+          // A narrow annulus, not a halo. At the wider band this started with, the rim read as
+          // a bold cyan donut and its screen blend tinted the whole revealed area — the brief
+          // asks for a seam where the two versions meet, kept extremely subtle.
+          maskImage:
+            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), transparent 80%, black 93%, transparent 100%)",
+          WebkitMaskImage:
+            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), transparent 80%, black 93%, transparent 100%)",
+          backgroundColor: v("accent-cyan"),
+          opacity: "calc(var(--ro) * 0.2)",
+          mixBlendMode: "screen",
+        },
+        /** Faint horizontal sampling lines over the revealed area — a readout, not a CRT. */
+        ".portrait-reveal-scan": {
+          backgroundImage:
+            "repeating-linear-gradient(to bottom, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, transparent 1px, transparent 4px)",
+          opacity: "calc(var(--ro) * 0.45)",
+          mixBlendMode: "screen",
+        },
+
         ".hero-portrait": {
           // The source is a real cut-out (see `identity.portraitCutout`), so no blend mode is
           // needed — an earlier `mix-blend-mode: screen` version lifted the image's near-black

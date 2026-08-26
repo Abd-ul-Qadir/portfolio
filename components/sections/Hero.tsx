@@ -2,6 +2,7 @@ import { ArrowRight, Mail } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { HeroPortraitReveal } from "@/components/effects/HeroPortraitReveal";
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
 import { Typewriter } from "@/components/effects/Typewriter";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +35,7 @@ const [firstName, ...restOfName] = identity.fullName.split(" ");
 
 export function Hero() {
   const portrait = identity.portraitCutout;
+  const robotic = identity.portraitRobotic;
 
   return (
     <section
@@ -114,6 +116,26 @@ export function Hero() {
                   sizes="(min-width: 1024px) 42vw, 1px"
                   className="hero-portrait object-contain object-bottom"
                 />
+
+                {/* The AI version of the same portrait, scanned into view under the cursor.
+                    Layered over the photo at identical geometry — same `fill`, same
+                    `object-contain object-bottom` — so the two register exactly; anything else
+                    would show the robot's features sliding against the photograph's.
+
+                    Not `priority`: the normal photo is the LCP element and this must not
+                    compete with it for bandwidth. It renders nothing at all on touch devices
+                    and under reduced motion. */}
+                {robotic ? (
+                  <HeroPortraitReveal>
+                    <Image
+                      src={robotic.src}
+                      alt=""
+                      fill
+                      sizes="(min-width: 1024px) 42vw, 1px"
+                      className="hero-portrait object-contain object-bottom"
+                    />
+                  </HeroPortraitReveal>
+                ) : null}
               </div>
             </div>
           ) : null}

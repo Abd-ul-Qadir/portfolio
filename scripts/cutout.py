@@ -1,5 +1,6 @@
 """
-Regenerate `public/portrait2-cutout.png` from `public/portrait2.jpeg`.
+Regenerate the hero portrait cut-outs: the normal one from `public/portrait2.jpeg`, and the
+robotic variant from `public/robotic_portrait.jpeg` using the *same* matte.
 
 **Committed this time, deliberately.** The previous cut-out was produced by an uncommitted
 one-off script, and PROGRESS.md had to carry a note saying it must be re-derived by hand if the
@@ -57,9 +58,35 @@ band = int(H * 0.10)
 fade[H - band:] = np.linspace(1, 0, band)
 alpha *= fade[:, None]
 
-out = np.dstack([np.asarray(src, np.uint8), (alpha * 255).astype(np.uint8)])
+def emit(path_in, path_out, erode_px=0):
+    """Apply the matte to an image and write an RGBA PNG."""
+    rgb_src = Image.open(path_in).convert("RGB")
+    if rgb_src.size != (W, H):
+        raise SystemExit(f"{path_in} is {rgb_src.size}, expected {(W, H)} - the matte would not line up")
+    a = alpha
+    if erode_px:
+        # Pull the matte in a little. Used for the robotic variant: its body is narrower than
+        # the photographed one in places, so the shared matte let a thin band of its grey
+        # backdrop through along the arms. Eroding tucks its edge just inside the silhouette,
+        # where the normal photo underneath covers the seam.
+        a = ndimage.grey_erosion(a, size=(erode_px * 2 + 1, erode_px * 2 + 1))
+        a = ndimage.gaussian_filter(a, 0.8)
+    data = np.dstack([np.asarray(rgb_src, np.uint8), (a * 255).astype(np.uint8)])
+    Image.fromarray(data, "RGBA").save(path_out, optimize=True)
+    return data
+
+
+out = emit("public/portrait2.jpeg", "public/portrait2-cutout.png")
 img = Image.fromarray(out, "RGBA")
-img.save("public/portrait2-cutout.png", optimize=True)
+
+# The robotic variant is keyed with the **same matte**, not its own.
+#
+# It has an opaque grey backdrop, and the hero layers it over the normal photo to reveal it
+# under the cursor. Keying it independently would give it a slightly different silhouette --
+# its shoulders are broader -- so the reveal would show robot pixels sitting outside the human
+# outline, which is exactly the "spilling outside the profile image" the effect must not do.
+# Sharing one matte makes the two silhouettes pixel-identical and the containment structural.
+emit("public/robotic_portrait.jpeg", "public/robotic-portrait-cutout.png", erode_px=4)
 
 # Preview on the real page background so the silhouette can be judged in context.
 bg = Image.new("RGBA", (W, H), (8, 9, 13, 255))

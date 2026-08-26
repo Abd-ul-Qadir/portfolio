@@ -84,6 +84,44 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — New portrait, keyed and wired into both slots
+
+Abdul dropped `public/portrait2.jpeg` (832x1248) and asked for it used, background removed if
+needed. It replaces the old photo in **both** portrait slots.
+
+**The preview lied about the source.** Rendered previews show it as a subject on a *light grey*
+backdrop; the actual pixels are dark — the backdrop runs L~70-140 with a vignette down to ~23 at
+the bottom corners, while the suit is L~20-60. The background therefore sits **between** the suit
+and the skin in luminance, and at the bottom it is as dark as the subject, so **no luminance or
+chroma threshold separates them**. Sampling the file rather than trusting the preview is what
+avoided building the wrong keyer.
+
+**What does separate them is the silhouette edge**, which is strong everywhere it matters. So:
+build a barrier from the colour gradient, flood the non-barrier region inward from the frame
+border, and whatever the flood cannot reach is the subject. Confidence check: subject coverage is
+**59.2%** of the frame and barely moves across edge thresholds from 14 to 36 — a leak would
+collapse it toward 0, a failed barrier would push it toward 100. Bottom 10% is faded out, since
+the torso runs off-frame and the vignette makes the key least reliable exactly there.
+
+**`scripts/cutout.py` is committed this time.** The previous cut-out came from an uncommitted
+one-off, and this file had to carry a note saying it must be re-derived by hand if the photo ever
+changed. A new photo is now one command: `python scripts/cutout.py`. Needs only Pillow, numpy and
+scipy — no OpenCV, no ML background remover.
+
+**Both slots use the cut-out, including the framed About one.** Using the raw photo there was
+tried first and rejected on evidence: its mid-grey backdrop reads as a bright rectangle punched
+into a dark page, and — concretely — it **hid the portrait-tied constellation** Phase 6 layers
+over that frame, since violet nodes on light grey are invisible. With the background keyed the
+subject sits on the glass panel, the frame stays dark, and that field is legible again.
+
+**Verified:** 17 images on the page, **0 broken, 0 without alt text, 0 whose alt is a filename**;
+both portrait slots resolve to `/portrait2-cutout.png` and are served at correctly-sized variants
+(598x897 hero, 384x576 About). `build`, `lint`, `tsc --noEmit` clean.
+
+**Left alone, flagged rather than changed:** `public/portrait.png` (996K) and
+`public/portrait-cutout.png` (744K) are now unreferenced — 1.7MB that still ships. They are in
+git, so deleting them is safe and reversible, but they are Abdul's photos and that is his call.
+
 ### Session 2 (cont.) — 2026-08-26 — Connections attach; the background was never un-interactive
 
 Abdul: "gap between nodes and its connecting lines. and background neural networks animation is

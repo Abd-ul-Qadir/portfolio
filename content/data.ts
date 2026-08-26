@@ -78,18 +78,30 @@ export const identity: Identity = {
   phone: "+92 324 542 24298",
   resumeUrl: null,
   /**
-   * Background-removed variant of the portrait, used by the hero where the subject has to
-   * sit directly on the page with no frame. Generated from `portrait.png` by keying out the
-   * border-connected near-black backdrop (a flood fill, so the black tie and the shadows
-   * inside the jacket stay opaque). The framed About portrait still uses the original.
+   * Background-removed variant of the portrait, used by the hero where the subject has to sit
+   * directly on the page with no frame.
+   *
+   * Derived from `portrait2.jpeg` (supplied 2026-08-26, 832x1248) by `scripts/cutout.py`. That
+   * source keys far more cleanly than the previous one: the subject sits against a smooth slate
+   * backdrop with a strong silhouette edge, so an edge-barrier flood fill from the frame border
+   * separates them without the luminance tricks the old near-black photo needed.
    */
   portraitCutout: {
-    src: "/portrait-cutout.png",
-    alt: "Abdul Qadir, in a suit, photographed in black and white.",
+    src: "/portrait2-cutout.png",
+    alt: "Abdul Qadir, wearing a grey suit and navy tie.",
   },
+  /**
+   * The framed About portrait. **Also the cut-out, not the raw photo.**
+   *
+   * The source's backdrop is a mid-grey (L~100), which against `bg-base` reads as a bright
+   * rectangle punched into a dark page — and, more concretely, it hid the portrait-tied
+   * constellation that Phase 6 layers over this frame: violet nodes on light grey are invisible.
+   * With the background keyed out the subject sits on the glass panel, the frame stays dark, and
+   * that field is legible again.
+   */
   portrait: {
-    src: "/portrait.png",
-    alt: "Abdul Qadir, in a suit, photographed in black and white against a dark background.",
+    src: "/portrait2-cutout.png",
+    alt: "Abdul Qadir, wearing a grey suit and navy tie.",
   },
   socials: [
     { label: "GitHub", href: "https://github.com/Abd-ul-Qadir", icon: "github" },

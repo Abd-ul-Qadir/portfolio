@@ -42,27 +42,32 @@ export function SiteBackground() {
 
           Tuning notes, because these numbers are the whole character of the effect:
 
-          - The **resting** mesh is deliberately quiet. `intensity` scales only the base
-            violet/indigo mesh, not activation, so the network stays behind body copy at rest
-            and lights up cyan only where the cursor actually is. That is what lets it be both
-            dense and readable — the earlier field had to be dimmed globally because its lines
-            were equally bright everywhere, including across the service cards' paragraphs.
+          - **Density and strength are set high on purpose** — Abdul asked for the field to
+            read as the page's main texture rather than a whisper. 215 nodes at a 112px link
+            radius gives a finer-grained mesh than the earlier 150/132 (more nodes, shorter
+            synapses), and `intensity` 1.75 lifts the resting mesh well clear of the
+            background. `intensity` scales only the base violet/indigo mesh, never activation,
+            so the cursor still stands out against it rather than being lost in it.
+          - **This is a readability trade, and it is the intended one.** A brighter resting
+            mesh does cross body copy more than the previous restrained setting. If text ever
+            reads as fighting the background, lower `intensity` first — it is the single knob
+            for that, and it does not touch the interaction.
           - `influenceRadius` at 250px with `pullStrength` 0.34 is the headline interaction:
             the mesh visibly bends toward the cursor within about 130ms.
           - `maxPackets` is a hard ceiling on data in flight, so a long cursor sweep across the
             page cannot cascade into unbounded work. */}
       <NeuralFieldMount
-        nodeCount={150}
-        mobileNodeCount={54}
-        linkRadius={132}
+        nodeCount={215}
+        mobileNodeCount={80}
+        linkRadius={112}
         minRadius={1}
         maxRadius={2.6}
         driftRadius={11}
         influenceRadius={250}
         pullStrength={0.34}
         parallaxDepth={18}
-        maxPackets={90}
-        intensity={1}
+        maxPackets={110}
+        intensity={1.75}
         scrollDrift={60}
         // A full-viewport layer of 1px lines and soft glows gains nothing visible from a 2x
         // backing store, and costs ~44% more pixels to fill on every frame.

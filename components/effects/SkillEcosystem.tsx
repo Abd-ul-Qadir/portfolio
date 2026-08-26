@@ -28,7 +28,12 @@ import { cn } from "@/lib/utils";
 // Radii as a fraction of the container's half-size. The core orbit has to clear the centre
 // node's own radius, or the connecting lines are hidden underneath it — which is exactly what
 // happened at mobile width before the hub was shrunk below `sm`.
-const ORBIT = { core: 0.36, outer: 0.48 };
+// The two orbits also have to clear *each other*. The labels hang below their circles, so a
+// long core-skill name reaches down into whatever the outer orbit has nearby: at 0.36/0.48
+// "Python, Django & FastAPI" overlapped "Frontend" by 47x31px and "HTML, CSS & JS" overlapped
+// "Data / AI-ML" by 112x21px, both measured. Pulling the orbits apart is what fixes that;
+// widening the buttons below (so long names wrap onto fewer lines) is the other half.
+const ORBIT = { core: 0.32, outer: 0.53 };
 
 interface EcosystemNode {
   id: string;
@@ -73,6 +78,32 @@ function nodeSize(proficiency: number | null) {
   // 80% → 2.75rem, 95% → 4.25rem. A 55% diameter spread across the range, which reads as a
   // clear difference without the largest node crowding its neighbours.
   return 2.75 + ((proficiency - 80) / 15) * 1.5;
+}
+
+/**
+ * Maps proficiency to a **resting** glow.
+ *
+ * `DESIGN_SYSTEM.md` asks proficiency to drive "node size and/or glow intensity". Size alone
+ * was carrying it, and glow existed only as a hover state — so at rest every node rendered as
+ * the same flat disc and the ecosystem read as inert rather than as a system under power.
+ * Now both carry it: a 95% skill sits visibly brighter than an 80% one before you touch
+ * anything.
+ *
+ * Built from `--accent-violet` through `color-mix` so it stays a token, never a hex literal
+ * (`CLAUDE.md` §2). Unscored stack groups get a deliberately faint halo — present enough to
+ * belong to the same system, dim enough that they never compete with the scored skills.
+ */
+function nodeGlow(proficiency: number | null, isActive: boolean) {
+  if (isActive) {
+    return `0 0 44px color-mix(in srgb, var(--accent-violet) 60%, transparent)`;
+  }
+  if (proficiency === null) {
+    return `0 0 14px color-mix(in srgb, var(--accent-violet) 12%, transparent)`;
+  }
+  const t = (proficiency - 80) / 15;
+  const blur = Math.round(18 + t * 24);
+  const strength = Math.round(24 + t * 26);
+  return `0 0 ${blur}px color-mix(in srgb, var(--accent-violet) ${strength}%, transparent)`;
 }
 
 export function SkillEcosystem() {
@@ -164,7 +195,7 @@ export function SkillEcosystem() {
                 onBlur={() => setActiveId(null)}
                 data-cursor-label="INFO"
                 data-skill-node={node.id}
-                className="flex w-24 flex-col items-center gap-2 rounded-card p-1 sm:w-28"
+                className="flex w-28 flex-col items-center gap-2 rounded-card p-1 sm:w-36"
                 // Gentle, continuous float — the one piece of ambient motion here, and it
                 // stops entirely under reduced motion.
                 animate={
@@ -190,10 +221,19 @@ export function SkillEcosystem() {
                   className={cn(
                     "block shrink-0 rounded-pill border transition-all duration-300 ease-smooth",
                     isActive
-                      ? "border-accent-violet bg-bg-surface shadow-glow-strong"
+                      ? "border-accent-violet bg-bg-surface"
                       : "border-border-subtle bg-bg-glass",
                   )}
-                  style={{ width: `${size}rem`, height: `${size}rem` }}
+                  // The glow is inline rather than a `shadow-*` class because its strength is
+                  // a function of this node's proficiency, which Tailwind cannot express as a
+                  // static utility. An inline `boxShadow` would also silently win over a
+                  // class-based one, so the active state is folded into the same ramp instead
+                  // of being layered on top of it.
+                  style={{
+                    width: `${size}rem`,
+                    height: `${size}rem`,
+                    boxShadow: nodeGlow(node.proficiency, isActive),
+                  }}
                 />
                 <span
                   className={cn(

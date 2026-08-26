@@ -85,13 +85,13 @@ export function SectionTransitions() {
           darken.current,
           { opacity: 0 },
           {
-            // Capped below 1 on purpose. This layer sits at `-z-10`, above the neural field at
-            // `-z-20`, so at full opacity it completely buries the field — and the field's
-            // `converge` stage is the *ending* of the scroll story, the point where the whole
-            // system settles into concentric order. Blacking it out throws away the payoff.
-            // 0.72 still darkens the page decisively into Contact while leaving the resolved
-            // network legible behind it.
-            opacity: 0.72,
+            // Kept low deliberately. This layer sits at `-z-10`, directly above the neural
+            // field at `-z-20`, so its opacity is subtracted straight from the field's
+            // visibility. At the 0.72 it used to scrub to, the bottom of the page read as
+            // having no field at all — Abdul reported exactly that. Phase 12 asks the
+            // background to "gradually darken" toward Contact, and 0.22 still does that
+            // perceptibly while leaving the network clearly visible all the way down.
+            opacity: 0.22,
             ease: "none",
             scrollTrigger: {
               trigger: contact,

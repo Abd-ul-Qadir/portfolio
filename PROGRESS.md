@@ -45,163 +45,57 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
-### Session 2 (cont.) — 2026-08-26 — Reel architecture: pinned stage, sections layered
+### Session 2 (cont.) — 2026-08-26 — Field density/reach, and the ecosystem's missing glow
 
-Abdul asked for the page to stop being a stack of sections and become a **cinematic reel**: one
-pinned stage, sections layered inside it, each entering from a deliberate direction while the
-previous one leaves in another, overlapping, with scroll position as the timeline.
+**⚠ FIRST, READ THIS — the working tree was rolled back before this entry was written.**
+`ReelStage.tsx`, `SectionChoreography.tsx` and `lib/reel.ts` were **deleted from the working
+tree**, and several files reverted, putting the tree at roughly commit `0d2557b` (the scroll
+story). That rollback was **not** made by me and I did not stage it. **Both features are safe in
+git history** — `1eb4422` (per-section choreography) and `4dee1aa` (the pinned reel) — and can be
+restored with `git checkout 4dee1aa -- <paths>`. This session's commit deliberately contains only
+the three files below, so the rollback stays unstaged and reversing it remains Abdul's call.
+Harmless leftovers in the tree: inert `data-section-inner` / `data-stagger-group` attributes that
+nothing reads any more.
 
-**A conflict in the brief, surfaced before coding rather than discovered halfway.** A pinned
-stage holds exactly one viewport. Measured against the real content: **four of seven sections
-are taller than the viewport on desktop, six of seven on mobile**, and Selected Work is
-**2.88 viewports on desktop and 7.04 on mobile** (3 cards + filter tabs + 5 certifications +
-6 awards). "Layer every section in a viewport-height stage" and "keep all my content, with
-enough scroll distance to read it" cannot both be literally true. Abdul chose:
-1. **tall sections pan their content inside the stage** (all content kept), and
-2. **phones keep normal scrolling** — the reel is ≥1024px only.
+**1. "The bottom of the page doesn't have the background."** It did — the canvas was fine at
+every scroll position (`top: 0`, full viewport height, opacity 1, actively painting). What was
+missing was *visibility*: the Phase 12 Projects→Contact darkening layer sits at `-z-10`, directly
+above the field at `-z-20`, and scrubbed to **0.72**, subtracting almost three quarters of the
+field's brightness exactly where Abdul was looking. Cut to **0.22** — still a perceptible
+darkening into Contact, per Phase 12, without burying the field.
 
-**Architecture — `components/effects/ReelStage.tsx`.**
-- The track and stage wrappers are **always rendered** and are `display: contents` by default,
-  so below 1024px and under reduced motion the browser lays the sections out exactly as if the
-  component were not there. Conditional markup would have meant a hydration mismatch. A media
-  query in `tailwind.config.ts` promotes them to a real track + sticky stage.
-- Pinning is **CSS `position: sticky`, not GSAP `pin`**: GSAP's pin works by inserting a spacer
-  of exactly the height this layout already has, so sticky gets the same result with no JS and
-  no spacer to keep in sync.
-- One scrubbed master timeline. **Overlap is structural**: section `i+1`'s entrance is placed at
-  exactly the timeline position where section `i`'s exit begins, so it cannot drift apart as
-  content changes.
-- Choreography as specified: hero → LEFT; About enters RIGHT, exits TOP; Capabilities enters
-  BOTTOM as one composition, exits TOP; Services enters BOTTOM (cards staggered), exits
-  TOP-RIGHT; Experience enters BOTTOM, exits TOP-LEFT; Selected Work enters RIGHT (projects one
-  by one), exits fully LEFT; Contact enters RIGHT (elements one by one), exits TOP-RIGHT.
+**2. Denser and more visible**, as asked: nodes **150 → 215** (mobile 54 → 80), `linkRadius`
+132 → 112 so the extra nodes give a finer mesh rather than longer lines, `intensity` 1 → 1.75,
+packets 90 → 110. Measured canvas luminance roughly doubled (0.47 → 0.98 at the top, 0.42 → 0.85
+at the bottom); combined with the darkening fix the bottom of the page is about **5.7x more
+visible** than before. **This is a deliberate readability trade** — a brighter resting mesh does
+cross body copy more. `intensity` is the single knob to dial it back and it does not affect the
+cursor interaction.
 
-**Four systems had to be rewired**, because with every section stacked in one box they all
-stopped working:
-- **navbar scroll-spy** — an IntersectionObserver over sections that now all intersect at once;
-- **anchor links** — `#about` pointed at a box every section shares;
-- **the neural field's story** — one ScrollTrigger per section, all keyed off an identical
-  `top top`; it now pulls the position from the reel inside its own animation frame
-  (`setStorySource`), rather than a second rAF loop copying a number;
-- **`HeroChoreography` and `SectionChoreography`** — both now capped below 1024px, or two
-  systems would transform the same elements.
-`lib/reel.ts` is the shared store. It notifies only on *coarse* changes, so the navbar
-re-renders a handful of times per page rather than sixty times a second.
+**3. The ecosystem was genuinely off-spec.** Abdul said "this is not according to design" and he
+was right on two counts, both measured rather than eyeballed:
+- **Every node reported `boxShadow: NONE`.** `DESIGN_SYSTEM.md` §Skills asks proficiency to drive
+  "node size **and/or glow intensity**"; size alone was carrying it and glow existed only as a
+  hover state, so at rest all nine nodes rendered as identical flat discs. Added a `nodeGlow`
+  ramp — 80% → 18px/24%, 95% → 42px/50%, unscored groups a faint 14px/12% — built from
+  `--accent-violet` via `color-mix` so it stays a token. It is inline rather than a `shadow-*`
+  class because the value is a function of the node's own proficiency, and an inline `boxShadow`
+  would silently beat a class-based one anyway, so the active state folds into the same ramp.
+- **Two real label collisions**: "Python, Django & FastAPI" x "Frontend" (47x31px) and
+  "HTML, CSS & JS" x "Data / AI-ML" (112x21px). Fixed by separating the orbits (core 0.36 → 0.32,
+  outer 0.48 → 0.53) and widening the buttons (`w-24 sm:w-28` → `w-28 sm:w-36`) so long names wrap
+  onto fewer lines. **Now 0 overlaps**, and label line counts dropped (Python 3 → 2 lines,
+  HTML/CSS 2 → 1, Data/AI-ML 2 → 1, Tools/Other 2 → 1).
 
-**⚠ Two real bugs found by measuring, not by looking.**
+*Worth noting:* I first also widened the container to `max-w-3xl`, which pushed the hub to the
+bottom of the viewport. Re-measuring showed the compact `max-w-2xl` gives **0 overlaps too** — the
+orbit separation and button widths did all the work — so the container was reverted. Change one
+variable at a time and re-measure; the obvious extra change was not carrying its weight.
 
-1. **Panning stopped short and content was permanently unreadable.** Overflow was computed from
-   `section.scrollHeight`, which counts content overflowing *below* a box but **not above it** —
-   and a centred flex child overflows in both directions. Measured on Selected Work: when the
-   hold ended, the bottom of the awards grid was still **399px below the stage**, i.e. never
-   visible at any scroll position. Fixed by measuring the inner container. Verified with a probe
-   that sweeps the whole reel and asks, per section, whether the content's top *and* bottom each
-   ever enter the stage: **all seven now READABLE**, Selected Work's 2307px included.
-
-2. **Seven full-viewport layers cost a whole vsync step.** Opacity on a full-viewport layer needs
-   `will-change` or it re-rasters — but promoting all seven permanently is worse: an opacity-0
-   layer is still a layer and is still composited every frame. Scroll frame time was a bimodal
-   **49.4ms / 33.35ms** (20fps / 30fps) against HEAD's rock-steady 33.4ms. Fix: promote only the
-   active section and its two neighbours, and set **`visibility: hidden`** on the rest so they
-   are not painted at all. Result: **33.3, 33.4, 33.4, 33.4, 33.4, 33.4 — identical to HEAD's
-   33.4 × 6, same zero variance.** The reel now costs nothing measurable.
-
-*On the measurement itself:* HEAD's zero variance across six runs is what made this diagnosable.
-Two samples would have been useless — the reel's own numbers alternated between two values.
-**Take enough samples to see the distribution, not the mean.**
-
-**Accessibility trade, made deliberately.** A `visibility: hidden` section's links leave the tab
-order. That is the same contract as any carousel, and nothing becomes unreachable: the navbar
-links to every section and drives the reel there. Sections within the active window keep opacity
-only (never `visibility: hidden`), and a `focusin` handler on the stage moves the reel to
-whatever receives focus. Reduced motion and phones bypass the reel entirely, so both get the
-plain document.
-
-**Verified (desktop, production build):** 10 of 27 scroll samples show two sections on stage at
-once, each pair matching the specified directions; reversibility drift **0** at every sampled
-position; all seven sections fully readable; navbar spy tracks About → Skills → Services →
-Experience → Projects → Contact; `#projects` anchor lands with the section at opacity 1; footer
-reachable at the bottom; project cards arrive **1 → 2 → 3** (x offsets 52→15→2, then 79→28→6,
-then 46→13→1); Services and Contact groups stagger (opacities `0.99, 0.89, 0.59, 0`). Mobile and
-reduced motion both report `display: contents`, sections unstacked, no track height.
-`build`, `lint`, `tsc --noEmit` clean.
-
-**Note for whoever picks this up:** the reel makes the document ~12.7k px tall against ~10.2k
-before. Contact exits the stage as specified, so there is a brief empty stage before the footer.
-If that reads badly, shorten `EXIT` for the last beat in `ReelStage`.
-
-### Session 2 (cont.) — 2026-08-26 — Cinematic section choreography (content, not just background)
-
-Abdul: the background now evolves per section, but the *sections themselves* still scroll like a
-normal website. He wanted each section's content to fly in from one direction, take focus, and
-leave in another — scrubbed, reversible, varied per boundary.
-
-**New: `components/effects/SectionChoreography.tsx`**, mounted once in `app/page.tsx`. Renders
-nothing; it finds each section's `[data-section-inner]` container (a `data-` attribute added to
-the existing `<Container>` in all six sections — no markup restructuring, no content change).
-
-**The rule that keeps it readable: there is a settled zone.** Enter finishes at `top 42%`, exit
-does not begin until `bottom 62%`, and in between the content sits at an identity transform and
-does not move at all. Text that translates while you read it is hard to read and a known
-motion-sickness trigger — `PHASE_PLAN.md` Phase 11 argues exactly this against scroll-jacking
-every boundary. The brief asks for "appear → become the focus → exit", and *become the focus*
-means holding still. Verified: all six sections measure `op=1 tx=0 scale=1` at reading position.
-(The zone is safe for any section taller than 20% of the viewport; all are far taller.)
-
-**It transforms the inner container, never the `<section>`.** Three independent reasons, each of
-which would be a real bug:
-1. the neural field's story measures sections with `start: "top top"` and the navbar scroll-spy
-   observes them — moving a section moves the triggers that describe it;
-2. `#about`-style anchor links jump to the section box;
-3. **`CredentialLightbox` is `position: fixed` and lives inside the Projects `<section>`.** A
-   transform on an ancestor makes a fixed element position against that ancestor instead of the
-   viewport. It is a sibling of the container, so transforming only the container leaves it
-   alone. (This is also why `perspective` is set on the container via `transformPerspective`
-   rather than as CSS on the section — `perspective` creates a containing block just like
-   `transform` does.)
-
-**Choreography** (hero is excluded — its pinned scale-into-the-corner *is* its exit, so About
-answers it from the opposite corner): About enters bottom-right → exits left; Skills enters
-bottom-left → exits top-right; Services enters right → exits top-left; Experience enters left →
-exits right; Projects enters bottom-right → exits top-left; **Contact enters and stays** — it is
-the last section and the footer follows, so animating it away would end the page on empty space.
-Direct children get 30% of the parent's travel, staggered; because the timeline is scrubbed,
-`stagger` spreads across scroll *progress*, which is what produces "heading first, then the
-paragraph, then the buttons". Mobile keeps the choreography but flattens it: no rotation, 42% of
-the travel (measured 0/6/19px vs 0/42/131px on desktop).
-
-**⚠ The perf work here is the important part of this entry.**
-
-**`will-change` is load-bearing and was measured, not assumed.** Animating `opacity` on these
-containers cost ~50% more frame time during scroll — **median 33 ms → 50 ms, long frames 23 →
-31**. The transforms were free; opacity was the entire regression. These subtrees are full-width
-and several viewports tall, and changing opacity on one forces the whole subtree to be
-re-rasterised into an offscreen buffer every frame. Adding
-`will-change: "transform, opacity"` lets the compositor keep it on its own layer and apply
-opacity there: **median 33.4 ms, long frames 24 — identical to having no choreography at all.**
-Do not remove it, and do not assume opacity is cheap because transform is.
-
-**⚠ And a measurement trap that cost most of the debugging time.** The first perf run showed
-33 ms where an earlier session had measured 16.8 ms, and it looked like a catastrophic
-regression. Three hypotheses were tested and all three were wrong: `force3D: true` (no change),
-3D vs pure 2D (no change), and finally the choreography unmounted entirely (**still 33 ms**).
-Stashing to the committed HEAD — the exact code that had measured 16.8 ms — also gave 33 ms.
-**The machine had simply gotten busier** (Abdul's own Chrome, 38 processes, sharing the Intel
-UHD 620). PROGRESS has warned about this since Phase 13 and I walked into it anyway.
-*The rule:* an absolute frame-rate number from a previous session is not a baseline. **A/B on
-one build, in one sitting, is the only valid comparison** — and it is what eventually isolated
-opacity as the real cost.
-
-**Also fixed:** the hero pin now carries `refreshPriority: 1`. Every trigger below it — this
-choreography and the field's story — measures against a layout whose height depends on the pin
-spacer. This is the one-line fix flagged in the 2026-08-22 entry and never applied.
-
-**Verified (final build):** settled zones exact for all six; scrub **identical** down and up at
-every sampled position (`op 0.73/tx 42` and `op 0.169/tx 131` both ways); **nothing stranded**
-(no section centred in the viewport with unreadable content) across a full-page sweep; scroll
-perf median 33.8 ms / 26 long frames, matching the no-choreography baseline; reduced motion has
-**zero transforms, zero inline styles, zero running animations** at three scroll positions.
-`build`, `lint`, `tsc --noEmit` clean.
+**Verified:** 0 overlaps at desktop and under reduced motion; every node carries a glow in both;
+mobile 390px shows one 3x44px bounding-box overlap that is not a visual collision (confirmed by
+screenshot — the labels are clearly separated). `build`, `lint`, `tsc --noEmit` clean; zero
+Tailwind arbitrary values.
 
 ### Session 2 (cont.) — 2026-08-26 — The scroll story: one continuous morph, neon ball removed
 
@@ -1655,30 +1549,6 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
-- **2026-08-26 — the homepage is a pinned reel above 1024px, not a scrolling document.**
-  This goes well beyond the scroll-jacking Phase 11 declined, and beyond the per-section
-  choreography logged below. Abdul asked for it explicitly after seeing that version. Sections
-  are absolutely layered in one sticky stage and moved by a single scrubbed master timeline;
-  see `components/effects/ReelStage.tsx`. **Below 1024px and under reduced motion none of this
-  exists** — the wrappers are `display: contents` and the page is an ordinary document, which
-  is also the accessible fallback. Four systems depend on this decision and are gated on the
-  same media query (`REEL_MEDIA` in `lib/reel.ts`): the navbar spy, anchor links, the neural
-  field's story, and both older choreography layers. **Change that breakpoint in one place
-  only.**
-- **2026-08-26 — off-stage reel sections are `visibility: hidden`, which removes their links
-  from the tab order.** Necessary, not incidental: seven full-viewport composited layers cost a
-  whole vsync step (20fps vs 30fps). Mitigated by the navbar linking to every section and
-  driving the reel there, by keeping the active window opacity-only, and by a `focusin` handler
-  that moves the reel to whatever gains focus. If this is ever revisited, re-measure before
-  removing it — the numbers are in the session log.
-- **2026-08-26 — full per-section scroll choreography, which Phase 11 deliberately declined.**
-  `PHASE_PLAN.md` Phase 11 argues against choreographing every boundary and says: "If after
-  seeing it you want the full scroll-jack treatment everywhere, that's a straightforward
-  extension of the same pattern per section — flag it as a scope change in `PROGRESS.md`'s
-  decision log." Abdul asked for it; this is that flag. The objection is answered rather than
-  ignored: there is a **settled zone** in every section where content is at an identity
-  transform and completely still, so the page never animates text while it is being read, and
-  nothing is pinned except the hero. Under reduced motion the entire layer does not exist.
 - **2026-08-26 — the Phase 12 Hero → About travelling blob is deleted, and the macro-layer is
   largely superseded by the field's scroll story.** `PHASE_PLAN.md` Phase 12 specifies a
   travelling gradient blob folded into the hero timeline. Abdul asked for it removed: it read

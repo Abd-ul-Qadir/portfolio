@@ -84,6 +84,29 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Cursor stops inverting over the hero portrait
+
+Abdul: "the same cursor design on image". Ambiguous enough to be worth asking about rather than
+guessing — he confirmed the cursor *looked wrong* over the portrait.
+
+**Cause.** `Cursor` composites with `mix-blend-mode: difference`, which is what keeps it legible
+against an unknown background and is right over this site's dark pages. Over a *bright* area it
+inverts the other way and the cursor turns dark — and because the AI reveal only brightens
+**part** of what the pointer crosses, the cursor visibly changed colour halfway across a single
+element.
+
+**Fix, scoped rather than global.** An element opts out with `data-cursor-plain`; the cursor then
+drops the blend and paints a fixed light ring with a dark halo (`.cursor-plain`, two drop-shadows
+— they follow the ring's and dot's own shapes, so one declaration covers both). The hero's reveal
+container carries the attribute. Everywhere else the difference blend is untouched, so
+`DESIGN_SYSTEM.md`'s "legible over any background" still holds where it was actually working.
+
+**Verified:** over the portrait the cursor layer reports `mix-blend-mode: normal` with the
+drop-shadow filter applied; over the page background it reports `difference` with `filter: none`.
+
+*Reusable:* any future bright surface — a light project card, a credential lightbox image — can
+opt out the same way rather than needing the blend reconsidered globally.
+
 ### Session 2 (cont.) — 2026-08-26 — Hero portrait bleeds to the screen edge
 
 Abdul asked twice for the portrait moved "to right side border because my right arm is not

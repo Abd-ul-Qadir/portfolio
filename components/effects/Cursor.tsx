@@ -11,6 +11,18 @@ const INTERACTIVE_SELECTOR =
   'a, button, [role="button"], input, textarea, select, summary, [data-cursor-label]';
 
 /**
+ * Surfaces where `mix-blend-mode: difference` stops helping and starts hurting.
+ *
+ * The blend keeps the cursor legible against an unknown background by inverting whatever is
+ * underneath, which is exactly right over this site's dark, low-contrast pages. Over a *bright*
+ * area it inverts the other way: the cursor turns dark, and if that area only covers part of
+ * what the pointer crosses — the hero portrait's AI reveal, say — the cursor visibly changes
+ * colour halfway across a single element. An element marks itself with `data-cursor-plain` to
+ * opt out; the cursor then paints a fixed light ring with a dark halo, which reads on both.
+ */
+const PLAIN_SELECTOR = "[data-cursor-plain]";
+
+/**
  * The dual-layer contextual cursor from `DESIGN_SYSTEM.md`.
  *
  * - **Outer:** a large translucent circle that springs/lags toward the pointer.
@@ -36,6 +48,7 @@ export default function Cursor() {
 
   const [visible, setVisible] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [plain, setPlain] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,6 +65,7 @@ export default function Cursor() {
       if (!(target instanceof Element)) return;
       const interactive = target.closest(INTERACTIVE_SELECTOR);
       setHovering(Boolean(interactive));
+      setPlain(Boolean(target.closest(PLAIN_SELECTOR)));
       setLabel(
         interactive instanceof HTMLElement
           ? (interactive.dataset.cursorLabel ?? null)
@@ -78,7 +92,15 @@ export default function Cursor() {
   if (!enabled) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-cursor mix-blend-difference">
+    <div
+      aria-hidden
+      className={cn(
+        "pointer-events-none fixed inset-0 z-cursor",
+        // Dropped over bright surfaces — see `PLAIN_SELECTOR`. `cursor-plain` puts a dark halo
+        // behind the ring and dot so they stay readable without the blend doing it for them.
+        plain ? "cursor-plain" : "mix-blend-difference",
+      )}
+    >
       {/* Outer: springs and lags behind the pointer. */}
       <motion.div
         className={cn(

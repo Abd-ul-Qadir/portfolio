@@ -499,6 +499,18 @@ const config: Config = {
          *
          * Values are tied to `Container`'s: change them together.
          */
+        /**
+         * The cursor's no-blend variant, used over bright surfaces where
+         * `mix-blend-mode: difference` would invert it to dark mid-element.
+         *
+         * A drop-shadow rather than a second ring: it follows the ring's and the dot's own
+         * shapes, so one declaration keeps both legible over chrome, over the dark page, and
+         * over the boundary between them.
+         */
+        ".cursor-plain": {
+          filter: "drop-shadow(0 0 3px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(0,0,0,0.5))",
+        },
+
         ".bleed-right": {
           marginRight: "calc(-1 * (max(0px, (100vw - 72rem) / 2) + 2rem))",
         },

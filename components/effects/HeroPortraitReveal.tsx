@@ -154,7 +154,14 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
   if (!enabled) return null;
 
   return (
-    <div ref={host} aria-hidden className="portrait-reveal">
+    <div
+      ref={host}
+      aria-hidden
+      // The reveal makes this area bright and only *partly* so, which is the one case where the
+      // cursor's difference blend inverts it halfway across the portrait. See `Cursor.tsx`.
+      data-cursor-plain
+      className="portrait-reveal"
+    >
       <div className="portrait-reveal-layer">{children}</div>
       {/* Faint scanlines across the revealed area, masked to the same window — a readout, not
           a CRT. **No coloured ring:** an earlier version drew a cyan annulus at the boundary

@@ -97,7 +97,7 @@ export function Hero() {
           {portrait ? (
             <div
               data-hero-portrait
-              className="relative hidden h-full w-full items-end justify-self-end lg:flex"
+              className="bleed-right relative hidden h-full w-full items-end justify-self-end lg:flex"
             >
               {/* Violet bloom behind the subject, so the cutout sits in light rather than
                   floating on flat black. */}

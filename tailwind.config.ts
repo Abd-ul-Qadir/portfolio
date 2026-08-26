@@ -484,6 +484,25 @@ const config: Config = {
          * `--rr: 0px` at rest collapses the window to nothing, so the layer is invisible until
          * the pointer arrives without needing a separate opacity switch.
          */
+        /**
+         * Lets the hero portrait run out to the right edge of the screen.
+         *
+         * It sits inside `Container` (`max-w-6xl`, `sm:px-8`), so at rest it stops at the
+         * content gutter with ~175px of page margin to its right — which made the shoulder
+         * look cropped, ending in mid-air rather than continuing off-screen.
+         *
+         * The negative margin cancels exactly two things: the container's own right padding,
+         * and half of whatever the viewport has over `max-w-6xl` (the centring margin).
+         * `max()` clamps the second term to zero below 72rem, where the container is already
+         * full-width and only the padding needs cancelling. The hero section is
+         * `overflow-hidden`, so this can never produce a horizontal scrollbar.
+         *
+         * Values are tied to `Container`'s: change them together.
+         */
+        ".bleed-right": {
+          marginRight: "calc(-1 * (max(0px, (100vw - 72rem) / 2) + 2rem))",
+        },
+
         ".portrait-reveal": {
           "--rx": "50%",
           "--ry": "50%",

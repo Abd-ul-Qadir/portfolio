@@ -84,6 +84,23 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Hero portrait bleeds to the screen edge
+
+Abdul asked twice for the portrait moved "to right side border because my right arm is not
+full". Aligning it right *within its box* (previous entry) was not what he meant — the portrait
+still stopped at `Container`'s content gutter with ~175px of page margin beyond it.
+
+New `.bleed-right` cancels exactly two things: the container's own right padding (`sm:px-8`), and
+half of whatever the viewport has over `max-w-6xl` — i.e. the centring margin. `max()` clamps the
+second term to zero below 72rem, where the container is already full-width and only the padding
+needs cancelling. **Values are tied to `Container`'s and must change with them.**
+
+Measured: flush at 1024px (gap 0), and at 1424px it overshoots the usable width by 8px. That is
+`100vw` including the scrollbar, and it is the preferable direction to err for a bleed — the hero
+is `overflow-hidden`, so the overshoot is clipped rather than producing a scrollbar, and
+overshooting guarantees no sliver of background between the image and the edge at any width.
+Confirmed no horizontal scrollbar at either size.
+
 ### Session 2 (cont.) — 2026-08-26 — Reveal rim dropped; portrait aligned right
 
 **The cyan rim is gone.** Abdul: "remove the cyan color circle radius visually." It read as a

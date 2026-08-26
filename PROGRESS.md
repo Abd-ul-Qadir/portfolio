@@ -84,28 +84,27 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
-### Session 2 (cont.) — 2026-08-26 — Cursor stops inverting over the hero portrait
+### Session 2 (cont.) — 2026-08-26 — Cursor left alone over the portrait (a change, then reverted)
 
-Abdul: "the same cursor design on image". Ambiguous enough to be worth asking about rather than
-guessing — he confirmed the cursor *looked wrong* over the portrait.
+Abdul asked for "the same cursor design on image". I offered three readings; he picked "cursor
+looks wrong over the image", so `data-cursor-plain` was added — the cursor dropped its
+`mix-blend-mode: difference` over the hero portrait and painted a fixed light ring with a dark
+halo instead.
 
-**Cause.** `Cursor` composites with `mix-blend-mode: difference`, which is what keeps it legible
-against an unknown background and is right over this site's dark pages. Over a *bright* area it
-inverts the other way and the cursor turns dark — and because the AI reveal only brightens
-**part** of what the pointer crosses, the cursor visibly changed colour halfway across a single
-element.
+**That was the wrong fix and it is reverted** (`d2d2ea3`). His follow-up, with a screenshot of
+the cursor he wants: *"same cursor design when i hover over the image dont change it."* The point
+was never that the cursor should be made legible by different means over the portrait — it was
+that it must not **change at all**. Dropping the blend and adding a halo is itself a change of
+design, so the fix was an instance of the problem.
 
-**Fix, scoped rather than global.** An element opts out with `data-cursor-plain`; the cursor then
-drops the blend and paints a fixed light ring with a dark halo (`.cursor-plain`, two drop-shadows
-— they follow the ring's and dot's own shapes, so one declaration covers both). The hero's reveal
-container carries the attribute. Everywhere else the difference blend is untouched, so
-`DESIGN_SYSTEM.md`'s "legible over any background" still holds where it was actually working.
+**The cursor now behaves identically everywhere**, `mix-blend-difference` included, and the
+`data-cursor-plain` mechanism is gone rather than left as dead code (recoverable at `d2d2ea3` if
+a genuinely bright surface ever needs it).
 
-**Verified:** over the portrait the cursor layer reports `mix-blend-mode: normal` with the
-drop-shadow filter applied; over the page background it reports `difference` with `filter: none`.
-
-*Reusable:* any future bright surface — a light project card, a credential lightbox image — can
-opt out the same way rather than needing the blend reconsidered globally.
+*Worth remembering:* the difference blend is why the cursor's white inner dot reads red-orange
+over the field's cyan core — `|255-34|, |255-211|, |255-238|` = `(221, 44, 17)`. That is the
+design working as specified, not a bug, and it is visible in the screenshot Abdul attached as the
+look he wants kept.
 
 ### Session 2 (cont.) — 2026-08-26 — Hero portrait bleeds to the screen edge
 

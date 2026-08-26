@@ -136,10 +136,6 @@ const config: Config = {
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
       keyframes: {
-        "orb-drift": {
-          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
-          "50%": { transform: "translate3d(2%, -3%, 0) scale(1.06)" },
-        },
         "rise-in": {
           from: { opacity: "0", transform: "translate3d(0, 24px, 0)" },
           to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
@@ -193,8 +189,6 @@ const config: Config = {
         },
       },
       animation: {
-        /** Deliberately very slow — this is ambience, not motion you should notice. */
-        "orb-drift": "orb-drift 24s ease-in-out infinite",
         "grain-shift": "grain-shift 12s steps(4, end) infinite",
         "caret-blink": "caret-blink 1.1s steps(1, end) infinite",
         "arrow-nudge": "arrow-nudge 2s ease-in-out infinite",
@@ -263,46 +257,6 @@ const config: Config = {
          * stagger between orbs live here rather than as arbitrary values in JSX. The drift is
          * ambience, so it stops outright under `prefers-reduced-motion`.
          */
-        ".ambient-orb": {
-          position: "absolute",
-          borderRadius: "9999px",
-          filter: "blur(64px)",
-          animation: "orb-drift 24s ease-in-out infinite",
-          "@media (prefers-reduced-motion: reduce)": {
-            animation: "none",
-          },
-        },
-        ".ambient-orb-a": {
-          width: "28rem",
-          height: "28rem",
-          top: "0",
-          left: "-8rem",
-          opacity: "0.10",
-        },
-        ".ambient-orb-b": {
-          width: "24rem",
-          height: "24rem",
-          top: "33%",
-          right: "-6rem",
-          opacity: "0.10",
-          animationDelay: "-8s",
-        },
-        /** Bloom behind the hero portrait. */
-        ".ambient-orb-hero": {
-          width: "30rem",
-          height: "30rem",
-          right: "-4rem",
-          bottom: "-2rem",
-          opacity: "0.13",
-        },
-        ".ambient-orb-c": {
-          width: "20rem",
-          height: "20rem",
-          bottom: "0",
-          left: "33%",
-          opacity: "0.07",
-          animationDelay: "-16s",
-        },
 
         /**
          * The outer cursor ring. Only size and fill transition — position is driven by
@@ -525,6 +479,23 @@ const config: Config = {
          * compositor nothing. Two arcs counter-rotate, which is what reads as "processing"
          * rather than "a spinner".
          */
+        /**
+         * Body copy that sits directly over the neural field.
+         *
+         * The field is deliberately dense and bright, so its lines and nodes run straight
+         * through long-form text — Abdul reported the Experience descriptions as "not visible",
+         * and they were rendering perfectly: `opacity: 1`, correct colour, real dimensions. The
+         * problem was the mesh crossing the glyphs.
+         *
+         * A halo in the page's own background colour separates the text from whatever is behind
+         * it, rather than dimming the field or covering it with a scrim. That matters: the last
+         * scrim added for a similar reason hid the field's cursor interaction, which was worse
+         * than the problem. This costs the background nothing.
+         */
+        ".text-on-field": {
+          textShadow: `0 0 4px ${v("bg-base")}, 0 0 10px ${v("bg-base")}, 0 0 18px ${v("bg-base")}`,
+        },
+
         ".cursor-core": {
           position: "absolute",
           left: "0",

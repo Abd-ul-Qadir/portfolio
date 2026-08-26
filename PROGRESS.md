@@ -84,6 +84,39 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Orbs removed site-wide; Experience copy made legible
+
+**1. Every "neon ball" is gone.** They came from three places, and only the first was obvious:
+- `RadialOrbs` in `SiteBackground` — three drifting blurred discs across the whole page.
+  Component deleted, along with the `.ambient-orb*` classes and the `orb-drift` keyframes.
+- The violet bloom behind the hero portrait (`.ambient-orb-hero`).
+- **`SectionHeading`** — a 224px `blur-3xl` violet disc behind *every* section heading. This is
+  the one that put a ball in the bento grid, Projects and Contact, and a source grep for
+  "orb" would never have found it. What found it was a DOM sweep for *any* element with a
+  blur filter and a large border-radius, run after the first two were removed — the shape, not
+  the name.
+
+`DESIGN_SYSTEM.md` #11 asks for a diffused glow behind headings. The neural field now supplies
+far more ambient light than that item was written for, so stacking blurred discs on top only
+muddied the background. Logged in the decision log.
+
+**Verified:** a full-page sweep finds **0** blurred large-radius elements, down from 5+.
+
+**2. The Experience descriptions were rendering perfectly.** `opacity: 1`, `visibility: visible`,
+correct colour, real dimensions, no hiding ancestor — the probe confirmed all of it. What made
+them "not visible" was the **field's mesh running straight through the glyphs**; that section is
+the page's longest run of body copy, so it suffered most. This is exactly the readability trade
+flagged when `intensity` went to 1.75.
+
+Fixed with a new `.text-on-field` utility — a halo in the page's own background colour, which
+separates text from whatever is behind it **without dimming the field or covering it with a
+scrim**. That distinction matters: the last scrim added for a similar reason (`.ecosystem-scrim`)
+ended up hiding the field's cursor interaction, which was worse than the problem it solved. A
+text-shadow costs the background nothing.
+
+Applied to the timeline's title, organisation and bullets. **It is reusable** — any body copy
+that ends up fighting the field should take this class rather than the field being dimmed.
+
 ### Session 2 (cont.) — 2026-08-26 — The processing core moved off the canvas onto the cursor
 
 Abdul: "the cyan circle around cursor isnt visible on cards/images."

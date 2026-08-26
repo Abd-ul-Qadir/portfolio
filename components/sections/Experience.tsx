@@ -148,17 +148,17 @@ export function Experience() {
                     {entry.arrangement ? <Badge>{entry.arrangement}</Badge> : null}
                   </div>
 
-                  <h3 className="mt-3 text-xl font-semibold text-text-primary sm:text-2xl">
+                  <h3 className="text-on-field mt-3 text-xl font-semibold text-text-primary sm:text-2xl">
                     {entry.title}
                   </h3>
-                  <p className="mt-1 text-text-secondary">{entry.organization}</p>
+                  <p className="text-on-field mt-1 text-text-secondary">{entry.organization}</p>
 
                   {entry.bullets.length > 0 ? (
                     <ul className="mt-4 flex flex-col gap-3">
                       {entry.bullets.map((bullet) => (
                         <li
                           key={bullet}
-                          className="text-sm leading-relaxed text-text-secondary"
+                          className="text-on-field text-sm leading-relaxed text-text-secondary"
                         >
                           {bullet}
                         </li>

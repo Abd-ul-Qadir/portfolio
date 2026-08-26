@@ -2,7 +2,6 @@
 
 import { DotGrid } from "@/components/effects/DotGrid";
 import { NeuralFieldMount } from "@/components/effects/NeuralFieldMount";
-import { RadialOrbs } from "@/components/effects/RadialOrbs";
 
 /**
  * The single background for the whole site.
@@ -31,9 +30,6 @@ export function SiteBackground() {
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-20 overflow-hidden"
     >
-      {/* Soft violet/indigo light. One set for the page rather than one per section. */}
-      <RadialOrbs />
-
       {/* Phase 12 still scrubs this from faint to defined at the About -> Skills boundary;
           it is just the site-wide grid now rather than the Skills section's own. */}
       <DotGrid data-transition-dotgrid />

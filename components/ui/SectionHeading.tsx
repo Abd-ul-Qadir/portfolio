@@ -19,8 +19,15 @@ interface SectionHeadingProps {
 }
 
 /**
- * The one heading block every section uses, so the eyebrow/heading/description rhythm and
- * the diffused violet glow behind the heading stay identical site-wide.
+ * The one heading block every section uses, so the eyebrow/heading/description rhythm stays
+ * identical site-wide.
+ *
+ * **No glow behind the heading.** This used to render a 224px violet blur here, which is why a
+ * soft violet ball sat behind *every* section — the bento grid, Projects, Contact — and it is
+ * what Abdul was pointing at when he asked for the neon balls removed. `DESIGN_SYSTEM.md` #11
+ * asks for a diffused glow behind headings; the neural field now supplies far more ambient
+ * light than that item was ever meant to provide, so stacking a blurred disc on top of it only
+ * muddied the background. Logged in PROGRESS.md's decision log.
  */
 export function SectionHeading({
   eyebrow,
@@ -33,10 +40,6 @@ export function SectionHeading({
 }: SectionHeadingProps) {
   return (
     <div className={cn("relative max-w-3xl", className)}>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-16 -top-24 h-56 w-56 rounded-pill bg-accent-violet opacity-[0.12] blur-3xl"
-      />
       {eyebrow ? (
         <p className="relative flex items-center gap-2 font-mono text-eyebrow uppercase text-accent-violet-text">
           {sparkle ? <Sparkles aria-hidden className="h-3.5 w-3.5" /> : null}

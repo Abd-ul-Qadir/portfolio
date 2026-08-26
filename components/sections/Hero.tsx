@@ -99,10 +99,6 @@ export function Hero() {
               data-hero-portrait
               className="bleed-right relative hidden h-full w-full items-end justify-self-end lg:flex"
             >
-              {/* Violet bloom behind the subject, so the cutout sits in light rather than
-                  floating on flat black. */}
-              <div aria-hidden className="ambient-orb ambient-orb-hero bg-accent-violet" />
-
               <div
                 style={rise(2)}
                 className="rise-in relative aspect-portrait w-full max-w-lg"

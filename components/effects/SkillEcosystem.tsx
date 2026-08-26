@@ -92,6 +92,27 @@ function nodeGlow(proficiency: number, isActive: boolean) {
   return `0 0 ${blur}px color-mix(in srgb, var(--accent-violet) ${strength}%, transparent)`;
 }
 
+/**
+ * The node's own body.
+ *
+ * Previously the circles were `bg-bg-glass` — a 4% white film, which against this background
+ * rendered them as dark holes punched in the page rather than as nodes carrying any charge.
+ * A radial fill, scaled by the same proficiency the size and glow already track, makes each
+ * one read as lit from within, and it also stops the connecting line showing straight through
+ * the middle of the circle it terminates at.
+ */
+function nodeFill(proficiency: number) {
+  const t = (proficiency - 80) / 15;
+  const core = Math.round(46 + t * 28);
+  const edge = Math.round(16 + t * 12);
+  return (
+    `radial-gradient(circle at 50% 40%, ` +
+    `color-mix(in srgb, var(--accent-violet) ${core}%, transparent) 0%, ` +
+    `color-mix(in srgb, var(--accent-indigo) ${edge}%, transparent) 58%, ` +
+    `transparent 80%)`
+  );
+}
+
 export function SkillEcosystem() {
   const reducedMotion = useReducedMotion();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -101,6 +122,15 @@ export function SkillEcosystem() {
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-2xl">
+      {/* Local well in the background field — see `.ecosystem-scrim`. Sits behind everything
+          this component draws but above the site-wide field, which is `fixed` at `-z-20`. */}
+      <div aria-hidden className="ecosystem-scrim pointer-events-none absolute -inset-16" />
+
+      {/* Everything that orbits lives inside one rotating wrapper: the connections, the orbit
+          ring and the nodes all turn together, so the geometry stays rigid while it spins.
+          The hub and the info panel are deliberately OUTSIDE it — the hub is the axis and its
+          lettering must stay upright, and the panel is UI, not part of the orbit. */}
+      <div className="absolute inset-0 animate-ecosystem-spin motion-reduce:animate-none">
       {/* Connecting lines back to the centre. Decorative — every node they connect is a
           real labelled control in the DOM below. */}
       <svg
@@ -131,37 +161,60 @@ export function SkillEcosystem() {
             <stop offset="100%" stopColor="var(--accent-cyan)" />
           </linearGradient>
         </defs>
-        {nodes.map((node) => {
+        {/* The orbit itself, drawn faintly. `DESIGN_SYSTEM.md` describes the nodes as
+            "floating/orbiting" the hub; without the path they sit on, four nodes on a cross
+            read as a static diagram rather than as a system with a shape. */}
+        <circle
+          cx="50"
+          cy="50"
+          r={ORBIT_RADIUS * 100}
+          fill="none"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="0.15"
+          strokeDasharray="0.9 2.6"
+          opacity="0.28"
+        />
+
+        {nodes.map((node, index) => {
           const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
           const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
           const isActive = activeId === node.id;
           return (
-            <line
-              key={node.id}
-              x1="50"
-              y1="50"
-              x2={x}
-              y2={y}
-              stroke={`url(#${gradientId})`}
-              strokeWidth={isActive ? 0.8 : 0.42}
-              // Opacity falls off for the outer orbit, the same way the constellation's
-              // lines fade with distance.
-              // Strong enough to read as the foreground. The site-wide neural field behind
-              // this section is deliberately dense and bright, and at the old 0.45 these
-              // connections were being outshone by the decoration.
-              opacity={isActive ? 1 : 0.75}
-              className="transition-all duration-500 ease-smooth"
-            />
+            <g key={node.id}>
+              <line
+                x1="50"
+                y1="50"
+                x2={x}
+                y2={y}
+                stroke={`url(#${gradientId})`}
+                strokeWidth={isActive ? 0.8 : 0.42}
+                // Strong enough to read as the foreground: the site-wide neural field behind
+                // this section is deliberately dense and bright, and at the earlier 0.45 these
+                // connections were being outshone by the decoration.
+                opacity={isActive ? 1 : 0.75}
+                className="transition-all duration-500 ease-smooth"
+              />
+              {/* The signal travelling that connection: one short dash sweeping the line's
+                  length, inward toward the hub. Pure CSS on an SVG stroke — no JS and no
+                  per-frame work — and it stops dead under reduced motion. Each connection is
+                  delayed so they never pulse in unison. */}
+              <line
+                x1="50"
+                y1="50"
+                x2={x}
+                y2={y}
+                stroke="var(--accent-cyan)"
+                strokeWidth={isActive ? 1 : 0.7}
+                strokeLinecap="round"
+                strokeDasharray="2 38"
+                opacity={isActive ? 0.95 : 0.7}
+                className="animate-synapse-flow transition-all duration-500 ease-smooth motion-reduce:animate-none motion-reduce:opacity-0"
+                style={{ animationDelay: `${index * 0.8}s` }}
+              />
+            </g>
           );
         })}
       </svg>
-
-      {/* The centre node. */}
-      <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill glass-surface text-center shadow-glow sm:h-28 sm:w-28 lg:h-32 lg:w-32">
-        <span className="px-3 font-mono text-eyebrow uppercase text-text-primary">
-          AI Engineer
-        </span>
-      </div>
 
       {/* Orbiting skill nodes. */}
       <ul className="contents">
@@ -180,6 +233,12 @@ export function SkillEcosystem() {
               // button is pulled up by half the circle's diameter.
               style={{ left: `${x}%`, top: `${y}%`, marginTop: `-${size / 2}rem` }}
             >
+              {/* Counter-rotation, on its own element so it cannot collide with the Framer
+                  transform the button below uses for its float. It cancels the orbit's spin
+                  exactly — same duration, same linear timing, opposite direction — so the node
+                  travels around the hub while its circle and label stay upright. Drop this and
+                  every label reads upside down halfway round. */}
+              <div className="animate-ecosystem-counterspin motion-reduce:animate-none">
               <motion.button
                 type="button"
                 aria-describedby={active?.id === node.id ? "skill-info-panel" : undefined}
@@ -214,9 +273,7 @@ export function SkillEcosystem() {
                   aria-hidden
                   className={cn(
                     "block shrink-0 rounded-pill border transition-all duration-300 ease-smooth",
-                    isActive
-                      ? "border-accent-violet bg-bg-surface"
-                      : "border-border-subtle bg-bg-glass",
+                    isActive ? "border-accent-violet" : "border-border-subtle",
                   )}
                   // The glow is inline rather than a `shadow-*` class because its strength is
                   // a function of this node's proficiency, which Tailwind cannot express as a
@@ -226,6 +283,7 @@ export function SkillEcosystem() {
                   style={{
                     width: `${size}rem`,
                     height: `${size}rem`,
+                    background: nodeFill(node.proficiency),
                     boxShadow: nodeGlow(node.proficiency, isActive),
                   }}
                 />
@@ -238,10 +296,19 @@ export function SkillEcosystem() {
                   {node.label}
                 </span>
               </motion.button>
+              </div>
             </li>
           );
         })}
       </ul>
+      </div>
+
+      {/* The centre node. */}
+      <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill glass-surface text-center shadow-glow sm:h-28 sm:w-28 lg:h-32 lg:w-32">
+        <span className="px-3 font-mono text-eyebrow uppercase text-text-primary">
+          AI Engineer
+        </span>
+      </div>
 
       {/* Info panel. `aria-live` so the detail is announced when a keyboard user tabs onto a
           node, rather than being visible-only. */}

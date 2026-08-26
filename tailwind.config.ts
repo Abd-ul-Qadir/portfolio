@@ -152,6 +152,30 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(6px)" },
         },
+        /**
+         * A short dash travelling the length of a skill connection, from the outer node in
+         * toward the `AI ENGINEER` hub — the ecosystem's equivalent of the neural field's data
+         * packets. The line is 40 viewBox units long, so the offset sweeps that full distance.
+         */
+        "synapse-flow": {
+          from: { strokeDashoffset: "40" },
+          to: { strokeDashoffset: "0" },
+        },
+        /**
+         * The ecosystem turning on its axis, and the exact inverse for each node's content.
+         *
+         * The two MUST share a duration and timing function: the node wrapper spins with the
+         * orbit while its label counter-spins by the same amount, which is what keeps every
+         * label upright and readable instead of tumbling upside down at the halfway point.
+         */
+        "ecosystem-spin": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
+        },
+        "ecosystem-counterspin": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(-360deg)" },
+        },
         "grain-shift": {
           "0%, 100%": { transform: "translate3d(0, 0, 0)" },
           "25%": { transform: "translate3d(-1%, 1%, 0)" },
@@ -165,6 +189,11 @@ const config: Config = {
         "grain-shift": "grain-shift 12s steps(4, end) infinite",
         "caret-blink": "caret-blink 1.1s steps(1, end) infinite",
         "arrow-nudge": "arrow-nudge 2s ease-in-out infinite",
+        /** Deliberately unhurried — a signal passing, not a chase light. */
+        "synapse-flow": "synapse-flow 3.2s linear infinite",
+        /** Slow enough to read as a system idling, not as a carousel. Keep both in step. */
+        "ecosystem-spin": "ecosystem-spin 48s linear infinite",
+        "ecosystem-counterspin": "ecosystem-counterspin 48s linear infinite",
       },
     },
   },
@@ -373,48 +402,17 @@ const config: Config = {
         },
 
         /**
-         * The cinematic reel stage.
+         * A soft local well behind the skill ecosystem.
          *
-         * **`display: contents` is the whole trick.** The track and stage wrappers are always
-         * in the DOM — rendering them conditionally would mean the server and the client
-         * disagree about the markup — but by default they are `display: contents`, so the
-         * browser lays the sections out exactly as if the wrappers were not there. Below
-         * 1024px, and under reduced motion, that is all that ever happens: normal document
-         * flow, normal scrolling, no pinning.
-         *
-         * At 1024px and up with motion allowed, the wrappers become real: the track is a tall
-         * scroll area, the stage sticks to the top of the viewport for the whole of it, and
-         * every section is absolutely layered inside that one stage. The browser is still
-         * scrolling vertically; the sections are moving through a fixed frame.
-         *
-         * Sticky rather than GSAP `pin`: the pin spacer GSAP inserts is exactly what this
-         * layout already provides with the track's own height, and sticky costs no JS.
+         * The site-wide neural field is deliberately dense and bright, and its `clusters` stage
+         * puts its densest knots at roughly the radius the skill nodes orbit at — so the
+         * ecosystem's own nodes were being visually swallowed by the decoration behind them.
+         * This dims the field just under the ecosystem and fades to nothing well before its
+         * edge, so the background stays dense everywhere else and the foreground wins where it
+         * needs to. Radial rather than a flat panel precisely so it has no visible boundary.
          */
-        "[data-reel-track], [data-reel-stage]": {
-          display: "contents",
-        },
-        "@media (min-width: 1024px) and (prefers-reduced-motion: no-preference)": {
-          "[data-reel-track]": {
-            display: "block",
-            position: "relative",
-          },
-          "[data-reel-stage]": {
-            display: "block",
-            position: "sticky",
-            top: "0",
-            height: "100vh",
-            overflow: "hidden",
-          },
-          "[data-reel-stage] > section": {
-            position: "absolute",
-            inset: "0",
-            overflow: "hidden",
-            // Each section is its own layer in the stage. Non-active ones are faded and
-            // untouchable; the timeline restores both as a section takes focus.
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          },
+        ".ecosystem-scrim": {
+          backgroundImage: `radial-gradient(circle at 50% 50%, ${baseAt(90)} 0%, ${baseAt(78)} 34%, ${baseAt(42)} 58%, transparent 76%)`,
         },
 
         /** Dimmed, blurred backdrop behind a modal dialog. */

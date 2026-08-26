@@ -45,6 +45,45 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — Ecosystem: lit nodes, data flow, and axis rotation
+
+Abdul: "still needs improvements", then "make it rotate on its axis".
+
+**The nodes were reading as holes, not nodes.** They were `bg-bg-glass` — a 4% white film — which
+against this background renders as a dark disc. Replaced with `nodeFill()`, a radial gradient
+scaled by the same proficiency that already drives size and glow, so each one reads as lit from
+within. It also stops the connecting line showing through the middle of the circle it ends at.
+
+**The real problem was that the background was beating the foreground.** The site-wide field is
+now dense and bright (previous entry), and its `clusters` stage puts its densest knots at roughly
+the radius the skill nodes orbit at — so React.js, Agentic AI and Python were each sitting inside
+a background cluster and disappearing into it. Added `.ecosystem-scrim`: a radial well that dims
+the field *only* under the ecosystem and fades to nothing well before its edge, so the background
+stays dense everywhere else. Radial specifically so it has no visible boundary.
+
+**Data flow along the connections**, per `DESIGN_SYSTEM.md`'s constellation language: one short
+dash sweeping each line inward toward the hub (`synapse-flow`), staggered per connection so they
+never pulse in unison. Pure CSS on an SVG stroke — no JS, no per-frame work — and
+`motion-reduce:animate-none` stops it dead. A faint dashed orbit ring was added too: with four
+nodes on a cross, the path they sit on is what makes "orbiting" legible rather than static.
+
+**Rotation on its axis.** One wrapper holds the connections, ring and nodes and spins
+(`ecosystem-spin`, 48s linear); each node's content counter-spins by exactly the same amount
+(`ecosystem-counterspin`). **The two must share duration and timing** or labels tumble upside
+down at the halfway point. The counter-rotation is on its own element so it cannot collide with
+the Framer transform the button uses for its float. The hub and the info panel sit **outside** the
+rotating wrapper — the hub is the axis and its lettering must stay upright, and the panel is UI.
+
+*One mistake worth recording:* the first attempt closed the rotating wrapper before the node
+list, because the hub is rendered between the `<svg>` and the `<ul>` in DOM order. The result was
+lines rotating while the circles and labels stayed put — which Abdul spotted before I had
+finished the fix. The hub now renders after the wrapper, which also paints it correctly on top of
+the connections.
+
+**Verified:** all four nodes travel 124–146px over 4s while accumulated label rotation stays
+**0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
+upright. `build`, `lint`, `tsc --noEmit` clean.
+
 ### Session 2 (cont.) — 2026-08-26 — Ecosystem brought in line with PHASE_PLAN Phase 10
 
 Abdul: "not according to design i described check phaseplan.md phase 10". He was right about two

@@ -20,7 +20,19 @@ const INTERACTIVE_SELECTOR =
  * colour, and the element's own `data-cursor-label` (`VIEW` / `OPEN` / `EXPLORE`) appears
  * inside it — each element controls its own label.
  *
- * `mix-blend-difference` keeps both layers legible over any background.
+ * **The cursor has a fixed appearance — it does not blend.**
+ *
+ * It used to composite with `mix-blend-mode: difference`, which derives its colour from
+ * whatever happens to be underneath. Over the page that meant differencing against the neural
+ * field's cyan processing core, which is what produced the familiar white ring with a warm dot.
+ * Over the hero portrait the image *occludes* that core, so the same cursor differenced against
+ * bright chrome instead and its dot went dark and all but disappeared — the cursor changed
+ * identity depending on what it was passing over. Abdul reported it twice.
+ *
+ * Explicit colours instead: the ring and dot now look the same everywhere, and the dark halo
+ * behind them is what keeps them legible on a bright image, which is the job the blend used to
+ * do. This is a deliberate deviation from `DESIGN_SYSTEM.md`'s `mix-blend-mode` line — see
+ * PROGRESS.md's decision log.
  *
  * This component assumes it is only ever mounted when pointer effects are wanted (see
  * `CursorMount`), but it re-checks anyway and renders nothing otherwise, so it can never be
@@ -78,7 +90,7 @@ export default function Cursor() {
   if (!enabled) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-cursor mix-blend-difference">
+    <div aria-hidden className="cursor-layer pointer-events-none fixed inset-0 z-cursor">
       {/* Outer: springs and lags behind the pointer. */}
       <motion.div
         className={cn(
@@ -113,7 +125,7 @@ export default function Cursor() {
 
       {/* Inner: tracks the pointer with no spring. */}
       <motion.div
-        className="absolute left-0 top-0 h-1.5 w-1.5 rounded-pill bg-text-primary"
+        className="absolute left-0 top-0 h-1.5 w-1.5 rounded-pill bg-cursor-dot"
         style={{
           x,
           y,

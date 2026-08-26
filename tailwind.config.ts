@@ -46,6 +46,7 @@ const config: Config = {
         },
         cursor: {
           fill: v("cursor-fill"),
+          dot: v("cursor-dot"),
         },
         accent: {
           violet: v("accent-violet"),
@@ -499,6 +500,17 @@ const config: Config = {
          *
          * Values are tied to `Container`'s: change them together.
          */
+        /**
+         * The cursor layer's legibility, now that it no longer uses `mix-blend-mode`.
+         *
+         * Drop-shadows rather than an extra ring or outline: they follow the ring's and the
+         * dot's own shapes, so one declaration keeps both readable over the dark page and over
+         * a bright image without changing the cursor's colour in either place.
+         */
+        ".cursor-layer": {
+          filter: "drop-shadow(0 0 2px rgba(0,0,0,0.85)) drop-shadow(0 0 6px rgba(0,0,0,0.55))",
+        },
+
         ".bleed-right": {
           marginRight: "calc(-1 * (max(0px, (100vw - 72rem) / 2) + 2rem))",
         },

@@ -63,9 +63,18 @@ export const tokens = {
   "dot-color": "rgba(255,255,255,0.14)",
 
   /* -- cursor ------------------------------------------------------------ */
-  /** Fill of the expanded outer cursor ring. Neutral, because the whole cursor layer is
-      composited with `mix-blend-mode: difference`. */
+  /** Fill of the expanded outer cursor ring. */
   "cursor-fill": "rgba(255,255,255,0.10)",
+  /**
+   * The cursor's inner dot.
+   *
+   * This is the colour the old `mix-blend-mode: difference` used to *produce* when the white
+   * dot fell over the neural field's cyan core — `|255-34|, |255-211|, |255-238|`. That warm
+   * point against the cool field is the look Abdul asked to keep, so now that the cursor no
+   * longer blends, it is stated outright instead of being an artefact that only appeared where
+   * the core happened to be visible.
+   */
+  "cursor-dot": "#DD2C11",
 
   /* -- composites ------------------------------------------------------- */
   "gradient-primary": `linear-gradient(135deg, ${palette["accent-violet"]}, ${palette["accent-indigo"]} 50%, ${palette["accent-cyan"]})`,

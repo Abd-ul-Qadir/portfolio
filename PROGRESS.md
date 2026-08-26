@@ -84,6 +84,36 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — The cursor gets a fixed appearance (third attempt, correct one)
+
+Two wrong fixes preceded this, both from misreading the same report. What Abdul's screenshots
+finally made clear is the **mechanism**: the cursor never had a fixed appearance at all.
+
+`mix-blend-mode: difference` *derives* the cursor's colour from whatever is beneath it. Over the
+page that meant differencing the white inner dot against the neural field's cyan processing core,
+which is what produced the familiar white ring with a warm red-orange dot — the look he kept
+pointing at. Over the hero portrait the **image occludes that core**, so the identical cursor
+differenced against bright chrome instead and its dot went dark and all but vanished. The cursor
+was changing identity depending on what it passed over, and the portrait simply made it obvious.
+
+So neither "make it legible over the image" (attempt 1) nor "leave it alone" (attempt 2) was the
+answer. **The cursor needed to stop deriving its colour from the backdrop at all.**
+
+- `mix-blend-difference` is gone; `.cursor-layer` carries two drop-shadows instead, which follow
+  the ring's and the dot's own shapes and keep both readable over a bright image without
+  altering their colour.
+- New `cursor-dot` token, `#DD2C11` — *the colour the blend used to compute*
+  (`|255-34|, |255-211|, |255-238|` against the cyan core), now stated outright rather than being
+  an artefact that only appeared where the core happened to be visible.
+
+**Verified identical over the portrait and over the page:** `blend: normal`,
+ring `rgb(245,246,250)`, dot `rgb(221,44,17)` in both.
+
+**Deviation logged:** `DESIGN_SYSTEM.md` specifies `mix-blend-mode` for the cursor "for
+legibility over any background". That is now done with drop-shadows instead, because the blend
+achieved legibility only by sacrificing a consistent identity — and on a site whose one bright
+surface is a portrait the reader's pointer lives on, that trade was the wrong way round.
+
 ### Session 2 (cont.) — 2026-08-26 — Cursor left alone over the portrait (a change, then reverted)
 
 Abdul asked for "the same cursor design on image". I offered three readings; he picked "cursor

@@ -414,8 +414,18 @@ const config: Config = {
          * edge, so the background stays dense everywhere else and the foreground wins where it
          * needs to. Radial rather than a flat panel precisely so it has no visible boundary.
          */
+        /**
+         * A local well in the background field so the ecosystem is not lost in it.
+         *
+         * **Kept deliberately shallow.** At the 90% it started at, this covered the middle of
+         * the Skills section almost completely — and since the neural field is the layer it
+         * covers, the field's cursor interaction was invisible exactly where a reader's pointer
+         * spends its time. Abdul reported the background as "not interactive" for this reason;
+         * it was reacting the whole time, under an opaque lid. Raise this only as far as the
+         * ecosystem actually needs.
+         */
         ".ecosystem-scrim": {
-          backgroundImage: `radial-gradient(circle at 50% 50%, ${baseAt(90)} 0%, ${baseAt(78)} 34%, ${baseAt(42)} 58%, transparent 76%)`,
+          backgroundImage: `radial-gradient(circle at 50% 50%, ${baseAt(56)} 0%, ${baseAt(42)} 34%, ${baseAt(18)} 58%, transparent 76%)`,
         },
 
         /** Dimmed, blurred backdrop behind a modal dialog. */

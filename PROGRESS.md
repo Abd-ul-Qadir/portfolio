@@ -84,6 +84,33 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Connections attach; the background was never un-interactive
+
+Abdul: "gap between nodes and its connecting lines. and background neural networks animation is
+not interactive on moving mouse pointer."
+
+**1. The gap had two causes, and the larger one was not the gap constant.** `LINE_GAP` was 1.1
+viewBox units (~7px), but measured gaps were 8/10/**3**/3px — inconsistent, which the constant
+alone cannot explain. The rest was the per-node float: each node bobbed ±8px on its own timer
+while its connection is drawn in the SVG and does **not** bob with it, so every circle detached
+from the end of its own line, by up to 8px, on a loop. Removing the float and setting `LINE_GAP`
+to 0 gives a measured **0px gap on all four**, permanently. The orbit's rotation still supplies
+the "gently floating/orbiting" motion `DESIGN_SYSTEM.md` asks for, and it moves the lines and the
+nodes together, so the geometry cannot drift.
+
+**2. ⚠ The background was interactive the entire time — it was covered.** Measured before
+changing anything: luminance under the cursor **9.99 vs 0.98 at rest, a 10x reaction**, working
+exactly as built. The problem was `.ecosystem-scrim`, the local well behind the ecosystem: a
+radial gradient of `bg-base` at **90%** at its centre, sitting directly over the field, covering
+the middle of the Skills section almost completely. That is precisely where a reader's pointer
+spends its time in that section, so the reaction was happening under an opaque lid. Dropped to
+56% at centre; the cursor core, its tendrils and the lit cluster around it are now plainly
+visible there.
+
+*Worth keeping:* "the effect doesn't work" and "the effect is covered" look identical from the
+outside. Measuring the canvas *before* touching the effect is what separated them — the fix was
+in a completely different file from the one that looked broken.
+
 ### Session 2 (cont.) — 2026-08-26 — Connector geometry, and the hero scroll animation removed
 
 **Hero scroll animation removed, at Abdul's request.** The pinned scrub that scaled the hero

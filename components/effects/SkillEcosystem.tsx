@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { coreSkills } from "@/content/data";
-import { useReducedMotion } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,8 +41,13 @@ import { cn } from "@/lib/utils";
 // ring is also what removes the label collisions the two rings caused between them.
 const ORBIT_RADIUS = 0.4;
 
-/** Breathing room, in viewBox units, between a connection's end and the circle it meets. */
-const LINE_GAP = 1.1;
+/**
+ * Gap, in viewBox units, between a connection's end and the circle it meets.
+ *
+ * Zero: the connections are meant to *attach* to the hub and to each node. Any positive value
+ * leaves them visibly floating short of the circles they connect.
+ */
+const LINE_GAP = 0;
 
 /** The node button's own padding (`p-1`), in rem. Offsets the circle from the button's top. */
 const BUTTON_PAD = 0.25;
@@ -120,7 +124,6 @@ function nodeFill(proficiency: number) {
 }
 
 export function SkillEcosystem() {
-  const reducedMotion = useReducedMotion();
   const [activeId, setActiveId] = useState<string | null>(null);
   const gradientId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -278,7 +281,7 @@ export function SkillEcosystem() {
 
       {/* Orbiting skill nodes. */}
       <ul className="contents">
-        {nodes.map((node, index) => {
+        {nodes.map((node) => {
           const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
           const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
           const size = nodeSize(node.proficiency);
@@ -324,23 +327,11 @@ export function SkillEcosystem() {
                 data-cursor-label="INFO"
                 data-skill-node={node.id}
                 className="flex w-28 flex-col items-center gap-2 rounded-card p-1 sm:w-36"
-                // Gentle, continuous float — the one piece of ambient motion here, and it
-                // stops entirely under reduced motion.
-                animate={
-                  reducedMotion
-                    ? undefined
-                    : { y: [0, index % 2 === 0 ? -8 : 8, 0] }
-                }
-                transition={
-                  reducedMotion
-                    ? undefined
-                    : {
-                        duration: 6 + (index % 4),
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: index * 0.35,
-                      }
-                }
+                // **No independent bob.** Each node used to drift +/-8px on its own timer,
+                // but the connections are drawn in the SVG and do not drift with it — so the
+                // circles detached from the ends of their own lines, by the same 8px, on a
+                // loop. The orbit's rotation already supplies the "gently floating" motion
+                // `DESIGN_SYSTEM.md` asks for, and it moves the lines and the nodes together.
               >
                 {/* The circle is the node: its diameter and glow carry the proficiency.
                     The label sits outside it, so a long skill name can never overflow it. */}

@@ -142,6 +142,11 @@ export function ProjectCard({ project, index }: ProjectCardProps) {
             }}
           />
 
+          {/* An analysis pass over the image while the card is hovered or focused — the
+              same reading the hero portrait's reveal gives, at card scale. Authored paused;
+              the `.group:hover` rule starts it, so an idle grid animates nothing. */}
+          <span aria-hidden className="scan-line" />
+
           {/* Keeps the title legible over any image. */}
           <div aria-hidden className="project-scrim absolute inset-0" />
 

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 
+import { CircuitTrace } from "@/components/effects/CircuitTrace";
 import { CredentialLightbox } from "@/components/effects/CredentialLightbox";
 import { ProjectCard } from "@/components/effects/ProjectCard";
 import { Container } from "@/components/ui/Container";
@@ -127,6 +128,9 @@ export function Projects() {
 
                 const inner = (
                   <>
+                    {/* Same edge charge the service cards carry, so the two galleries read as
+                        one system. `shared` supplies the `.circuit-card` parent it needs. */}
+                    <CircuitTrace />
                     <MediaFrame
                       image={credential.image}
                       pendingLabel={
@@ -157,7 +161,7 @@ export function Projects() {
                 );
 
                 const shared =
-                  "group block w-full rounded-panel border border-border-subtle p-4 text-left transition-all duration-300 ease-smooth hover:border-border-hover hover:shadow-glow focus-visible:border-border-hover focus-visible:shadow-glow";
+                  "circuit-card group block w-full rounded-panel border border-border-subtle p-4 text-left transition-all duration-300 ease-smooth hover:border-border-hover hover:shadow-glow focus-visible:border-border-hover focus-visible:shadow-glow";
 
                 return (
                   <motion.li

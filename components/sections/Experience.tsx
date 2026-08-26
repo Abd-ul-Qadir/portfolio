@@ -108,6 +108,16 @@ export function Experience() {
             )}
           />
 
+          {/* Packets running down the rail — the neural field's synapse traffic, on the one
+              line in the content layer that genuinely *is* a connection. A third copy of the
+              rail's geometry, clipped, so a packet can never travel past the rail's ends; the
+              two offsets are deliberately unequal so they never fall in step. Pure CSS, and
+              `.timeline-packet` hides itself under reduced motion. */}
+          <div aria-hidden className="timeline-rail overflow-hidden">
+            <span className="timeline-packet" />
+            <span className="timeline-packet" style={{ animationDelay: "2.9s" }} />
+          </div>
+
           <ol className="flex flex-col gap-12">
             {timeline.map((entry) => {
               const isActive = activeId === entry.id;

@@ -20,6 +20,125 @@ const v = (name: TokenName) => `var(--${name})`;
 const baseAt = (percent: number) =>
   `color-mix(in srgb, ${v("bg-base")} ${percent}%, transparent)`;
 
+/**
+ * Every `@keyframes` in the project, in one place.
+ *
+ * **These are emitted by the plugin's `addBase` below, not by Tailwind's `keyframes` theme
+ * key, and that is deliberate.** Tailwind only writes an `@keyframes` block out when some
+ * `animate-*` utility that references it is actually found in the source — so a keyframe used
+ * *only* by a component class in `addComponents` (which is most of them here) silently never
+ * reaches the stylesheet. `animation-name` still computes, so `getComputedStyle` reports the
+ * animation as present while `element.getAnimations()` returns nothing and the element never
+ * moves. Measured before this was fixed: `rise-in` (the hero's entrance stagger) and
+ * `cursor-core-spin` (the cursor's counter-rotating arcs) were both dead in production for
+ * exactly this reason, and both fail silently into a perfectly reasonable-looking static state.
+ *
+ * Emitting the lot unconditionally costs a few hundred bytes and removes the trap. If you add
+ * a keyframe, add it here — it does not matter whether a utility or a component class uses it.
+ */
+const keyframes = {
+  "rise-in": {
+    from: { opacity: "0", transform: "translate3d(0, 24px, 0)" },
+    to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
+  },
+  "caret-blink": {
+    "0%, 45%": { opacity: "1" },
+    "50%, 95%": { opacity: "0" },
+    "100%": { opacity: "1" },
+  },
+  "arrow-nudge": {
+    "0%, 100%": { transform: "translateY(0)" },
+    "50%": { transform: "translateY(6px)" },
+  },
+  /**
+   * A short dash travelling the length of a skill connection, from the outer node in
+   * toward the `AI ENGINEER` hub — the ecosystem's equivalent of the neural field's data
+   * packets. The line is 40 viewBox units long, so the offset sweeps that full distance.
+   */
+  /** The cursor core's counter-rotating arcs. Transform-only, so it stays on the GPU. */
+  "cursor-core-spin": {
+    from: { transform: "translate(-50%, -50%) rotate(0deg)" },
+    to: { transform: "translate(-50%, -50%) rotate(360deg)" },
+  },
+  "synapse-flow": {
+    // Distance comes from `--flow-span`, set per connection from its measured length —
+    // the segments are no longer all the same length now that they stop at each circle's
+    // edge and the circles differ in size.
+    from: { strokeDashoffset: "var(--flow-span, 40)" },
+    to: { strokeDashoffset: "0" },
+  },
+  /**
+   * The ecosystem turning on its axis, and the exact inverse for each node's content.
+   *
+   * The two MUST share a duration and timing function: the node wrapper spins with the
+   * orbit while its label counter-spins by the same amount, which is what keeps every
+   * label upright and readable instead of tumbling upside down at the halfway point.
+   */
+  "ecosystem-spin": {
+    from: { transform: "rotate(0deg)" },
+    to: { transform: "rotate(360deg)" },
+  },
+  "ecosystem-counterspin": {
+    from: { transform: "rotate(0deg)" },
+    to: { transform: "rotate(-360deg)" },
+  },
+  /* ---- The signal language (AI motion pass) --------------------------
+   *
+   * Everything below says one thing in a different place: this page is a running
+   * system, not a document. They are all either transform-only or a single registered
+   * custom property, so the compositor carries them, and each one is switched off by
+   * its component class under `prefers-reduced-motion`.
+   */
+
+  /** A charge running the perimeter of a card. Drives the registered `--trace-angle`. */
+  "circuit-trace": {
+    from: { "--trace-angle": "0deg" },
+    to: { "--trace-angle": "360deg" },
+  },
+  /** The live status node beside every section eyebrow: its core, and its ping ring. */
+  "node-core": {
+    "0%, 100%": { transform: "scale(0.52)", opacity: "1" },
+    "50%": { transform: "scale(0.74)", opacity: "0.7" },
+  },
+  "node-ping": {
+    "0%": { transform: "scale(0.52)", opacity: "0.8" },
+    "70%, 100%": { transform: "scale(1.2)", opacity: "0" },
+  },
+  /**
+   * A light passing through the gradient accent words. Only the highlight layer moves —
+   * the brand gradient beneath it is held still, so the words keep their colour and are
+   * simply lit. It rests off the glyphs for most of the cycle, which is what makes it
+   * read as an occasional pass rather than a constant shimmer.
+   */
+  "gradient-scan": {
+    "0%, 10%": { backgroundPosition: "130% 0, 0 0" },
+    "55%, 100%": { backgroundPosition: "-30% 0, 0 0" },
+  },
+  /** A packet falling down the Experience rail. The packet is 22% tall, so 455% clears it. */
+  "packet-fall": {
+    "0%": { transform: "translate3d(0, -100%, 0)", opacity: "0" },
+    "12%, 88%": { opacity: "1" },
+    "100%": { transform: "translate3d(0, 455%, 0)", opacity: "0" },
+  },
+  /** The analysis pass over a project image. The line is 18% tall, so 555% clears the frame. */
+  "scan-pass": {
+    "0%": { transform: "translate3d(0, -120%, 0)" },
+    "100%": { transform: "translate3d(0, 555%, 0)" },
+  },
+  /** A signal travelling the footer's bus line. The light is 22% wide, so 455% clears it. */
+  "bus-signal": {
+    "0%": { transform: "translate3d(-100%, 0, 0)" },
+    "100%": { transform: "translate3d(455%, 0, 0)" },
+  },
+
+  "grain-shift": {
+    "0%, 100%": { transform: "translate3d(0, 0, 0)" },
+    "25%": { transform: "translate3d(-1%, 1%, 0)" },
+    "50%": { transform: "translate3d(1%, -1%, 0)" },
+    "75%": { transform: "translate3d(1%, 1%, 0)" },
+  },
+};
+
 const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
@@ -135,59 +254,7 @@ const config: Config = {
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
-      keyframes: {
-        "rise-in": {
-          from: { opacity: "0", transform: "translate3d(0, 24px, 0)" },
-          to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
-        },
-        "caret-blink": {
-          "0%, 45%": { opacity: "1" },
-          "50%, 95%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-        "arrow-nudge": {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(6px)" },
-        },
-        /**
-         * A short dash travelling the length of a skill connection, from the outer node in
-         * toward the `AI ENGINEER` hub — the ecosystem's equivalent of the neural field's data
-         * packets. The line is 40 viewBox units long, so the offset sweeps that full distance.
-         */
-        /** The cursor core's counter-rotating arcs. Transform-only, so it stays on the GPU. */
-        "cursor-core-spin": {
-          from: { transform: "translate(-50%, -50%) rotate(0deg)" },
-          to: { transform: "translate(-50%, -50%) rotate(360deg)" },
-        },
-        "synapse-flow": {
-          // Distance comes from `--flow-span`, set per connection from its measured length —
-          // the segments are no longer all the same length now that they stop at each circle's
-          // edge and the circles differ in size.
-          from: { strokeDashoffset: "var(--flow-span, 40)" },
-          to: { strokeDashoffset: "0" },
-        },
-        /**
-         * The ecosystem turning on its axis, and the exact inverse for each node's content.
-         *
-         * The two MUST share a duration and timing function: the node wrapper spins with the
-         * orbit while its label counter-spins by the same amount, which is what keeps every
-         * label upright and readable instead of tumbling upside down at the halfway point.
-         */
-        "ecosystem-spin": {
-          from: { transform: "rotate(0deg)" },
-          to: { transform: "rotate(360deg)" },
-        },
-        "ecosystem-counterspin": {
-          from: { transform: "rotate(0deg)" },
-          to: { transform: "rotate(-360deg)" },
-        },
-        "grain-shift": {
-          "0%, 100%": { transform: "translate3d(0, 0, 0)" },
-          "25%": { transform: "translate3d(-1%, 1%, 0)" },
-          "50%": { transform: "translate3d(1%, -1%, 0)" },
-          "75%": { transform: "translate3d(1%, 1%, 0)" },
-        },
-      },
+      keyframes,
       animation: {
         "grain-shift": "grain-shift 12s steps(4, end) infinite",
         "caret-blink": "caret-blink 1.1s steps(1, end) infinite",
@@ -203,6 +270,28 @@ const config: Config = {
   plugins: [
     plugin(({ addBase, addComponents }) => {
       addBase({
+        /**
+         * `--trace-angle` has to be *registered* for `.circuit-trace` to animate: an
+         * unregistered custom property has no type, so the browser can only interpolate it
+         * discretely — it would jump from 0deg to 360deg at the halfway mark instead of
+         * sweeping. Registered as an `<angle>` it interpolates smoothly, and the whole effect
+         * stays off the main thread.
+         *
+         * Where `@property` is unsupported the gradient still resolves (the class declares
+         * its own `--trace-angle` fallback) and the card simply gets a static gradient edge on
+         * hover. A degradation, not a break.
+         */
+        // See the note on `keyframes` above: Tailwind will not emit these on its own for
+        // the ones only `addComponents` consumes, so they are written out here instead.
+        ...Object.fromEntries(
+          Object.entries(keyframes).map(([name, frames]) => [`@keyframes ${name}`, frames]),
+        ),
+
+        "@property --trace-angle": {
+          syntax: '"<angle>"',
+          inherits: "false",
+          "initial-value": "0deg",
+        },
         ":root": Object.fromEntries(
           Object.entries(tokens).map(([key, value]) => [`--${key}`, value]),
         ),
@@ -494,6 +583,202 @@ const config: Config = {
          */
         ".text-on-field": {
           textShadow: `0 0 4px ${v("bg-base")}, 0 0 10px ${v("bg-base")}, 0 0 18px ${v("bg-base")}`,
+        },
+
+        /* ---- The signal language (AI motion pass) --------------------------
+         *
+         * These classes extend the neural field's vocabulary — nodes, synapses, travelling
+         * packets — into the content layer, so the sections read as parts of one running
+         * system rather than as a document laid over an animated backdrop. All of it is CSS:
+         * no per-frame JS, nothing for React to re-render, and every class carries its own
+         * `prefers-reduced-motion` off-switch.
+         */
+
+        /**
+         * A charge running the perimeter of an interactive card, on hover and on focus.
+         *
+         * Two things make this cheap enough to put on every card. It is **idle until pointed
+         * at** — the animation is authored `paused` and the parent's `:hover`/`:focus-within`
+         * sets it `running`, so an untouched grid of cards costs nothing at all. And the only
+         * moving value is a registered custom property, so the browser interpolates an angle
+         * rather than anything re-running layout.
+         *
+         * The ring is the standard two-layer mask: paint the border box, punch out the
+         * content box, and the 1px padding between them is what remains visible. **`mask` is
+         * a shorthand and resets `mask-composite`, so those two must stay in this order.**
+         */
+        ".circuit-card": {
+          position: "relative",
+        },
+        ".circuit-trace": {
+          position: "absolute",
+          inset: "0",
+          borderRadius: "inherit",
+          padding: "1px",
+          pointerEvents: "none",
+          opacity: "0",
+          transition: "opacity 320ms ease-out",
+          /* Fallback for browsers without `@property`; see the registration in `addBase`. */
+          "--trace-angle": "0deg",
+          backgroundImage: `conic-gradient(from var(--trace-angle), transparent 0deg, ${v(
+            "accent-cyan",
+          )} 24deg, ${v("accent-violet")} 50deg, transparent 92deg, transparent 180deg, ${v(
+            "accent-cyan",
+          )} 204deg, ${v("accent-violet")} 230deg, transparent 272deg)`,
+          /* Alpha-only stencils. `#000` here is a mask, not a design colour. */
+          mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          maskComposite: "exclude",
+          animation: "circuit-trace 4.5s linear infinite",
+          animationPlayState: "paused",
+          "@media (prefers-reduced-motion: reduce)": {
+            // The edge still lights on hover — it just stops travelling.
+            animation: "none",
+          },
+        },
+        ".circuit-card:hover .circuit-trace, .circuit-card:focus-visible .circuit-trace, .circuit-card:focus-within .circuit-trace":
+          {
+            opacity: "1",
+            animationPlayState: "running",
+          },
+
+        /**
+         * The live status node beside every section eyebrow — the page's smallest recurring
+         * "the system is on" signal, in the same node-and-ping language the ecosystem and the
+         * field already speak. Built from two pseudo-elements rather than two spans, so
+         * `SectionHeading` stays a server component and gains no extra markup.
+         */
+        ".status-node": {
+          position: "relative",
+          display: "inline-block",
+          flex: "none",
+          width: "0.5rem",
+          height: "0.5rem",
+          "&::before, &::after": {
+            content: '""',
+            position: "absolute",
+            inset: "0",
+            borderRadius: "9999px",
+          },
+          "&::before": {
+            backgroundColor: v("accent-cyan"),
+            animation: "node-core 2.6s ease-in-out infinite",
+          },
+          "&::after": {
+            borderWidth: "1px",
+            borderStyle: "solid",
+            borderColor: v("accent-cyan"),
+            animation: "node-ping 2.6s ease-out infinite",
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            // Still a lit node inside a ring — just a still one. These are the animations'
+            // own resting frames, so nothing jumps when the motion is switched off.
+            "&::before": { animation: "none", transform: "scale(0.52)" },
+            "&::after": { animation: "none", opacity: "0.3" },
+          },
+        },
+
+        /**
+         * The gradient accent words, with a light passing through them. Two stacked
+         * backgrounds, both clipped to the glyphs: the highlight on top, the brand gradient
+         * beneath. Under reduced motion the highlight parks off the glyphs, so the words
+         * render as plain `.text-gradient-primary` and nothing is lost.
+         */
+        ".text-gradient-scan": {
+          backgroundImage: `linear-gradient(100deg, transparent 44%, color-mix(in srgb, ${v(
+            "text-primary",
+          )} 70%, transparent) 50%, transparent 56%), ${v("gradient-primary")}`,
+          backgroundSize: "300% 100%, 100% 100%",
+          backgroundPosition: "130% 0, 0 0",
+          backgroundRepeat: "no-repeat",
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          color: "transparent",
+          animation: "gradient-scan 7s cubic-bezier(0.22, 1, 0.36, 1) infinite",
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        },
+
+        /**
+         * Data packets falling down the Experience rail — the field's synapse traffic, on the
+         * one line in the content layer that is literally a connection. It sits inside a
+         * clipped copy of `.timeline-rail`, so it can never run past the rail's ends.
+         * `packet-fall`'s 455% is the rail's length expressed in packet heights: **change the
+         * height here and that number changes with it.**
+         */
+        ".timeline-packet": {
+          position: "absolute",
+          left: "0",
+          right: "0",
+          top: "0",
+          height: "22%",
+          backgroundImage: `linear-gradient(to bottom, transparent, ${v("accent-cyan")}, transparent)`,
+          animation: "packet-fall 5.4s linear infinite",
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            opacity: "0",
+          },
+        },
+
+        /**
+         * An analysis pass over a project image, on hover and on keyboard focus. Paused until
+         * the card is pointed at, exactly like `.circuit-trace`, so a full grid sits idle.
+         * `scan-pass`'s 555% is the frame expressed in scan-line heights (18%).
+         */
+        ".scan-line": {
+          position: "absolute",
+          left: "0",
+          right: "0",
+          top: "0",
+          height: "18%",
+          pointerEvents: "none",
+          opacity: "0",
+          transition: "opacity 260ms ease-out",
+          backgroundImage: `linear-gradient(to bottom, transparent, color-mix(in srgb, ${v(
+            "accent-cyan",
+          )} 45%, transparent) 46%, color-mix(in srgb, ${v(
+            "text-primary",
+          )} 70%, transparent) 50%, color-mix(in srgb, ${v(
+            "accent-cyan",
+          )} 45%, transparent) 54%, transparent)`,
+          animation: "scan-pass 2.8s ease-in-out infinite",
+          animationPlayState: "paused",
+          "@media (prefers-reduced-motion: reduce)": {
+            // A scan line with no travel is just a bright band sitting on the image, so it goes.
+            display: "none",
+          },
+        },
+        ".group:hover .scan-line, .group:focus-within .scan-line": {
+          opacity: "1",
+          animationPlayState: "running",
+        },
+
+        /**
+         * A signal travelling the footer's top edge — the last thing the page does, and a
+         * quiet restatement that the system is still running once the content has ended.
+         * `bus-signal`'s 455% is the full width in light-widths (22%).
+         */
+        ".signal-bus": {
+          position: "absolute",
+          top: "-1px",
+          left: "0",
+          right: "0",
+          height: "1px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            top: "0",
+            left: "0",
+            height: "100%",
+            width: "22%",
+            backgroundImage: `linear-gradient(90deg, transparent, ${v("accent-cyan")}, transparent)`,
+            animation: "bus-signal 7.5s ease-in-out infinite",
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            "&::after": { animation: "none", opacity: "0" },
+          },
         },
 
         ".cursor-core": {

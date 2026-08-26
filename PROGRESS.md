@@ -45,6 +45,123 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — A signal language across the whole page, and a dead-keyframes bug
+
+Abdul: "add beautiful ai related animations to whole page."
+
+**The idea, rather than a pile of effects.** The page already had one strong AI vocabulary — the
+neural field's nodes, synapses and travelling packets — but it lived entirely in the background,
+and the content sat on top of it like a document laid over a screensaver. So rather than invent a
+new visual language, this pass **extends the field's own vocabulary into the content layer**, so
+the sections read as parts of the same running system:
+
+| effect | where | reads as |
+|---|---|---|
+| `.circuit-trace` | every interactive card (4 services + 11 credentials) | a charge running the card's edge, on hover **and** on focus |
+| `.status-node` | every section eyebrow | a live node with a ping ring — "the system is on" |
+| `.text-gradient-scan` | every gradient accent word, hero name included | a light passing through the letters |
+| `.timeline-packet` | the Experience rail | the field's synapse traffic, on the one line in the content layer that genuinely *is* a connection |
+| `.scan-line` | project card images | an analysis pass over the image, on hover/focus |
+| `.signal-bus` | the footer's top edge | the system still running after the content ends |
+
+**All of it is CSS.** No new component is a client component (`CircuitTrace` is server-rendered),
+no per-frame JS was added, nothing new for React to re-render, and every class carries its own
+`prefers-reduced-motion` off-switch. The two hover effects are authored `paused` and started by
+the parent's `:hover`/`:focus-within`, so an untouched grid of fifteen cards animates nothing at
+all.
+
+`.circuit-trace` is the one with real technique in it: a conic gradient masked down to a 1px ring
+(paint the border box, punch out the content box), turned by a **registered** `@property
+--trace-angle`. Registration is what makes it work — an unregistered custom property has no type,
+so the browser can only interpolate it discretely and it would snap from 0deg to 360deg at the
+halfway mark instead of sweeping.
+
+---
+
+**⚠ THE FIND, and it is much bigger than this session's own work: Tailwind was silently dropping
+most of this project's `@keyframes`.**
+
+Tailwind only emits an `@keyframes` block when it finds an `animate-*` utility referencing it in
+the source. A keyframe consumed **only** by a component class in `addComponents` — which is how
+almost every animation in this project is written — never reaches the stylesheet at all.
+
+It fails in the worst possible way: `animation-name` still computes to the right value, so
+`getComputedStyle` reports the animation as present and correct. Only
+`element.getAnimations().length === 0` gives it away, and the element simply renders in its
+static state, which looks entirely reasonable.
+
+**Measured on the committed build, before any fix: only 5 of 13 keyframes existed.** Two of the
+eight missing ones were load-bearing:
+
+- **`rise-in` — the hero's entrance stagger.** The site's first impression. Every element still
+  rendered, just with no entrance at all.
+- **`cursor-core-spin` — the cursor core's counter-rotating arcs.** Built last session,
+  documented as "what reads as *processing* rather than a spinner", and never once rotated.
+
+Both were verified dead in Chrome (`animationName: "rise-in"`, `animations: 0`).
+
+**Fix:** the keyframes object is hoisted to a top-level `const keyframes` and the plugin's
+`addBase` emits **every** entry as a real `@keyframes` at-rule, whatever consumes it. Confirmed in
+the built CSS: **15 keyframes, each exactly once**, no duplicates.
+
+*Worth keeping:* the reason this survived so long is that a missing keyframe degrades into a
+perfectly plausible static state. Nothing errors, nothing looks broken, and a screenshot cannot
+tell the difference. `getAnimations()` is the only reliable check — `getComputedStyle` will lie to
+you here.
+
+---
+
+**⚠ A verification trap that nearly cost a good effect, recorded because I fell into it.**
+
+First frame-rate reading with the new animations: **33.2 ms median (30fps)**, against 16.7 ms with
+them cancelled. A bisect then "confirmed" the culprit precisely — cancelling the seven
+`gradient-scan` instances took it 32.8 → 17.1 ms, and cancelling one at a time showed a *single*
+scanning heading costing the entire frame budget. A tidy, plausible story: `background-clip: text`
+repainting per frame over a full-viewport canvas.
+
+**All of it was ambient machine load.** The tell was in the bisect output and I nearly missed it:
+the last step cancelled *more* animations and the frame time went **back up** to 33.1 ms. Load
+does that. Causation does not.
+
+The correct measurement is **alternating A/B in one page session** — pause and resume the same
+animations repeatedly and compare interleaved samples, so drift cannot align with the change.
+Result: **ten alternating samples, all exactly 16.7 ms**, scanning or paused. Repeated for all 22
+new animations together: **16.82 ms running vs 16.70 ms paused** — 0.12 ms apart, both at the
+vsync floor.
+
+The effect was free the whole time. A before/after pair, however clean it looks, cannot separate a
+regression from a busy machine; only interleaving can. This is the second time this file has
+recorded a phantom 33 ms regression, so the rule is now: **never accept a frame-rate result from a
+single before/after pair.**
+
+---
+
+**Verified (production build, real GPU):**
+
+| check | result |
+|---|---|
+| keyframes emitted | **15, each exactly once** (was 5 of 13) |
+| `rise-in` / `cursor-core-spin` | dead before, running after |
+| perf, all 22 new animations | **16.82 ms vs 16.70 ms paused** — locked 60fps, 10-sample alternating A/B |
+| idle cost of the 15 card traces | `opacity: 0`, `animation-play-state: paused`, all of them |
+| trace on hover | opacity 1, running, `--trace-angle` advancing 138.7° → 180.1° in 500 ms (= 360°/4.5 s exactly), **every other trace still paused** |
+| keyboard parity | focusing a service card, a credential card and a project link each lights the trace/scan, same as hover |
+| timeline packets | both running, staggered, travelling 186 px/700 ms, clipped to the rail |
+| gradient scan | 7 accent phrases, all running, position advancing |
+| reduced motion | **0 running animations page-wide**; scan lines `display: none`, packets `opacity: 0`, and the status node still renders as a lit dot rather than vanishing |
+| mobile 390px | no horizontal scroll, 6 status nodes at 8px, eyebrows still one line, packets running, traces idle |
+
+`build`, `lint`, `tsc --noEmit` clean (the one warning is still the pre-existing unused
+`spokenLanguages` from Abdul's own edit to `Skills.tsx`).
+
+**Deviation logged.** `DESIGN_SYSTEM.md` does not specify any of these six effects; they are
+Abdul's direct request. They were deliberately built *from* the existing vocabulary — the field's
+cyan activation colour, its node/ping shapes, its packet behaviour — rather than as new ideas, so
+the doc's language still governs them even though the doc does not list them.
+
+**Not done:** Lighthouse still not re-run (see the Vercel note below). The frame-rate evidence
+above is strong, but Lighthouse measures things a frame counter does not.
+
 ### Session 2 (cont.) — 2026-08-26 — Ecosystem: lit nodes, data flow, and axis rotation
 
 Abdul: "still needs improvements", then "make it rotate on its axis".

@@ -15,6 +15,11 @@ export function Footer() {
 
   return (
     <footer className="relative border-t border-border-subtle">
+      {/* A signal travelling the footer's top edge: the last thing the page does, and a quiet
+          restatement that the system is still running once the content has ended. CSS only,
+          so this component stays on the server. */}
+      <span aria-hidden className="signal-bus" />
+
       <Container className="py-16">
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between">
           <div className="max-w-sm">

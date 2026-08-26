@@ -1,5 +1,6 @@
 import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
+import { CircuitTrace } from "@/components/effects/CircuitTrace";
 import { cn } from "@/lib/utils";
 
 interface GlassCardProps extends Omit<HTMLAttributes<HTMLElement>, "className" | "children"> {
@@ -7,7 +8,8 @@ interface GlassCardProps extends Omit<HTMLAttributes<HTMLElement>, "className" |
   className?: string;
   as?: ElementType;
   /**
-   * Adds hover/focus affordances: violet border, ambient glow, slight lift.
+   * Adds hover/focus affordances: violet border, ambient glow, slight lift, and the
+   * `CircuitTrace` charge running the card's edge.
    * `:focus-visible` gets the same static treatment as hover, because the Phase 7 tilt and
    * cursor-spotlight have no keyboard analog (`DESIGN_SYSTEM.md`, Services).
    */
@@ -31,10 +33,13 @@ export function GlassCard({
       className={cn(
         "glass-surface rounded-card text-left shadow-elevated",
         interactive &&
-          "transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-border-hover hover:shadow-glow focus-visible:-translate-y-0.5 focus-visible:border-border-hover focus-visible:shadow-glow",
+          "circuit-card transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-border-hover hover:shadow-glow focus-visible:-translate-y-0.5 focus-visible:border-border-hover focus-visible:shadow-glow",
         className,
       )}
     >
+      {/* Rendered before the content so it can never sit over a focus ring or a link. It is
+          a 1px edge either way — but the paint order is the guarantee, not the geometry. */}
+      {interactive ? <CircuitTrace /> : null}
       {children}
     </Tag>
   );

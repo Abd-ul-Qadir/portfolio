@@ -41,7 +41,11 @@ export function SectionHeading({
   return (
     <div className={cn("relative max-w-3xl", className)}>
       {eyebrow ? (
-        <p className="relative flex items-center gap-2 font-mono text-eyebrow uppercase text-accent-violet-text">
+        <p className="relative flex items-center gap-2.5 font-mono text-eyebrow uppercase text-accent-violet-text">
+          {/* A live status node in front of every section label, so each heading reads as a
+              panel on a running system rather than a title. Pure CSS, two pseudo-elements —
+              see `.status-node` — which is what keeps this a server component. */}
+          <span aria-hidden className="status-node" />
           {sparkle ? <Sparkles aria-hidden className="h-3.5 w-3.5" /> : null}
           {eyebrow}
         </p>

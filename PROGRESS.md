@@ -84,6 +84,31 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — Reveal rim dropped; portrait aligned right
+
+**The cyan rim is gone.** Abdul: "remove the cyan color circle radius visually." It read as a
+hard circle drawn onto the portrait rather than as a reveal. The `.portrait-reveal-rim` class and
+its element are deleted; the feathered mask is now the only thing marking where the two versions
+meet, which is what the effect wanted in the first place. The faint scanlines stay — they are
+neutral white and carry the "scanning" read without drawing an outline.
+
+**Portrait aligned right.** Abdul: "move my picture to right side border because my right arm is
+not full." The cause is a ratio mismatch: the photo is 2:3 inside a 4:5 box, so `object-contain`
+fits it by height and **letterboxes it horizontally by 75px** — it was floating centred with a
+gap on each side, so the shoulder ended in mid-air and read as cropped. `object-right-bottom`
+puts the whole gap on the left and the subject flush to the container's right edge, where it
+reads as continuing past the boundary.
+
+**⚠ Three things share one object-position and must be changed together:** the normal image, the
+robotic image, and **`.portrait-reveal`'s silhouette mask** (`mask-position`). The mask mirrors
+`object-position` so the clip lands on the rendered subject; because `contain` letterboxes by
+75px here, any disagreement slides the clip off the subject by that much. Verified after the
+change: images and mask all report `100% 100%`.
+
+Note the portrait still stops at the Container's right edge, ~175px short of the viewport edge —
+that is the page's content gutter, not a gap in the image. Making it bleed to the viewport edge
+is a separate layout change, not done.
+
 ### Session 2 (cont.) — 2026-08-26 — Hero portrait: cursor-following AI reveal
 
 Abdul supplied `robotic_portrait.jpeg` — the same pose, chrome-plated with cyan circuitry — and

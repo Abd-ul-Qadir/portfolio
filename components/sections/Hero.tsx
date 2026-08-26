@@ -114,13 +114,15 @@ export function Hero() {
                   // Above the fold, and the likely LCP element on desktop.
                   priority
                   sizes="(min-width: 1024px) 42vw, 1px"
-                  className="hero-portrait object-contain object-bottom"
+                  className="hero-portrait object-contain object-right-bottom"
                 />
 
                 {/* The AI version of the same portrait, scanned into view under the cursor.
                     Layered over the photo at identical geometry — same `fill`, same
-                    `object-contain object-bottom` — so the two register exactly; anything else
-                    would show the robot's features sliding against the photograph's.
+                    `object-contain object-right-bottom` — so the two register exactly; anything
+                    else would show the robot's features sliding against the photograph's.
+                    `HeroPortraitReveal`'s silhouette mask mirrors this object-position, so the
+                    three have to be changed together.
 
                     Not `priority`: the normal photo is the LCP element and this must not
                     compete with it for bandwidth. It renders nothing at all on touch devices
@@ -132,7 +134,7 @@ export function Hero() {
                       alt=""
                       fill
                       sizes="(min-width: 1024px) 42vw, 1px"
-                      className="hero-portrait object-contain object-bottom"
+                      className="hero-portrait object-contain object-right-bottom"
                     />
                   </HeroPortraitReveal>
                 ) : null}

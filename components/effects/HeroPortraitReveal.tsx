@@ -156,10 +156,10 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
   return (
     <div ref={host} aria-hidden className="portrait-reveal">
       <div className="portrait-reveal-layer">{children}</div>
-      {/* The boundary treatments, masked to the same window: a thin cyan rim where the two
-          versions meet, and faint scanlines across the revealed area. Both are decoration on
-          top of the reveal, so neither can affect the silhouette. */}
-      <div className="portrait-reveal-rim" />
+      {/* Faint scanlines across the revealed area, masked to the same window — a readout, not
+          a CRT. **No coloured ring:** an earlier version drew a cyan annulus at the boundary
+          and it read as a hard circle drawn on the portrait rather than as a reveal. The
+          feathered mask is the only thing that should mark where the two versions meet. */}
       <div className="portrait-reveal-scan" />
     </div>
   );

@@ -499,18 +499,21 @@ const config: Config = {
           // the cursor neared an edge. Masking the container clips every child at once, so
           // containment holds for anything added here later too.
           //
-          // `contain` / `bottom center` mirror the `object-contain object-bottom` the images
-          // inside are laid out with, so the mask lands exactly on the rendered subject.
+          // `contain` / `right bottom` mirror the `object-contain object-right-bottom` the
+          // images inside are laid out with, so the mask lands exactly on the rendered subject.
+          // **These must change together**: the photo is 2:3 inside a 4:5 box, so `contain`
+          // letterboxes it horizontally, and any disagreement in object-position slides the
+          // clip off the subject by that gap.
           maskImage: "url('/robotic-portrait-cutout.png')",
           WebkitMaskImage: "url('/robotic-portrait-cutout.png')",
           maskSize: "contain",
           WebkitMaskSize: "contain",
-          maskPosition: "bottom center",
-          WebkitMaskPosition: "bottom center",
+          maskPosition: "right bottom",
+          WebkitMaskPosition: "right bottom",
           maskRepeat: "no-repeat",
           WebkitMaskRepeat: "no-repeat",
         },
-        ".portrait-reveal-layer, .portrait-reveal-rim, .portrait-reveal-scan": {
+        ".portrait-reveal-layer, .portrait-reveal-scan": {
           position: "absolute",
           inset: "0",
           pointerEvents: "none",
@@ -518,19 +521,6 @@ const config: Config = {
             "radial-gradient(circle var(--rr) at var(--rx) var(--ry), black 0%, black 42%, rgba(0,0,0,0.75) 62%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,0.1) 92%, transparent 100%)",
           WebkitMaskImage:
             "radial-gradient(circle var(--rr) at var(--rx) var(--ry), black 0%, black 42%, rgba(0,0,0,0.75) 62%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,0.1) 92%, transparent 100%)",
-        },
-        /** A thin cyan seam where the AI version meets the photograph. */
-        ".portrait-reveal-rim": {
-          // A narrow annulus, not a halo. At the wider band this started with, the rim read as
-          // a bold cyan donut and its screen blend tinted the whole revealed area — the brief
-          // asks for a seam where the two versions meet, kept extremely subtle.
-          maskImage:
-            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), transparent 80%, black 93%, transparent 100%)",
-          WebkitMaskImage:
-            "radial-gradient(circle var(--rr) at var(--rx) var(--ry), transparent 80%, black 93%, transparent 100%)",
-          backgroundColor: v("accent-cyan"),
-          opacity: "calc(var(--ro) * 0.2)",
-          mixBlendMode: "screen",
         },
         /** Faint horizontal sampling lines over the revealed area — a readout, not a CRT. */
         ".portrait-reveal-scan": {

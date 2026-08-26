@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useId, useState } from "react";
 
-import { coreSkills, skillGroups } from "@/content/data";
+import { coreSkills } from "@/content/data";
 import { useReducedMotion } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,12 @@ import { cn } from "@/lib/utils";
  * **Explicitly not progress bars and not cards** — the old portfolio's linear percentage bars
  * are retired. A centred `AI ENGINEER` node with the skill nodes orbiting it, each connected
  * back to the centre by a thin line, sharing the constellation's visual language.
+ *
+ * **Only the four scored core skills orbit** (`PHASE_PLAN.md` Phase 10). The unscored stack —
+ * Backend, Frontend, Data/AI-ML, Databases, Tools — is a plain tag list in `Skills.tsx`, listing
+ * each group's actual technologies. It used to *also* orbit on a second ring, which contradicted
+ * the plan, duplicated content already on the page, and was the sole cause of the label
+ * collisions between the two rings.
  *
  * Proficiency drives **node size and glow**, and the exact number is revealed in the hover /
  * focus panel rather than printed as a bar label.
@@ -28,56 +34,39 @@ import { cn } from "@/lib/utils";
 // Radii as a fraction of the container's half-size. The core orbit has to clear the centre
 // node's own radius, or the connecting lines are hidden underneath it — which is exactly what
 // happened at mobile width before the hub was shrunk below `sm`.
-// The two orbits also have to clear *each other*. The labels hang below their circles, so a
-// long core-skill name reaches down into whatever the outer orbit has nearby: at 0.36/0.48
-// "Python, Django & FastAPI" overlapped "Frontend" by 47x31px and "HTML, CSS & JS" overlapped
-// "Data / AI-ML" by 112x21px, both measured. Pulling the orbits apart is what fixes that;
-// widening the buttons below (so long names wrap onto fewer lines) is the other half.
-const ORBIT = { core: 0.32, outer: 0.53 };
+// **One orbit, four nodes.** `PHASE_PLAN.md` Phase 10 is explicit that only the four *scored*
+// core skills orbit the hub, and that "the remaining stack (Databases, Tools, etc. — no
+// percentage given) renders as a plain tag list". The stack groups used to orbit on a second
+// ring as well, which both contradicted that and duplicated them — they are already listed in
+// full, with their individual technologies, in the tag list below this ecosystem. Removing that
+// ring is also what removes the label collisions the two rings caused between them.
+const ORBIT_RADIUS = 0.4;
 
 interface EcosystemNode {
   id: string;
   label: string;
-  /** 0–100 for the four scored skills; `null` for the unscored stack groups. */
-  proficiency: number | null;
+  /** 0–100. Every orbiting node is a scored core skill; the unscored stack is the tag list. */
+  proficiency: number;
   angle: number;
-  radius: number;
 }
 
 function buildNodes(): EcosystemNode[] {
-  // Core skills sit on the inner orbit, evenly spaced.
-  const core = coreSkills.map((skill, index) => ({
+  return coreSkills.map((skill, index) => ({
     id: skill.id,
     label: skill.name,
     proficiency: skill.proficiency,
+    // Evenly spaced, starting at the top.
     angle: (index / coreSkills.length) * Math.PI * 2 - Math.PI / 2,
-    radius: ORBIT.core,
   }));
-
-  // The unscored stack groups sit further out, offset so they interleave with the core nodes
-  // rather than hiding directly behind them.
-  const groups = skillGroups.map((group, index) => ({
-    id: group.id,
-    label: group.label,
-    proficiency: null,
-    angle:
-      (index / skillGroups.length) * Math.PI * 2 -
-      Math.PI / 2 +
-      Math.PI / skillGroups.length,
-    radius: ORBIT.outer,
-  }));
-
-  return [...core, ...groups];
 }
 
 const nodes = buildNodes();
 
 /** Maps proficiency to a node diameter in rem — size carries the number, not a bar. */
-function nodeSize(proficiency: number | null) {
-  if (proficiency === null) return 2;
-  // 80% → 2.75rem, 95% → 4.25rem. A 55% diameter spread across the range, which reads as a
-  // clear difference without the largest node crowding its neighbours.
-  return 2.75 + ((proficiency - 80) / 15) * 1.5;
+function nodeSize(proficiency: number) {
+  // 80% → 3.25rem, 95% → 5rem. With only four nodes on one ring there is room for them to be
+  // bigger, which makes the proficiency difference easier to read at a glance.
+  return 3.25 + ((proficiency - 80) / 15) * 1.75;
 }
 
 /**
@@ -93,12 +82,9 @@ function nodeSize(proficiency: number | null) {
  * (`CLAUDE.md` §2). Unscored stack groups get a deliberately faint halo — present enough to
  * belong to the same system, dim enough that they never compete with the scored skills.
  */
-function nodeGlow(proficiency: number | null, isActive: boolean) {
+function nodeGlow(proficiency: number, isActive: boolean) {
   if (isActive) {
-    return `0 0 44px color-mix(in srgb, var(--accent-violet) 60%, transparent)`;
-  }
-  if (proficiency === null) {
-    return `0 0 14px color-mix(in srgb, var(--accent-violet) 12%, transparent)`;
+    return `0 0 48px color-mix(in srgb, var(--accent-violet) 65%, transparent)`;
   }
   const t = (proficiency - 80) / 15;
   const blur = Math.round(18 + t * 24);
@@ -124,14 +110,30 @@ export function SkillEcosystem() {
         preserveAspectRatio="none"
       >
         <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          {/* `gradientUnits="userSpaceOnUse"` is load-bearing, not a preference.
+              SVG's default is `objectBoundingBox`, which resolves the gradient against each
+              stroked element's own bounding box — and a perfectly horizontal or vertical
+              `<line>` has a **zero-area** box, so the gradient cannot resolve and the stroke
+              paints nothing at all. With four nodes evenly spaced from the top, every single
+              connection is axis-aligned, so every line silently disappeared. (Before the outer
+              ring was removed this hid it: the diagonal group lines drew, while the lines to
+              React.js and HTML/CSS did not.) Pinning the gradient to the viewBox instead makes
+              it independent of each line's geometry. */}
+          <linearGradient
+            id={gradientId}
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="100"
+            y2="100"
+          >
             <stop offset="0%" stopColor="var(--accent-violet)" />
             <stop offset="100%" stopColor="var(--accent-cyan)" />
           </linearGradient>
         </defs>
         {nodes.map((node) => {
-          const x = 50 + Math.cos(node.angle) * node.radius * 100;
-          const y = 50 + Math.sin(node.angle) * node.radius * 100;
+          const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
+          const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
           const isActive = activeId === node.id;
           return (
             <line
@@ -141,15 +143,14 @@ export function SkillEcosystem() {
               x2={x}
               y2={y}
               stroke={`url(#${gradientId})`}
-              strokeWidth={isActive ? 0.6 : 0.25}
+              strokeWidth={isActive ? 0.8 : 0.42}
               // Opacity falls off for the outer orbit, the same way the constellation's
               // lines fade with distance.
-              opacity={isActive ? 0.9 : node.proficiency === null ? 0.25 : 0.45}
-              className={cn(
-                "transition-all duration-500 ease-smooth",
-                // Matches the node it points at — see the `<li>` below.
-                node.proficiency === null && "hidden sm:block",
-              )}
+              // Strong enough to read as the foreground. The site-wide neural field behind
+              // this section is deliberately dense and bright, and at the old 0.45 these
+              // connections were being outshone by the decoration.
+              opacity={isActive ? 1 : 0.75}
+              className="transition-all duration-500 ease-smooth"
             />
           );
         })}
@@ -165,22 +166,15 @@ export function SkillEcosystem() {
       {/* Orbiting skill nodes. */}
       <ul className="contents">
         {nodes.map((node, index) => {
-          const x = 50 + Math.cos(node.angle) * node.radius * 100;
-          const y = 50 + Math.sin(node.angle) * node.radius * 100;
+          const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
+          const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
           const size = nodeSize(node.proficiency);
           const isActive = activeId === node.id;
 
           return (
             <li
               key={node.id}
-              className={cn(
-                "absolute -translate-x-1/2",
-                // Below `sm` the outer orbit's labels collide with the core ones. The group
-                // nodes are dropped there rather than shrunk into illegibility — every one of
-                // them is already listed in full in the tag list below this ecosystem, so
-                // nothing is lost. `CLAUDE.md` §4 expects this kind of mobile simplification.
-                node.proficiency === null && "hidden sm:block",
-              )}
+              className="absolute -translate-x-1/2"
               // The connecting lines end at the orbit point, and the circle — not the
               // button's centre — is what should sit there. The label hangs below it, so the
               // button is pulled up by half the circle's diameter.

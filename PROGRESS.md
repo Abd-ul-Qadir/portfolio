@@ -45,6 +45,47 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 2 (cont.) — 2026-08-26 — Ecosystem brought in line with PHASE_PLAN Phase 10
+
+Abdul: "not according to design i described check phaseplan.md phase 10". He was right about two
+further things, on top of the glow fixed in the entry below.
+
+**1. The unscored stack should not orbit at all.** Phase 10: "Map each of the **four core
+skills'** proficiency … The remaining stack (Databases, Tools, etc. — no percentage given)
+**renders as a plain tag list**." The ecosystem was orbiting the five stack *groups* on a second
+outer ring **as well as** listing them as tags below — so Backend / Frontend / Data-AI-ML /
+Databases / Tools appeared twice, and the plan says once. `content/data.ts` already said the same
+thing in a comment on `SkillGroup`: "renders as a plain tag list, deliberately not as bars."
+The outer ring is removed; only the four scored core skills orbit. That also **deleted the label
+collisions at their source** — they were all between the two rings — so the orbit could be pushed
+out (0.32 → 0.40) and the nodes made bigger (3.25–5rem, up from 2.75–4.25).
+
+**2. ⚠ A latent SVG bug: the hub's connecting lines were not painting.** With the four core nodes
+evenly spaced from the top, every connection is *exactly* vertical or horizontal — and a
+horizontal or vertical `<line>` has a **zero-area bounding box**. The gradient stroke used SVG's
+default `gradientUnits="objectBoundingBox"`, which resolves against that box, so it could not
+resolve and **the stroke painted nothing at all**. Measured: all four lines report
+`bbox 0x40` / `40x0`, `degenerateBBox: true`.
+
+This was **pre-existing and partly hidden** by the very ring that shouldn't have been there: the
+group nodes sat at odd angles, so *their* lines drew fine while the lines to React.js (straight
+up) and HTML/CSS (straight down) silently did not. Look at Abdul's first screenshot and the two
+axis-aligned nodes have no line. Removing the outer ring made it total and therefore obvious.
+Fixed with `gradientUnits="userSpaceOnUse"` pinned to the viewBox, which is independent of each
+line's geometry. **Never leave a gradient in `objectBoundingBox` units on strokes that can be
+axis-aligned.**
+
+Lines were also strengthened (opacity 0.45 → 0.75, width 0.25 → 0.42): the site-wide field is now
+much brighter, and at the old values the ecosystem's own connections were outshone by the
+decoration behind it.
+
+**Verified:** 4 orbiting nodes and **0 label overlaps at both desktop and 390px** (the 3x44px
+mobile overlap noted below is gone too); all four connections paint in normal, reduced-motion and
+mobile renders; the tag list still carries every group heading *and* their individual
+technologies (Django, FastAPI, Flask, React Native, PostgreSQL, KMeans); spoken languages still
+render as circular badges. Node diameters 80/71/52/52px track proficiencies 95/90/80/80.
+`build`, `lint`, `tsc --noEmit` clean.
+
 ### Session 2 (cont.) — 2026-08-26 — Field density/reach, and the ecosystem's missing glow
 
 **⚠ FIRST, READ THIS — the working tree was rolled back before this entry was written.**

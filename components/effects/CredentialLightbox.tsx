@@ -91,7 +91,7 @@ export function CredentialLightbox({ credential, onClose }: CredentialLightboxPr
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="scrim-backdrop absolute inset-0 h-full w-full cursor-default"
+            className="scrim-backdrop absolute inset-0 h-full w-full"
             tabIndex={-1}
           />
 

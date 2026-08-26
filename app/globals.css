@@ -19,9 +19,19 @@
   }
 
   /* The custom cursor is mounted under exactly these conditions (see `CursorMount`), so
-     the native cursor is hidden under exactly the same ones — never more broadly. */
+     the native cursor is hidden under exactly the same ones — never more broadly.
+
+     `body *`, not just `body`: `cursor` inherits, but any element carrying its own value wins,
+     and the UA stylesheet gives every `a:link` `cursor: pointer`. Hiding it on `body` alone
+     therefore left the native hand showing over every link and button — on top of the custom
+     cursor, since the OS pointer is not a DOM layer and no z-index can sit above it. Measured
+     before the fix: nav links and CTAs computed `pointer` while everything else computed
+     `none`.
+
+     Author styles beat UA styles regardless of specificity, so this needs no `!important`. */
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    body {
+    body,
+    body * {
       cursor: none;
     }
   }

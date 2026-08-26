@@ -84,6 +84,32 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — The native cursor was never fully hidden
+
+Abdul kept calling it "the arrow", and that was the literal answer: **the OS pointer was still
+visible**, drawn on top of the custom cursor. Three rounds of cursor work went past it because
+**CDP screenshots do not capture the OS cursor** — every screenshot I took looked correct, while
+his did not. When a user's screenshot and a scripted one disagree, that gap *is* the finding.
+
+**Cause.** `globals.css` hid the native cursor with `body { cursor: none }`. `cursor` inherits,
+but any element carrying its own value wins — and the UA stylesheet gives every `a:link`
+`cursor: pointer`. So the arrow reappeared over **every link and button**. Measured before the
+fix: nav links and CTAs computed `pointer` while everything else computed `none`.
+
+**Fix:** `body, body *`. Author styles beat UA styles regardless of specificity, so no
+`!important` is needed. One Tailwind `cursor-default` on the lightbox backdrop was also removed —
+a class (0,1,0) out-specifies `body *` (0,0,2) and would have punched a hole in the rule.
+
+**Verified:** with motion enabled, **0 of 729 elements** and **0 of 45 interactive elements**
+compute a native cursor. Under reduced motion `body` is back to `cursor: auto` and all 45 get
+their native cursors again — correct, because `CursorMount` does not mount the custom cursor
+there.
+
+*Abdul's hypothesis was "move the cursor to the top layer".* Worth recording why that could not
+have worked: the custom cursor was already top of the z-scale (`z-cursor: 50`), and the OS
+pointer is **not a DOM layer at all** — no z-index can sit above it. `cursor: none` is the only
+lever.
+
 ### Session 2 (cont.) — 2026-08-26 — Hero portrait colour-graded onto the dark page
 
 Abdul: the normal hero photo "is much brighter and doesnt look good on dark background".

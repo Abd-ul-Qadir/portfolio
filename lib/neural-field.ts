@@ -1236,38 +1236,20 @@ export class NeuralField {
       ctx.fill();
     }
 
-    /* -- the core itself ---------------------------------------------------- */
-    const pulse = 1 + Math.sin(this.time * 3.4) * 0.05;
+    /* -- the core's glow, and only its glow --------------------------------- */
+    //
+    // **The core's rings, arcs and centre point are NOT drawn here any more.** This canvas is
+    // the site background at `-z-20`, so everything it paints is occluded by content — and the
+    // processing core is the one thing on it that must never be: it belongs to the cursor, and
+    // a cursor that vanishes over a card or an image is just broken. It is rendered as DOM in
+    // `Cursor.tsx` instead, on the top layer, where it is visible over anything.
+    //
+    // What stays here is the soft glow, which reads as the field responding *around* the
+    // cursor rather than as part of the cursor itself, together with the tendrils and trail
+    // above — all three are only meaningful where the field is visible anyway.
     const boost = Math.min(speed / 1600, 0.5);
-    const ring = (30 + boost * 14) * pulse;
-
+    const ring = 30 + boost * 14;
     this.blit(this.glowCyan, this.px, this.py, ring * 2.6, 0.2 + boost * 0.2);
-
-    ctx.strokeStyle = rgba(CYAN, 0.3);
-    ctx.beginPath();
-    ctx.arc(this.px, this.py, ring, 0, TAU);
-    ctx.stroke();
-
-    // Counter-rotating arcs — the "processing" read. Two short arcs, opposite directions.
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = rgba(CYAN, 0.75);
-    ctx.beginPath();
-    ctx.arc(this.px, this.py, ring * 0.74, this.time * 2.1, this.time * 2.1 + 1.1);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(this.px, this.py, ring * 0.74, this.time * 2.1 + Math.PI, this.time * 2.1 + Math.PI + 1.1);
-    ctx.stroke();
-
-    ctx.strokeStyle = rgba(VIOLET, 0.6);
-    ctx.beginPath();
-    ctx.arc(this.px, this.py, ring * 0.5, -this.time * 2.8, -this.time * 2.8 + 1.9);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-
-    ctx.fillStyle = rgba(CYAN, 0.9);
-    ctx.beginPath();
-    ctx.arc(this.px, this.py, 2.2, 0, TAU);
-    ctx.fill();
   }
 
   private blit(

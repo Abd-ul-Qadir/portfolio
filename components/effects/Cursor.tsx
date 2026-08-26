@@ -123,6 +123,25 @@ export default function Cursor() {
         </AnimatePresence>
       </motion.div>
 
+      {/* The AI processing core.
+          Tracks the raw pointer, not the spring, because it is the point of contact rather
+          than the trailing ring — and because the neural field's tendrils and glow are drawn
+          at the raw coordinate too, so anything else would separate them.
+
+          **It lives here rather than on the canvas.** The field is the site background at
+          `-z-20`, so a core drawn there is occluded by every card and every image — Abdul
+          reported it missing over exactly those. As DOM on the cursor layer it is visible over
+          anything, which is the only correct behaviour for something attached to the pointer. */}
+      <motion.div
+        className="cursor-core"
+        style={{ x, y, translateX: "-50%", translateY: "-50%", opacity: visible ? 1 : 0 }}
+      >
+        <span className="cursor-core-halo" />
+        <span className="cursor-core-ring" />
+        <span className="cursor-core-arc" />
+        <span className="cursor-core-arc-inner" />
+      </motion.div>
+
       {/* Inner: tracks the pointer with no spring. */}
       <motion.div
         className="absolute left-0 top-0 h-1.5 w-1.5 rounded-pill bg-cursor-dot"

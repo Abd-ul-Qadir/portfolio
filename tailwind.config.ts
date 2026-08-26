@@ -158,6 +158,11 @@ const config: Config = {
          * toward the `AI ENGINEER` hub — the ecosystem's equivalent of the neural field's data
          * packets. The line is 40 viewBox units long, so the offset sweeps that full distance.
          */
+        /** The cursor core's counter-rotating arcs. Transform-only, so it stays on the GPU. */
+        "cursor-core-spin": {
+          from: { transform: "translate(-50%, -50%) rotate(0deg)" },
+          to: { transform: "translate(-50%, -50%) rotate(360deg)" },
+        },
         "synapse-flow": {
           // Distance comes from `--flow-span`, set per connection from its measured length —
           // the segments are no longer all the same length now that they stop at each circle's
@@ -507,6 +512,62 @@ const config: Config = {
          * dot's own shapes, so one declaration keeps both readable over the dark page and over
          * a bright image without changing the cursor's colour in either place.
          */
+        /**
+         * The AI processing core that rides the cursor.
+         *
+         * A DOM copy of what the neural field used to draw on its canvas. It had to move: the
+         * field is the page background at `-z-20`, so the core disappeared behind every card
+         * and image, which is precisely where a pointer spends its time. Here it sits on the
+         * cursor layer and is visible over anything.
+         *
+         * Built from borders rather than a canvas or an SVG: a circle whose border is
+         * transparent on all but one or two sides *is* an arc, and rotating it costs the
+         * compositor nothing. Two arcs counter-rotate, which is what reads as "processing"
+         * rather than "a spinner".
+         */
+        ".cursor-core": {
+          position: "absolute",
+          left: "0",
+          top: "0",
+          width: "3.75rem",
+          height: "3.75rem",
+        },
+        ".cursor-core-halo, .cursor-core-ring, .cursor-core-arc, .cursor-core-arc-inner": {
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          borderRadius: "9999px",
+          transform: "translate(-50%, -50%)",
+        },
+        /** The soft bloom. Matches the glow the field still paints at the same point. */
+        ".cursor-core-halo": {
+          width: "100%",
+          height: "100%",
+          backgroundImage: `radial-gradient(circle, color-mix(in srgb, ${v("accent-cyan")} 22%, transparent) 0%, transparent 68%)`,
+        },
+        ".cursor-core-ring": {
+          width: "3.75rem",
+          height: "3.75rem",
+          border: "1px solid color-mix(in srgb, var(--accent-cyan) 34%, transparent)",
+        },
+        /** Outer arc: two opposite segments, clockwise. */
+        ".cursor-core-arc": {
+          width: "2.75rem",
+          height: "2.75rem",
+          border: "1.5px solid transparent",
+          borderTopColor: "color-mix(in srgb, var(--accent-cyan) 80%, transparent)",
+          borderBottomColor: "color-mix(in srgb, var(--accent-cyan) 80%, transparent)",
+          animation: "cursor-core-spin 3s linear infinite",
+        },
+        /** Inner arc: a single segment, counter-clockwise, violet. */
+        ".cursor-core-arc-inner": {
+          width: "1.9rem",
+          height: "1.9rem",
+          border: "1.5px solid transparent",
+          borderLeftColor: "color-mix(in srgb, var(--accent-violet) 70%, transparent)",
+          animation: "cursor-core-spin 2.2s linear infinite reverse",
+        },
+
         ".cursor-layer": {
           filter: "drop-shadow(0 0 2px rgba(0,0,0,0.85)) drop-shadow(0 0 6px rgba(0,0,0,0.55))",
         },

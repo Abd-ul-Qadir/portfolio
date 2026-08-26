@@ -84,6 +84,33 @@ the connections.
 **0° → 0°** through the whole chain; under reduced motion movement is **0px** and labels are still
 upright. `build`, `lint`, `tsc --noEmit` clean.
 
+### Session 2 (cont.) — 2026-08-26 — The processing core moved off the canvas onto the cursor
+
+Abdul: "the cyan circle around cursor isnt visible on cards/images."
+
+**Cause, and it is the same one that produced two earlier wrong fixes.** The core — the cyan
+ring, the counter-rotating arcs and the centre point — was drawn by the neural field, and the
+field is the page background at `-z-20`. Everything it paints is behind content, so the core
+vanished behind every card and every image. That is also why the cursor appeared to "change" over
+the portrait earlier: what changed was that the core underneath it disappeared.
+
+**Fix: the core is part of the cursor, so it now lives with the cursor.** Rings and arcs are
+rendered as DOM in `Cursor.tsx` on the cursor layer (`z-cursor: 50`), where nothing can occlude
+them. Built from **borders, not canvas or SVG** — a circle whose border is transparent on all but
+one or two sides *is* an arc, and rotating it is transform-only, so the compositor carries it.
+Two arcs counter-rotate, which is what reads as "processing" rather than "a spinner".
+
+The canvas keeps the soft glow, the tendrils and the velocity trail. Those are field behaviour —
+they describe the network reacting *around* the pointer and are only meaningful where the field
+is visible — so leaving them at `-z-20` is correct, not a compromise.
+
+**Verified:** the core renders over `article.glass-surface` in Services and over the hero
+portrait, on a layer computing `z-index: 50`.
+
+*This is the third and last symptom of one root cause.* The cursor's identity was distributed
+across two layers that could not both be on top: a DOM ring plus a canvas core. Anything drawn on
+the background canvas cannot belong to the pointer.
+
 ### Session 2 (cont.) — 2026-08-26 — The native cursor was never fully hidden
 
 Abdul kept calling it "the arrow", and that was the literal answer: **the OS pointer was still

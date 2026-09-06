@@ -29,6 +29,12 @@ interface ButtonAsLink extends CommonProps {
   href: string;
   /** Force-opens in a new tab. Defaults to true for absolute URLs. */
   external?: boolean;
+  /**
+   * Side effect to run alongside following the link — closing the mobile menu, say. It is
+   * *not* a substitute for the href: navigation stays the link's own job, so the control keeps
+   * working under middle-click, Cmd-click and "open in new tab".
+   */
+  onClick?: () => void;
 }
 
 export type ButtonProps = ButtonAsButton | ButtonAsLink;
@@ -80,6 +86,7 @@ export function Button(props: ButtonProps) {
         href={props.href}
         className={classes}
         data-cursor-label={props.cursorLabel}
+        onClick={props.onClick}
         {...(openInNewTab ? { target: "_blank", rel: "noreferrer noopener" } : {})}
       >
         {props.children}

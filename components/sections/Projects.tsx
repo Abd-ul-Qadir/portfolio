@@ -67,6 +67,8 @@ export function Projects() {
         <div
           role="tablist"
           aria-label="Filter work by type"
+          data-scroll-reveal
+          data-scroll-delay="70"
           className="mt-10 flex flex-wrap gap-2"
         >
           {galleryFilters.map((tab) => {
@@ -168,7 +170,8 @@ export function Projects() {
                     key={credential.id}
                     className="list-none"
                     initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
                     transition={{ duration: reducedMotion ? 0.15 : 0.5, ease: [0.22, 1, 0.36, 1] }}
                   >
                     {isLink ? (

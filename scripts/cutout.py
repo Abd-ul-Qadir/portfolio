@@ -1,6 +1,6 @@
 """
 Regenerate the hero portrait cut-outs: the normal one from `public/portrait2.jpeg`, and the
-robotic variant from `public/robotic_portrait.jpeg` using the *same* matte.
+robotic variant from `public/portrait-robotic.jpg` using the *same* matte.
 
 **Committed this time, deliberately.** The previous cut-out was produced by an uncommitted
 one-off script, and PROGRESS.md had to carry a note saying it must be re-derived by hand if the
@@ -82,8 +82,43 @@ def grade(rgb01):
     return np.clip(y, 0.0, 1.0)
 
 
-def emit(path_in, path_out, erode_px=0, do_grade=False):
-    """Apply the matte to an image and write an RGBA PNG."""
+# The hero framing crop, in source pixels: (left, top, right, bottom) of the 832x1248 frame.
+#
+# The uncropped key is a near-full-length portrait, which the hero rendered small -- the head
+# ended up a minor element in a tall column. This crops to head-and-chest so the face carries
+# the composition, per Abdul's reference framing (2026-08-27).
+#
+# **Both emitted files must share this exact box.** The robotic layer is revealed through a mask
+# that assumes pixel-identical geometry with the photo; cropping them differently would slide
+# the robot's features against the photograph's. It is applied inside `emit()` for that reason,
+# rather than at either call site where the two could drift apart.
+#
+# The bottom edge is not feathered here: `.hero-portrait` in `tailwind.config.ts` already masks
+# the element's bottom 24% to transparent, so the crop dissolves into the section rather than
+# ending on a line. Keep that in mind when choosing the bottom -- the last quarter of whatever
+# this box includes will be faded out on the page.
+# The right bound is the subject's own silhouette edge, not the frame's: the key left ~4
+# transparent columns there, and the hero anchors this image flush to the section's right
+# edge, where those columns would read as a gap. Measured, not guessed — the photo's alpha
+# runs to column 827 and the robotic variant's to 823, so 828 trims the margin without
+# touching either silhouette.
+HERO_CROP = (0, 40, 828, 925)
+
+
+def emit(path_in, path_out, erode_px=0, do_grade=False, mask_out=None):
+    """
+    Apply the matte to an image, crop to the hero framing, and write an RGBA PNG.
+
+    `mask_out` additionally writes an **alpha-only stencil** of the same matte.
+
+    That file exists for one reason: `.portrait-reveal` in `tailwind.config.ts` clips the hero
+    reveal with `mask-image: url(...)`, and a CSS mask reads only the **alpha** channel — the
+    colour data is never sampled. Pointing it at the full-colour cut-out meant the browser
+    downloaded a ~1 MB PNG *raw*, outside `next/image`, purely to use as a shape; Lighthouse
+    measured it as 980 KiB of wasted image payload and it was the page's biggest single
+    download. All-black RGB with the matte in alpha, at half resolution (a stencil is scaled by
+    `mask-size: contain` anyway), compresses to a tiny fraction of that.
+    """
     rgb_src = Image.open(path_in).convert("RGB")
     if rgb_src.size != (W, H):
         raise SystemExit(f"{path_in} is {rgb_src.size}, expected {(W, H)} - the matte would not line up")
@@ -98,9 +133,18 @@ def emit(path_in, path_out, erode_px=0, do_grade=False):
     pixels = np.asarray(rgb_src, np.float32) / 255.0
     if do_grade:
         pixels = grade(pixels)
-    data = np.dstack([(pixels * 255).astype(np.uint8), (a * 255).astype(np.uint8)])
-    Image.fromarray(data, "RGBA").save(path_out, optimize=True)
-    return data
+    alpha8 = (a * 255).astype(np.uint8)
+    data = np.dstack([(pixels * 255).astype(np.uint8), alpha8])
+    out = Image.fromarray(data, "RGBA").crop(HERO_CROP)
+    out.save(path_out, optimize=True)
+
+    if mask_out:
+        black = np.zeros_like(alpha8)
+        stencil = Image.fromarray(np.dstack([black, black, black, alpha8]), "RGBA").crop(HERO_CROP)
+        stencil = stencil.resize((stencil.width // 2, stencil.height // 2), Image.LANCZOS)
+        stencil.save(mask_out, optimize=True)
+
+    return np.asarray(out)
 
 
 out = emit("public/portrait2.jpeg", "public/portrait2-cutout.png", do_grade=True)
@@ -115,10 +159,15 @@ img = Image.fromarray(out, "RGBA")
 # Sharing one matte makes the two silhouettes pixel-identical and the containment structural.
 # Deliberately ungraded: the AI variant is meant to read as lit from within, and it is only
 # ever seen inside the reveal, where dimming it would defeat the effect.
-emit("public/robotic_portrait.jpeg", "public/robotic-portrait-cutout.png", erode_px=4)
+emit(
+    "public/portrait-robotic.jpg",
+    "public/robotic-portrait-cutout.png",
+    erode_px=4,
+    mask_out="public/portrait-reveal-mask.png",
+)
 
 # Preview on the real page background so the silhouette can be judged in context.
-bg = Image.new("RGBA", (W, H), (8, 9, 13, 255))
+bg = Image.new("RGBA", img.size, (8, 9, 13, 255))
 import sys
 if len(sys.argv) > 1:
     Image.alpha_composite(bg, img).convert("RGB").save(f"{sys.argv[1]}/cut-preview.png")

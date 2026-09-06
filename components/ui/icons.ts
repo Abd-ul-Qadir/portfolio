@@ -1,4 +1,4 @@
-import { Code2, Mail, Phone, Rocket, Share2, Smartphone } from "lucide-react";
+import { FileText, Globe, LayoutDashboard, Mail, Phone, Smartphone, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import type { IconName } from "@/content/data";
@@ -13,10 +13,11 @@ import type { IconName } from "@/content/data";
  * adds them as inline SVG — not as a new icon dependency. See `PROGRESS.md`'s decision log.
  */
 export const iconMap: Partial<Record<IconName, LucideIcon>> = {
-  "code-2": Code2,
+  globe: Globe,
   smartphone: Smartphone,
-  rocket: Rocket,
-  "share-2": Share2,
+  workflow: Workflow,
+  "layout-dashboard": LayoutDashboard,
   mail: Mail,
   phone: Phone,
+  "file-text": FileText,
 };

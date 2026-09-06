@@ -57,10 +57,12 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
     notFound();
   }
 
+  // `date` is nullable — the CV gives no year for some projects, and an empty "Date" row reads
+  // as a bug. Dropped rather than rendered blank or filled with a guess.
   const meta = [
     { label: "Role", value: project.role },
     { label: "Type", value: project.type },
-    { label: "Date", value: project.date },
+    ...(project.date ? [{ label: "Date", value: project.date }] : []),
   ];
 
   return (

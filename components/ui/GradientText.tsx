@@ -9,7 +9,7 @@ interface GradientTextProps {
 }
 
 /**
- * Violet -> indigo -> cyan gradient text, with a light passing through it.
+ * Copper -> gold -> mineral-teal gradient text, with a light passing through it.
  *
  * Short headline phrases only — `DESIGN_SYSTEM.md` rules it out for body copy, since the
  * cyan end of the ramp does not hold contrast at body sizes.

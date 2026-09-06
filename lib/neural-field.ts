@@ -45,7 +45,7 @@ import { palette } from "@/lib/tokens";
  * - **activates** everything inside its radius — activation rises fast (`0.45`) and decays slow
  *   (`0.055`), an asymmetry that leaves a comet-tail of still-lit nodes behind a moving cursor,
  *   so the network looks like it *remembers* where the pointer went;
- * - **lights the edges** it is near, painting cyan over the resting violet mesh;
+ * - **lights the edges** it is near, painting teal over the resting copper/gold mesh;
  * - **injects signal**: nodes it activates fire packets, so cascades genuinely radiate outward
  *   from the cursor. This is the difference between the network reacting to the cursor and the
  *   cursor merely being drawn on top of it;
@@ -97,9 +97,17 @@ function toRgb(hex: string): RGB {
 const rgba = (c: RGB, a: number) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 
 /** The restrained three-accent palette this effect is allowed to use. */
-const VIOLET = toRgb(palette["accent-violet"]);
-const INDIGO = toRgb(palette["accent-indigo"]);
-const CYAN = toRgb(palette["accent-cyan"]);
+const COPPER = toRgb(palette["accent-copper"]);
+const GOLD = toRgb(palette["accent-gold"]);
+const TEAL = toRgb(palette["accent-teal"]);
+const ROBOT_BLUE = toRgb(palette["accent-robot-blue"]);
+const ROBOT_CYAN = toRgb(palette["accent-robot-cyan"]);
+
+const mixRgb = (from: RGB, to: RGB, amount: number): RGB => [
+  Math.round(lerp(from[0], to[0], amount)),
+  Math.round(lerp(from[1], to[1], amount)),
+  Math.round(lerp(from[2], to[2], amount)),
+];
 
 export interface NeuralFieldConfig {
   /** Node count at a desktop viewport. */
@@ -139,7 +147,39 @@ export interface NeuralFieldConfig {
    * more.
    */
   maxDpr?: number;
+  /**
+   * Ceiling on how often the field **repaints**, in frames per second. `0` means every frame.
+   *
+   * The simulation always steps at full rate; only `draw()` is gated. That split matters: the
+   * engine's JS costs ~0.8 ms/frame while the *rasterisation* of a full-viewport canvas is what
+   * actually limits the page, so skipping draws buys almost all of the win and none of the
+   * simulation's smoothness is lost.
+   *
+   * The cap is **suspended while the pointer is moving** (see `POINTER_FRESH_MS`), so cursor
+   * reaction stays at full rate and only ambient drift is throttled — which is exactly the state
+   * the page is in while someone scrolls or reads.
+   */
+  drawHz?: number;
+  /**
+   * Ceiling on total backing-store pixels, after `maxDpr` is applied. `0` disables it.
+   *
+   * `maxDpr` alone does not bound cost: a 2560-wide monitor at DPR 1 is still 3.7 megapixels to
+   * fill every frame, and the area grows quadratically with window size. This clamps the ratio
+   * further on large displays so the field degrades gracefully instead of getting slower the
+   * bigger the screen.
+   */
+  maxBackingPixels?: number;
 }
+
+/**
+ * How long after the last pointer sample the field keeps drawing at full rate. Long enough to
+ * cover the gaps between samples during a slow drag; short enough that letting go of the mouse
+ * drops back to the cheap path almost immediately.
+ */
+const POINTER_FRESH_MS = 400;
+
+/** Never scale the backing store below this ratio — past it the mesh visibly softens. */
+const MIN_DPR = 0.8;
 
 const DEFAULTS: Required<NeuralFieldConfig> = {
   nodeCount: 150,
@@ -156,6 +196,10 @@ const DEFAULTS: Required<NeuralFieldConfig> = {
   intensity: 1,
   scrollDrift: 60,
   maxDpr: 2,
+  // Both default to "off" so every existing call site keeps its exact behaviour; only the
+  // site-wide field, which is the one that is full-viewport, opts in.
+  drawHz: 0,
+  maxBackingPixels: 0,
 };
 
 /**
@@ -297,7 +341,7 @@ interface Spark {
 
 /** Resting-mesh alpha buckets. Batching edges into a few strokes is the main draw-cost win. */
 const EDGE_BUCKETS = 5;
-/** Activation alpha buckets, drawn as a cyan pass over the resting mesh. */
+/** Activation alpha buckets, drawn as a teal pass over the resting mesh. */
 const ACTIVE_BUCKETS = 3;
 /** How many trail samples the cursor keeps. */
 const TRAIL_LENGTH = 20;
@@ -330,6 +374,14 @@ export class NeuralField {
   private pSpeed = 0;
   private lastPx = 0;
   private lastPy = 0;
+  /**
+   * Timestamp of the last pointer sample, for the draw throttle in `frame()`. `pActive` alone is
+   * not enough — it stays true for a pointer resting motionless in the document, which is the
+   * case the throttle most wants to catch.
+   */
+  private lastPointerAt = -Infinity;
+  /** Timestamp of the last repaint, for the same throttle. */
+  private lastDraw = -Infinity;
 
   private trail = new Float32Array(TRAIL_LENGTH * 2);
   private trailCount = 0;
@@ -359,13 +411,17 @@ export class NeuralField {
   private raf = 0;
   private running = false;
   private ambientTimer = 0;
+  /** Eased palette mix for the hero's robotic portrait reveal: 0 = teal, 1 = steel/cyan. */
+  private robotTarget = 0;
+  private robotMix = 0;
 
   /** Rolling accumulator for the opt-in `__neuralDebug` frame-cost readout. */
   private frameAcc = 0;
   private frameN = 0;
 
-  private glowViolet: HTMLCanvasElement | null = null;
-  private glowCyan: HTMLCanvasElement | null = null;
+  private glowCopper: HTMLCanvasElement | null = null;
+  private glowTeal: HTMLCanvasElement | null = null;
+  private glowRobot: HTMLCanvasElement | null = null;
 
   constructor(canvas: HTMLCanvasElement, config: NeuralFieldConfig = {}) {
     this.canvas = canvas;
@@ -373,8 +429,9 @@ export class NeuralField {
     if (!ctx) throw new Error("NeuralField: 2D context unavailable");
     this.ctx = ctx;
     this.cfg = { ...DEFAULTS, ...config };
-    this.glowViolet = makeGlowSprite(VIOLET);
-    this.glowCyan = makeGlowSprite(CYAN);
+    this.glowCopper = makeGlowSprite(COPPER);
+    this.glowTeal = makeGlowSprite(TEAL);
+    this.glowRobot = makeGlowSprite(ROBOT_CYAN);
   }
 
   /** Swap config without re-seeding, for props that change on resize/breakpoint. */
@@ -388,7 +445,14 @@ export class NeuralField {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return false;
 
-    this.dpr = Math.min(window.devicePixelRatio || 1, this.cfg.maxDpr);
+    const capped = Math.min(window.devicePixelRatio || 1, this.cfg.maxDpr);
+    // Then clamp by total area, so a wide monitor does not scale the fill cost quadratically.
+    const budget = this.cfg.maxBackingPixels;
+    const planned = rect.width * rect.height * capped * capped;
+    this.dpr =
+      budget > 0 && planned > budget
+        ? Math.max(MIN_DPR, capped * Math.sqrt(budget / planned))
+        : capped;
     this.width = rect.width;
     this.height = rect.height;
     this.canvas.width = Math.round(rect.width * this.dpr);
@@ -777,12 +841,18 @@ export class NeuralField {
     this.px = x;
     this.py = y;
     this.pActive = true;
+    this.lastPointerAt = performance.now();
   }
 
   clearPointer() {
     this.pActive = false;
     this.pSpeed = 0;
     this.trailCount = 0;
+  }
+
+  /** Match active circuitry to the robotic portrait without changing the resting brand mesh. */
+  setRoboticReveal(active: boolean) {
+    this.robotTarget = active ? 1 : 0;
   }
 
   setScroll(y: number) {
@@ -862,6 +932,12 @@ export class NeuralField {
 
   private step(dt: number) {
     this.time += dt;
+    // The portrait owns the interaction; the field only eases its palette toward that state.
+    // This rides the existing simulation tick and therefore creates no second animation loop.
+    this.robotMix +=
+      (this.robotTarget - this.robotMix) *
+      Math.min(1, dt * (this.robotTarget > this.robotMix ? 8 : 5));
+    if (this.robotTarget === 0 && this.robotMix < 0.001) this.robotMix = 0;
     this.applyStory(dt);
     const cfg = this.cfg;
     const pointerOn = cfg.influenceRadius > 0 && this.pActive;
@@ -1043,6 +1119,12 @@ export class NeuralField {
 
     const pointerOn = animated && cfg.influenceRadius > 0 && this.pActive;
     const R = cfg.influenceRadius;
+    // Active edges become steel-blue while packets, nodes and sparks take the portrait's
+    // electric cyan. Only the already-local pointer activation changes; the copper/gold rest
+    // mesh remains untouched across the text side of the hero.
+    const activeEdgeColour = mixRgb(TEAL, ROBOT_BLUE, this.robotMix);
+    const activeNodeColour = mixRgb(TEAL, ROBOT_CYAN, this.robotMix);
+    const activeGlow = this.robotMix > 0.35 ? this.glowRobot : this.glowTeal;
 
     /* -- edges: resting mesh, batched into a few strokes ------------------- */
     // Squared-ratio thresholds, so no square root is needed in a per-edge loop: an edge is
@@ -1073,7 +1155,7 @@ export class NeuralField {
         const d = Math.sqrt((this.px - mx) ** 2 + (this.py - my) ** 2);
         if (d < R) {
           // Cubed rather than squared: a tight pool of lit connections right at the cursor
-          // reads as processing. A broader falloff washes a quarter of the screen cyan and
+          // reads as processing. A broader falloff washes a quarter of the screen teal and
           // starts competing with the body copy in front of it.
           const f = 1 - d / R;
           activation = Math.max(activation, f * f * f * 0.8);
@@ -1097,11 +1179,11 @@ export class NeuralField {
         any = true;
       }
       if (!any) continue;
-      ctx.strokeStyle = rgba(INDIGO, alpha);
+      ctx.strokeStyle = rgba(GOLD, alpha);
       ctx.stroke();
     }
 
-    /* -- edges: activation pass, cyan over the resting violet -------------- */
+    /* -- edges: activation pass, teal over the resting copper/gold ---------- */
     for (let bucket = 0; bucket < ACTIVE_BUCKETS; bucket += 1) {
       const lo = (bucket + 1) / (ACTIVE_BUCKETS + 1);
       ctx.beginPath();
@@ -1116,7 +1198,7 @@ export class NeuralField {
       }
       if (!any) continue;
       ctx.lineWidth = 1 + bucket * 0.25;
-      ctx.strokeStyle = rgba(CYAN, 0.12 + lo * 0.5);
+      ctx.strokeStyle = rgba(activeEdgeColour, 0.12 + lo * 0.5);
       ctx.stroke();
     }
     ctx.lineWidth = 1;
@@ -1135,13 +1217,13 @@ export class NeuralField {
         const tailT = Math.max(0, t - 0.16);
         // A packet is only as visible as the connection carrying it.
         ctx.globalAlpha = edge.fade;
-        ctx.strokeStyle = rgba(CYAN, 0.5);
+        ctx.strokeStyle = rgba(activeNodeColour, 0.5);
         ctx.beginPath();
         ctx.moveTo(from.x + (to.x - from.x) * tailT, from.y + (to.y - from.y) * tailT);
         ctx.lineTo(x, y);
         ctx.stroke();
-        this.blit(this.glowCyan, x, y, 7, 0.5);
-        ctx.fillStyle = rgba(CYAN, 0.95);
+        this.blit(activeGlow, x, y, 7, 0.5);
+        ctx.fillStyle = rgba(activeNodeColour, 0.95);
         ctx.beginPath();
         ctx.arc(x, y, 1.5, 0, TAU);
         ctx.fill();
@@ -1158,13 +1240,13 @@ export class NeuralField {
       const act = node.act;
 
       if (act > 0.05) {
-        this.blit(this.glowCyan, node.x, node.y, radius * 9 + act * 12, act * 0.55);
+        this.blit(activeGlow, node.x, node.y, radius * 9 + act * 12, act * 0.55);
       } else if (node.tier === 2) {
-        // Hubs keep a permanent, faint violet halo — the mesh's focal points.
-        this.blit(this.glowViolet, node.x, node.y, radius * 8, 0.16 * cfg.intensity);
+        // Hubs keep a permanent, faint copper halo — the mesh's focal points.
+        this.blit(this.glowCopper, node.x, node.y, radius * 8, 0.16 * cfg.intensity);
       }
 
-      const colour = act > 0.05 ? CYAN : node.tier === 2 ? VIOLET : INDIGO;
+      const colour = act > 0.05 ? activeNodeColour : node.tier === 2 ? COPPER : GOLD;
       ctx.fillStyle = rgba(colour, Math.min(1, depthAlpha * (0.55 + act * 0.9)));
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius * (1 + act * 0.55), 0, TAU);
@@ -1176,7 +1258,7 @@ export class NeuralField {
       for (const spark of this.sparks) {
         if (!spark.alive) continue;
         const life = spark.life / spark.max;
-        ctx.fillStyle = rgba(CYAN, life * 0.7);
+        ctx.fillStyle = rgba(activeNodeColour, life * 0.7);
         ctx.beginPath();
         ctx.arc(spark.x, spark.y, 1.2 * life + 0.4, 0, TAU);
         ctx.fill();
@@ -1195,6 +1277,8 @@ export class NeuralField {
   private drawCore() {
     const ctx = this.ctx;
     const speed = this.pSpeed;
+    const coreColour = mixRgb(TEAL, ROBOT_CYAN, this.robotMix);
+    const coreGlow = this.robotMix > 0.35 ? this.glowRobot : this.glowTeal;
 
     /* -- velocity trail ---------------------------------------------------- */
     // Drawn as tapering segments: a single path cannot vary its width, and 20 short strokes
@@ -1205,7 +1289,7 @@ export class NeuralField {
       const alpha = t * 0.36 * reach;
       if (alpha < 0.01) continue;
       ctx.lineWidth = 0.4 + t * 2;
-      ctx.strokeStyle = rgba(CYAN, alpha);
+      ctx.strokeStyle = rgba(coreColour, alpha);
       ctx.beginPath();
       ctx.moveTo(this.trail[(i - 1) * 2], this.trail[(i - 1) * 2 + 1]);
       ctx.lineTo(this.trail[i * 2], this.trail[i * 2 + 1]);
@@ -1220,7 +1304,7 @@ export class NeuralField {
       const d = Math.sqrt(this.tendrilD2[k]);
       const f = 1 - d / R;
       if (f <= 0) continue;
-      ctx.strokeStyle = rgba(CYAN, f * f * 0.5);
+      ctx.strokeStyle = rgba(coreColour, f * f * 0.5);
       ctx.beginPath();
       ctx.moveTo(this.px, this.py);
       ctx.lineTo(node.x, node.y);
@@ -1230,7 +1314,7 @@ export class NeuralField {
       const phase = (this.time * 0.9 + k * 0.37) % 1;
       const dx = node.x + (this.px - node.x) * phase;
       const dy = node.y + (this.py - node.y) * phase;
-      ctx.fillStyle = rgba(CYAN, f * (1 - phase) * 0.9);
+      ctx.fillStyle = rgba(coreColour, f * (1 - phase) * 0.9);
       ctx.beginPath();
       ctx.arc(dx, dy, 1.4, 0, TAU);
       ctx.fill();
@@ -1249,7 +1333,7 @@ export class NeuralField {
     // above — all three are only meaningful where the field is visible anyway.
     const boost = Math.min(speed / 1600, 0.5);
     const ring = 30 + boost * 14;
-    this.blit(this.glowCyan, this.px, this.py, ring * 2.6, 0.2 + boost * 0.2);
+    this.blit(coreGlow, this.px, this.py, ring * 2.6, 0.2 + boost * 0.2);
   }
 
   private blit(
@@ -1287,7 +1371,24 @@ export class NeuralField {
     const t0 = debug ? performance.now() : 0;
 
     this.step(dt);
-    this.draw(true);
+
+    /**
+     * The simulation always steps; the *repaint* is what gets throttled.
+     *
+     * Rasterising a full-viewport canvas is what limits this page — the step above costs under a
+     * millisecond. Skipping draws therefore buys nearly all of the saving while the simulation
+     * keeps advancing at full rate, so nothing drifts or stutters in its timing.
+     *
+     * **The throttle lifts while the pointer is moving.** The field's whole point is reacting to
+     * the cursor, and a 30fps reaction feels detached. Ambient drift — what is on screen while
+     * someone scrolls or reads, which is exactly when jank is felt — is throttled instead.
+     */
+    const interval = this.cfg.drawHz > 0 ? 1000 / this.cfg.drawHz : 0;
+    const pointerFresh = this.pActive && now - this.lastPointerAt < POINTER_FRESH_MS;
+    if (interval === 0 || pointerFresh || now - this.lastDraw >= interval) {
+      this.lastDraw = now;
+      this.draw(true);
+    }
 
     if (debug) {
       this.frameAcc += performance.now() - t0;

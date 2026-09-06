@@ -20,7 +20,8 @@ interface SectionHeadingProps {
 
 /**
  * The one heading block every section uses, so the eyebrow/heading/description rhythm stays
- * identical site-wide.
+ * identical site-wide. Its rail and signal line are static CSS decoration: the heading gains a
+ * stronger system identity without creating six new animation loops or another client boundary.
  *
  * **No glow behind the heading.** This used to render a 224px violet blur here, which is why a
  * soft violet ball sat behind *every* section — the bento grid, Projects, Contact — and it is
@@ -39,31 +40,32 @@ export function SectionHeading({
   sparkle = false,
 }: SectionHeadingProps) {
   return (
-    <div className={cn("relative max-w-3xl", className)}>
+    <div data-scroll-reveal className={cn("section-heading max-w-3xl", className)}>
       {eyebrow ? (
-        <p className="relative flex items-center gap-2.5 font-mono text-eyebrow uppercase text-accent-violet-text">
+        <p className="section-heading-kicker font-mono text-eyebrow uppercase text-accent-violet-text">
           {/* A live status node in front of every section label, so each heading reads as a
               panel on a running system rather than a title. Pure CSS, two pseudo-elements —
               see `.status-node` — which is what keeps this a server component. */}
           <span aria-hidden className="status-node" />
           {sparkle ? <Sparkles aria-hidden className="h-3.5 w-3.5" /> : null}
-          {eyebrow}
+          <span>{eyebrow}</span>
+          <span aria-hidden className="section-heading-rule" />
         </p>
       ) : null}
       <h2
         id={id}
-        className="relative mt-4 text-heading font-semibold text-text-primary"
+        className="section-heading-title mt-4 text-heading font-semibold text-text-primary"
       >
         {children}
         {accent ? (
           <>
             {" "}
-            <GradientText>{accent}</GradientText>
+            <GradientText className="section-heading-accent">{accent}</GradientText>
           </>
         ) : null}
       </h2>
       {description ? (
-        <p className="relative mt-5 text-base leading-relaxed text-text-secondary sm:text-lg">
+        <p className="section-heading-description mt-5 text-base leading-relaxed text-text-secondary sm:text-lg">
           {description}
         </p>
       ) : null}

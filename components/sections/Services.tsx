@@ -1,16 +1,13 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 
 import { MagneticWrapper } from "@/components/effects/MagneticWrapper";
 import { TiltCard } from "@/components/effects/TiltCard";
+import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { iconMap } from "@/components/ui/icons";
 import { services } from "@/content/data";
-import { useReducedMotion } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,8 +18,6 @@ import { cn } from "@/lib/utils";
 const bentoSpan = ["lg:col-span-2", "lg:col-span-1", "lg:col-span-1", "lg:col-span-2"];
 
 export function Services() {
-  const reducedMotion = useReducedMotion();
-
   return (
     <section
       id="services"
@@ -42,24 +37,18 @@ export function Services() {
             const Icon = iconMap[service.icon];
 
             return (
-              <motion.li
+              <li
                 key={service.id}
+                data-scroll-reveal
+                data-scroll-delay={String((index % 2) * 80)}
                 className={cn("list-none", bentoSpan[index])}
-                initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 28 }}
-                whileInView={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{
-                  duration: reducedMotion ? 0.2 : 0.6,
-                  delay: reducedMotion ? 0 : index * 0.08,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
               >
                 <MagneticWrapper className="block h-full w-full" maxTravel={6} radius={220}>
                   <TiltCard className="w-full">
                     <GlassCard
                       interactive
                       as="article"
-                      className="card-spotlight group relative h-full overflow-hidden p-8"
+                      className="card-spotlight group relative flex h-full flex-col overflow-hidden p-8"
                       // Focusable so keyboard users reach the card and get the static
                       // focus treatment `GlassCard` provides in place of tilt/spotlight.
                       tabIndex={0}
@@ -68,7 +57,11 @@ export function Services() {
                       {Icon ? (
                         <span
                           data-depth="near"
-                          className="mb-6 inline-flex rounded-card border border-border-subtle bg-bg-surface p-3 text-accent-violet-text transition-transform duration-500 ease-smooth group-hover:rotate-6 group-hover:scale-110 motion-reduce:transform-none"
+                          // `self-start` is load-bearing: the card is a flex column (so the
+                          // stack row can be pinned to its foot), and a flex item defaults to
+                          // `align-self: stretch` — which silently pulled this badge across the
+                          // full width of the card, turning a 48px tile into a full-width bar.
+                          className="mb-6 inline-flex self-start rounded-card border border-border-subtle bg-bg-surface p-3 text-accent-violet-text transition-transform duration-500 ease-smooth group-hover:rotate-6 group-hover:scale-110 motion-reduce:transform-none"
                         >
                           <Icon aria-hidden className="h-6 w-6" />
                         </span>
@@ -105,10 +98,38 @@ export function Services() {
                           ))}
                         </ul>
                       ) : null}
+
+                      {/* Stack, pinned to the foot of the card.
+
+                          `mt-auto` on a flex column is what makes the four cards agree: the
+                          bento gives them different heights and different amounts of copy, so
+                          without it each stack row floats at whatever height its own text ends,
+                          and the grid reads as ragged. Pushed to the bottom they line up as a
+                          band across the section.
+
+                          The wrapper is not redundant: `mt-auto` collapses to zero on a card
+                          whose copy already fills the height, which would leave the rule welded
+                          to the last bullet. The outer `pt-6` is the guaranteed gap above it,
+                          the inner one the gap below.
+
+                          The rule is a border rather than an `<hr>`: it separates two lists that
+                          are both already semantic, so a screen reader gains nothing from a
+                          second landmark. */}
+                      {service.stack.length > 0 ? (
+                        <div className="mt-auto pt-6">
+                          <ul className="flex flex-wrap gap-2 border-t border-border-subtle pt-6">
+                            {service.stack.map((tech) => (
+                              <li key={tech}>
+                                <Badge>{tech}</Badge>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </GlassCard>
                   </TiltCard>
                 </MagneticWrapper>
-              </motion.li>
+              </li>
             );
           })}
         </ul>

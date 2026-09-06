@@ -42,7 +42,7 @@ export function SiteBackground() {
             read as the page's main texture rather than a whisper. 215 nodes at a 112px link
             radius gives a finer-grained mesh than the earlier 150/132 (more nodes, shorter
             synapses), and `intensity` 1.75 lifts the resting mesh well clear of the
-            background. `intensity` scales only the base violet/indigo mesh, never activation,
+            background. `intensity` scales only the base copper/gold mesh, never activation,
             so the cursor still stands out against it rather than being lost in it.
           - **This is a readability trade, and it is the intended one.** A brighter resting
             mesh does cross body copy more than the previous restrained setting. If text ever
@@ -62,12 +62,36 @@ export function SiteBackground() {
         influenceRadius={250}
         pullStrength={0.34}
         parallaxDepth={18}
-        maxPackets={110}
+        // Each packet is a dot plus a tail stroke. 110 in flight is a lot of small strokes on
+        // top of ~700 edges, and the exact count is not individually perceptible — measured as
+        // part of the 2026-08-27 raster-cost pass.
+        maxPackets={60}
         intensity={1.75}
         scrollDrift={60}
-        // A full-viewport layer of 1px lines and soft glows gains nothing visible from a 2x
-        // backing store, and costs ~44% more pixels to fill on every frame.
-        maxDpr={1.5}
+        /**
+         * **The three settings below are the fix for the page feeling laggy, and they are all
+         * about rasterisation rather than JavaScript.**
+         *
+         * Measured on a production build: hiding this one canvas roughly doubled the page's
+         * frame rate, while the engine's own JS cost only 0.79 ms/frame. The bottleneck was
+         * filling a 2160x1350 (2.9 megapixel) backing store 60 times a second.
+         *
+         * - `maxDpr` 1.5 -> 1 cuts that to 1.3 MP: **2.25x fewer pixels per frame.** This layer
+         *   is 1px lines and soft cached sprites on near-black — there is no fine detail for the
+         *   extra ratio to resolve.
+         * - `maxBackingPixels` bounds the *area*, which `maxDpr` alone does not: a 2560-wide
+         *   monitor at DPR 1 is still 3.7 MP, and it grows quadratically with window size.
+         * - `drawHz` repaints ambient drift at 30fps while stepping the simulation every frame.
+         *   The cap lifts automatically while the pointer is moving, so cursor reaction stays
+         *   at full rate — only the state the page is in while scrolling or reading is
+         *   throttled.
+         *
+         * If the field ever needs to look sharper again, raise `maxDpr` first and re-measure;
+         * it is the single most expensive knob here.
+         */
+        maxDpr={1}
+        maxBackingPixels={2_600_000}
+        drawHz={30}
         core
         // The scroll story: the field's whole topology morphs continuously from section to
         // section — ambient → lattice → clusters → hub → timeline → pipeline → converge. See

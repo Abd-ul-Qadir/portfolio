@@ -17,15 +17,16 @@
  * React imports.
  */
 export type IconName =
-  | "code-2"
+  | "globe"
   | "smartphone"
-  | "rocket"
-  | "share-2"
+  | "workflow"
+  | "layout-dashboard"
   | "github"
   | "linkedin"
   | "instagram"
   | "mail"
-  | "phone";
+  | "phone"
+  | "file-text";
 
 /* ----------------------------------------------------------------- images */
 
@@ -48,13 +49,33 @@ export interface Identity {
   readonly initials: string;
   readonly location: string;
   /** Hero typewriter cycles through these in order. Index 0 is the reduced-motion fallback. */
-  readonly roles: readonly [string, string, string];
+  readonly roles: readonly [string, string, string, string];
   readonly tagline: string;
   readonly bio: string;
   readonly email: string;
   readonly phone: string;
-  /** `[TODO]` in the brief — no CV link supplied yet. */
+  /**
+   * Supplied by Abdul 2026-08-27 as a Google Drive share link. It opens Drive's own preview
+   * page rather than downloading the file, which is why every consumer treats it as an
+   * external link (`target="_blank"`), not a `download`. Kept nullable: if the file is ever
+   * unshared the field goes back to `null` rather than shipping a dead link.
+   */
   readonly resumeUrl: string | null;
+  /**
+   * The same file, as a direct download rather than a preview page.
+   *
+   * **Two fields on purpose.** `resumeUrl` is for "let me read this" (the Contact panel row);
+   * this one is for "give me the file" (the navbar button). Drive serves them from different
+   * endpoints and there is no single URL that does both well.
+   *
+   * Verified 2026-08-27 against the live URL: it answers
+   * `Content-Disposition: attachment; filename="Resume.pdf"` with a 155 KB body and **no
+   * virus-scan interstitial** — Drive only interposes that page for large files. Because the
+   * response is an attachment, the browser downloads it *without navigating away*, so the
+   * button deliberately does **not** open a new tab (a `target="_blank"` here would leave a
+   * blank tab behind). Re-check these headers if the file is ever replaced.
+   */
+  readonly resumeDownloadUrl: string | null;
   /**
    * The About-section portrait. Supplied 2026-08-21 at 1374x1727, which is almost exactly the
    * `aspect-portrait` (4:5) token the About layout was built against, so it dropped in without
@@ -72,13 +93,29 @@ export const identity: Identity = {
   fullName: "Abdul Qadir",
   initials: "AQ",
   location: "Pakistan",
-  roles: ["Full Stack AI Engineer", "ML Engineer", "Agentic AI Builder"],
+  roles: [
+    "Full Stack AI Engineer",
+    "Full Stack Web Engineer",
+    "Full Stack Mobile App Engineer",
+    "Agentic AI Builder",
+  ],
+  /**
+   * Broadened 2026-08-29 at Abdul's request: the old line said "web applications" only, which
+   * undersold four fifths of what he actually builds. It now names the full range and lands on
+   * the same closing sentence, which was the good half.
+   *
+   * Watch the length if this is edited again — it sits under the hero typewriter in a `max-w-xl`
+   * column, where it runs to three lines. Much longer and it starts pushing the CTAs down.
+   */
   tagline:
-    "I specialize in building scalable, high-performance web applications powered by AI. Let's turn your complex ideas into seamless digital experiences.",
-  bio: "I am a Full Stack AI Engineer based in Pakistan. I specialize in building intelligent, scalable web applications by integrating machine learning models with robust backends like Django and FastAPI. I help convert complex data ideas into meaningful and useful digital products. Having a strong foundation in both modern front-end technologies and data science allows me to build comprehensive solutions, prioritize tasks effectively, and iterate fast.",
+    "I build AI-powered web and mobile apps, AI agents and automations, and AI SaaS, ERP and CRM platforms. Let's turn your complex ideas into seamless digital experiences.",
+  bio: "I am a Full Stack AI Engineer based in Pakistan. I build AI-powered web and mobile applications, AI agents and automations, and full business platforms — SaaS products, ERP and CRM systems — pairing modern front ends with robust Python backends like Django and FastAPI. I help convert complex data ideas into meaningful and useful digital products. Having a strong foundation in both modern front-end technologies and data science allows me to build comprehensive solutions, prioritize tasks effectively, and iterate fast.",
   email: "abdulqadir12511@gmail.com",
   phone: "+92 324 542 24298",
-  resumeUrl: null,
+  resumeUrl:
+    "https://drive.google.com/file/d/1ZLB5BreWeAJCiNlU4_8QRwpSTVQFEeAy/view?usp=sharing",
+  resumeDownloadUrl:
+    "https://drive.google.com/uc?export=download&id=1ZLB5BreWeAJCiNlU4_8QRwpSTVQFEeAy",
   /**
    * Background-removed variant of the portrait, used by the hero where the subject has to sit
    * directly on the page with no frame.
@@ -96,10 +133,17 @@ export const identity: Identity = {
    * The AI/robotic counterpart of the hero cut-out, revealed under the cursor by
    * `HeroPortraitReveal`. Keyed with the **same matte** as `portraitCutout` (eroded a few px),
    * so the two silhouettes cannot disagree and the reveal can never paint outside the subject.
+   *
+   * Derived by `scripts/cutout.py` from `public/portrait-robotic.jpg` (Abdul replaced the
+   * earlier `robotic_portrait.jpeg` on 2026-08-29). **A replacement source has one hard
+   * requirement: it must be the same 832x1248 frame with the head in the same place**, because
+   * the photo's matte is applied to it unchanged — the script raises if the dimensions differ,
+   * but only the eye can catch a pose that has drifted. Verified for this one: hair, jaw, collar
+   * and tie all land within a couple of pixels of the photograph's.
    */
   portraitRobotic: {
     src: "/robotic-portrait-cutout.png",
-    alt: "Abdul Qadir reimagined as an AI: chrome plating and cyan circuitry over the same portrait.",
+    alt: "Abdul Qadir reimagined as an AI: chrome plating and blue circuitry over the same portrait.",
   },
   /**
    * The framed About portrait — the **raw photo, background intact**, at Abdul's request.
@@ -134,48 +178,99 @@ export interface Service {
   readonly title: string;
   readonly description: string;
   readonly icon: IconName;
-  /** Checkmark-bulleted sub-points (`DESIGN_SYSTEM.md` #10). */
+  /** Checkmark-bulleted sub-points (`DESIGN_SYSTEM.md` #10) — what the client gets. */
   readonly points: readonly string[];
+  /**
+   * What it is built with, rendered as `Badge`s at the foot of the card — the same treatment
+   * project cards give their stacks, so a technology reads identically wherever it appears.
+   *
+   * **Kept to four entries, using Abdul's own slash notation** (`Django / Flask / FastAPI`)
+   * rather than one badge per technology. Spelling all nine out turned the 1-column bento
+   * cards into a wall of chips that buried the description above them; grouping by role keeps
+   * the row to a single line on the wide cards and two on the narrow ones.
+   */
+  readonly stack: readonly string[];
 }
 
+/**
+ * The four offers, rewritten to Abdul's brief of 2026-08-29:
+ *
+ *   1 web apps, 2 cross-platform mobile apps, 3 AI agents, 4 AI SaaS / ERP / CRM.
+ *
+ * **This replaces the previous split of web / app / n8n agents / "AI-ML powered apps".** That
+ * last card was the problem: "integrating trained ML models for predictive analytics" is a
+ * *technique*, not something a client buys, and it overlapped the other three rather than
+ * standing beside them. The new fourth card is the business-platform work Abdul actually ships
+ * — the ICPS ERP and the Pyora CRM are both in `experience` above — which is a distinct offer.
+ *
+ * **AI is now the through-line rather than one card's subject.** Every card names a model layer,
+ * because that is Abdul's positioning: not "web development, and separately some AI", but
+ * AI-powered products in four shapes.
+ *
+ * **Card 3 is titled "AI Agents & Automations".** The brief lists the two separately in its
+ * opening line but gives one card for them, and n8n and Make are automation platforms — so they
+ * are one offer with two names, not two offers.
+ *
+ * **Card 4's stack is derived, not invented.** The brief gives no technologies for it; these are
+ * the ones Abdul's own ERP and CRM entries in `experience` name (React, Django, PostgreSQL),
+ * plus Next.js from `skillGroups` and the same model layer as the other three cards.
+ */
 export const services: readonly Service[] = [
   {
-    id: "web-development",
-    title: "Web Development",
+    id: "web-apps",
+    title: "AI-Powered Web Apps",
     description:
-      "Building scalable, and responsive web applications using modern frameworks like React, Django, FastAPI, HTML/CSS/JS to deliver seamless user experiences from frontend to backend.",
-    icon: "code-2",
-    points: ["React front-ends", "Django & FastAPI back-ends", "Responsive by default"],
-  },
-  {
-    id: "app-development",
-    title: "App Development",
-    description:
-      "Developing high-performance cross-platform applications using React Native, with seamless backend API integrations powered by Django, FastAPI, and Flask.",
-    icon: "smartphone",
-    points: ["Cross-platform React Native", "Django, FastAPI & Flask APIs"],
-  },
-  {
-    id: "agentic-ai",
-    title: "Agentic AI using n8n",
-    description:
-      "Building automated workflows and AI agents using n8n for data extraction, complex API integrations, and business process automation.",
-    icon: "rocket",
+      "Web applications with a React or Next.js front end and a Python back end, wired to Gemini, OpenAI or Claude so the intelligence is part of the product rather than a feature bolted on beside it.",
+    icon: "globe",
     points: [
-      "Automated workflows",
-      "Complex API integrations",
-      "Business process automation",
+      "React & Next.js front ends",
+      "Django, Flask & FastAPI back ends",
+      "LLM features built into the core flow",
+      // Carried over from the card this replaced. Four bullets rather than three is also what
+      // fills the wide bento cell: at three, the narrow card beside it was taller and this one
+      // showed a hollow band between the list and its stack row.
+      "Responsive by default",
     ],
+    stack: ["React.js", "Next.js", "Django / Flask / FastAPI", "Gemini / OpenAI / Claude"],
   },
   {
-    id: "ai-ml-apps",
-    title: "AI/ML Powered Apps",
+    id: "mobile-apps",
+    title: "Cross-Platform Mobile Apps",
     description:
-      "Integrating trained machine learning models and AI APIs into web and mobile applications for advanced data processing and predictive analytics.",
-    icon: "share-2",
-    points: ["Trained model integration", "Predictive analytics"],
+      "One React Native codebase shipping to both Android and iOS, backed by a Python API and the same model layer as the web work.",
+    icon: "smartphone",
+    points: ["One codebase, Android & iOS", "Python API back ends"],
+    // "Android & iOS" deliberately is *not* a badge here. The stack row is technologies; the
+    // platforms are a capability, and the bullet above already says "One codebase, Android &
+    // iOS". It also cost real layout: as a narrow bento cell this card wrapped to three badge
+    // rows, which made it the tallest in its row and left a hollow gap in the wide card beside
+    // it. Three badges wrap to two rows and the pair sit level.
+    stack: ["React Native", "Django / Flask / FastAPI", "Gemini / OpenAI / Claude"],
+  },
+  {
+    id: "ai-agents",
+    title: "AI Agents & Automations",
+    description:
+      "Autonomous agents and automated workflows: retrieval over your own data, orchestration across the tools you already run, and the model layer of your choice.",
+    icon: "workflow",
+    points: ["Retrieval-augmented agents", "n8n & Make orchestration"],
+    stack: ["Pinecone", "n8n", "Make", "Gemini / OpenAI / Claude"],
+  },
+  {
+    id: "ai-saas-erp-crm",
+    title: "AI SaaS, ERP & CRM",
+    description:
+      "Complete business platforms — SaaS products, ERP and CRM systems — with role-based access, analytics dashboards and automated workflows. The kind of system I have already built and shipped in production.",
+    icon: "layout-dashboard",
+    points: [
+      "Role-based access & permissions",
+      "Analytics dashboards",
+      "Automated business workflows",
+    ],
+    stack: ["React.js", "Next.js", "Django", "PostgreSQL", "Gemini / OpenAI / Claude"],
   },
 ];
+
 
 /* ------------------------------------------------- experience & education */
 
@@ -197,58 +292,82 @@ export interface TimelineEntry {
   readonly bullets: readonly string[];
 }
 
+/**
+ * Work history, taken from Abdul's CV (`Resume (2).pdf`, supplied 2026-08-27).
+ *
+ * **The CV is the source of truth for this array, not `CONTENT_BRIEF.md`.** It is newer and it
+ * is the document he sends to employers, so where the two disagree the CV wins. Two entries the
+ * brief had are deliberately gone as a result — see the note on the Pyora entry below and the
+ * session log.
+ */
 export const experience: readonly TimelineEntry[] = [
   {
-    id: "pyora-full-stack",
+    id: "icps-full-stack",
     kind: "work",
-    title: "Full Stack Developer",
-    organization: "Pyora Solutions",
-    period: "Aug 2025 – Present",
-    startYear: 2025,
-    arrangement: "Hybrid",
+    title: "Full-Stack Web Developer",
+    organization: "ICPS Pvt. Ltd.",
+    period: "July 2026 – Present",
+    startYear: 2026,
+    arrangement: "Onsite · Full-time",
     bullets: [
-      "POS System — Django, Oracle, PostgreSQL: built a Django-based POS system with modules for dashboard analytics, customer and kitchen orders, checkout, stock management, and table booking.",
-      "CRM System — Django, ReactJS, PostgreSQL: developed a full-stack CRM with an analytics dashboard, customer and CRM staff management, lead and task tracking, and role-based permissions.",
+      "ERP System — React, Django, PostgreSQL, Hostinger VPS: developed a full-stack ERP system using ReactJS and Django to manage Administration, Sales, Operations, Course Management, HR, and Accounts through a centralized web platform with role-based access and automated workflows.",
     ],
   },
   {
-    id: "pyora-internship",
+    /**
+     * The CV folds what used to be two separate Pyora entries — a 2024 internship and an
+     * "Aug 2025 – Present" full-stack role — into one full-time role running July 2025 to July
+     * 2026, and it carries the Pyzk attendance work as a bullet of that role rather than of an
+     * internship. This follows the CV.
+     */
+    id: "pyora-full-stack",
     kind: "work",
-    title: "Python/Django Internship",
+    title: "Full-Stack Web Developer",
     organization: "Pyora Solutions",
-    period: "June 2024 – Sept 2024",
-    startYear: 2024,
-    arrangement: "Onsite",
+    period: "July 2025 – July 2026",
+    startYear: 2025,
+    arrangement: "Hybrid · Full-time",
     bullets: [
-      "Pyzk Attendance Machine Application — Python, Pyzk library, Oracle, PostgreSQL: built a GUI-based biometric attendance system for Sufi Group of Companies using Pyzk, integrating ZKTeco devices with automated/manual sync, scheduling, error logging, and centralized device management.",
-      "POS System — Python, Pyzk library, Oracle, PostgreSQL: implemented a secure admin and user login system with authentication in Django, enabling role-based access control.",
+      "Pyzk Attendance Machine Application — Python, Pyzk, Oracle, PostgreSQL: built a GUI-based biometric attendance system using Pyzk to interface with ZKTeco devices, integrating automated/manual attendance synchronization, error logging, and centralized machine management.",
+      "POS System — Django, Oracle, PostgreSQL: built a Django-based POS system with modules for dashboard, customer orders, kitchen orders, checkout, stock management, and table booking, with data transfer between Oracle and PostgreSQL databases.",
+      "CRM System — Django, React, PostgreSQL: developed a full-stack CRM with analytics dashboard, customer and CRM staff management, lead and task tracking, and role-based permissions.",
     ],
   },
   {
     id: "octanet-intern",
     kind: "work",
-    title: "Python Development Intern",
+    title: "Python Developer Intern",
     organization: "OctaNet Services Pvt. Ltd",
     period: "April 2024 – May 2024",
     startYear: 2024,
-    arrangement: null,
+    arrangement: "Internship",
     bullets: [
-      "Developed an ATM application using Python to manage transaction history, withdrawals, deposits, and transfers.",
+      "Developed an ATM application using Python with five classes to manage transaction history, withdrawals, deposits, transfers, and account exit functionality.",
     ],
   },
   {
+    /**
+     * **Not on the CV, and kept on purpose.** It was removed when Experience was synced to
+     * `Resume (2).pdf`, and Abdul asked for it back on 2026-08-27 — the CV omits it for space,
+     * it is not a correction to his history. The site is longer-form than a one-page CV, so it
+     * can carry it. Content is the original from `CONTENT_BRIEF.md`, unchanged.
+     *
+     * Sits after OctaNet because both start in 2024 and the timeline's sort is stable: OctaNet
+     * (April–May) is the later of the two.
+     */
     id: "cognorise-intern",
     kind: "work",
     title: "Python Development Intern",
     organization: "CognoRise InfoTech",
     period: "March 2024 – April 2024",
     startYear: 2024,
-    arrangement: null,
+    arrangement: "Internship",
     bullets: [
       "Built a set of small Python/Tkinter tools: a calculator (expression-based arithmetic), a password generator, Rock Paper Scissors, Hangman, a Dice Rolling Simulator, and a Countdown Timer.",
     ],
   },
 ];
+
 
 export const education: readonly TimelineEntry[] = [
   {
@@ -290,7 +409,11 @@ export interface Project {
   readonly pitch: string;
   readonly role: string;
   readonly type: string;
-  readonly date: string;
+  /**
+   * Human-readable year or range. `null` where the CV gives none — the detail page drops the
+   * row rather than showing a guessed date.
+   */
+  readonly date: string | null;
   readonly stack: readonly string[];
   readonly abstract: string;
   /** Hide the "Live Preview" button while null. */
@@ -312,17 +435,52 @@ export interface Project {
 
 export const projects: readonly Project[] = [
   {
+    /**
+     * New in the 2026-08-27 CV.
+     *
+     * **`liveUrl` is null because there is no live demo — confirmed by Abdul, not unknown.** It
+     * is a mobile app, so there is nothing to link to; the "Live Preview" button stays hidden,
+     * which is Phase 9's rule (a missing link is a hidden button, never a dead click).
+     *
+     * `cardImage`, `heroImage` and `date` are **pending** — Abdul is supplying them. Until then
+     * `MediaFrame` renders a labelled placeholder occupying exactly the space the real asset
+     * will, so dropping the files in cannot shift the layout, and the detail page omits the
+     * Date row rather than showing a guess.
+     *
+     * `role` and `type` are derived from the CV's own description, the way the other three
+     * entries were.
+     */
+    slug: "calorie-counter-ai",
+    title: "Calorie Counter AI",
+    pitch:
+      "AI-powered calorie tracking mobile app built with React Native and the Gemini API — add and analyse meals, estimate calories and nutrition, and track daily intake.",
+    role: "Full-Stack Developer",
+    type: "AI Mobile Application",
+    date: null,
+    stack: ["React Native", "Gemini API", "JavaScript", "Supabase"],
+    abstract:
+      "Developed an AI-powered calorie tracking mobile application using React Native and the Gemini API, enabling users to add and analyze meals, estimate calorie and nutritional values, log daily food intake, and monitor nutrition progress through an interactive dashboard.",
+    liveUrl: null,
+    repoUrl: null,
+    cardImage: {
+      src: "/projects/calorie-counter-ai-card.jpeg",
+      alt:
+        "Infographic for NutriAI, an AI-powered calorie tracking mobile app built with React Native and the Gemini API: two phone mockups show a daily-calorie ring reading 560 calories with protein, carbs and fat macros, and a camera view identifying grilled chicken and vegetables totalling 350 kcal. Four surrounding panels read Add Meals Effortlessly, AI Nutrition Analysis, Track Daily Intake and Set Personalized Goals.",
+    },
+    heroImage: null,
+  },
+  {
     slug: "pest-eye",
     title: "Pest Eye",
     pitch:
-      "Worked as a Full-Stack Developer on a web application using ReactJS and FastAPI, integrating a trained EfficientNet model for crop pest classification and Firebase for authentication.",
+      "Developed a full-stack pest identification system with a React Native mobile app and ReactJS web application, integrating a trained EfficientNet model through FastAPI for crop pest classification and using Firebase for authentication, data storage, and notifications.",
     role: "Full-Stack Developer",
-    type: "AI Web Application",
+    type: "AI Mobile & Web Application",
     date: "2024",
-    stack: ["ReactJS", "FastAPI", "Firebase"],
+    stack: ["React Native", "ReactJS", "FastAPI", "Firebase", "PyTorch", "EfficientNet"],
     abstract:
       "Plants are affected by many pests, one of agriculture's biggest problems — roughly 40% of global crops are lost to pests annually (~$69B in economic loss). Rural farmers often lack the resources for effective pest control, and manual identification is slow, inaccurate, and costly. Pest Eye uses deep learning to classify crop pests from images across a cross-platform system, trained on a large pest dataset for quick identification. By analyzing past pest-attack data it also provides predictive insights to help prevent future infestations — giving farmers without direct expert access pesticide recommendations and automated, history-based notifications.",
-    liveUrl: null,
+    liveUrl: "https://pesteyee.netlify.app/",
     repoUrl: null,
     cardImage: {
       src: "/projects/pest-eye-card.jpeg",
@@ -341,7 +499,7 @@ export const projects: readonly Project[] = [
     role: "Machine Learning Engineer",
     type: "ML Pipeline & Deployment",
     date: "2024",
-    stack: ["Python", "Gradio", "Hugging Face"],
+    stack: ["Python", "Pandas", "Scikit-learn", "KMeans", "PCA", "Gradio", "Hugging Face"],
     abstract:
       "Applies RFM (Recency, Frequency, Monetary) analysis combined with KMeans clustering to group customers by purchasing behavior, using the UCI Online Retail dataset. The goal is to surface distinct customer groups for targeted marketing — the pipeline covers data preprocessing, exploratory data analysis, unsupervised learning, model deployment, and feedback collection, with the final model deployed through a Gradio web interface on Hugging Face Spaces. Effectiveness is enhanced through interactive visualizations and iterative improvements based on real user feedback.",
     // Read off the deployment screenshot Abdul supplied and confirmed live (HTTP 200).
@@ -365,10 +523,10 @@ export const projects: readonly Project[] = [
     role: "Full-Stack Developer",
     type: "Web App & Predictive Model",
     date: "2023 – 2024",
-    stack: ["HTML", "CSS", "JS", "Django", "AI & ML"],
+    stack: ["HTML", "CSS", "JavaScript", "Django", "Python", "Linear Regression"],
     abstract:
       "A web application that predicts Netflix's future stock price by training a linear regression model on historical price data, then serving predictions through a Django-backed web app.",
-    liveUrl: null,
+    liveUrl: "https://netflix-stock-price-predictor-p9li.onrender.com/",
     repoUrl: null,
     cardImage: {
       src: "/projects/netflix-stock-price-card.jpeg",
@@ -412,38 +570,77 @@ export interface SkillGroup {
   readonly items: readonly string[];
 }
 
+/**
+ * The unscored stack, in the CV's own five categories plus one for tooling.
+ *
+ * **Taken from `Resume (2).pdf`'s Technical Skills (2026-08-27), which is the source of truth
+ * here.** The site's previous grouping (backend / frontend / data-ai-ml / databases / tools) was
+ * the brief's, and it both missed a lot — Java, C#, Next.js, MySQL, SQLite, NumPy, Matplotlib,
+ * Seaborn, Make, OpenAI API, Pinecone — and split the same technologies differently from how
+ * Abdul presents them to employers.
+ *
+ * **"Tools & platforms" is the one group the CV does not name.** Everything in it is still drawn
+ * from the CV — Firebase and Supabase from the project stacks, Gradio and Hugging Face from
+ * Customer Segmentation, Pyzk from the Pyora role, Hostinger VPS from the ICPS role — plus Git,
+ * which the site already listed and the CV does not contradict. Nothing here is invented.
+ *
+ * **The modelling techniques are deliberately not repeated here.** KMeans, PCA, RFM analysis,
+ * Linear Regression and EfficientNet live in the individual project stacks, which is exactly
+ * where the CV puts them, and they render as tags on those project cards. Listing them twice
+ * would pad this section rather than inform it.
+ *
+ * Six groups is also what the layout wants: `Skills.tsx` tiles these three-up on `lg`, so six
+ * fills two clean rows with no orphan.
+ */
 export const skillGroups: readonly SkillGroup[] = [
-  { id: "backend", label: "Backend", items: ["Django", "FastAPI", "Flask"] },
-  { id: "frontend", label: "Frontend", items: ["React.js", "React Native"] },
   {
-    id: "data-ai-ml",
-    label: "Data / AI-ML",
+    id: "languages",
+    label: "Languages",
+    items: ["Python", "Java", "C++", "C#", "SQL", "JavaScript", "HTML/CSS"],
+  },
+  {
+    id: "frameworks",
+    label: "Frameworks",
+    items: ["Django", "FastAPI", "Flask", "React", "React Native", "Next.js"],
+  },
+  {
+    id: "databases",
+    label: "Databases",
+    items: ["PostgreSQL", "Oracle", "MySQL", "SQLite"],
+  },
+  {
+    id: "libraries",
+    label: "Libraries",
     items: [
-      "EfficientNet",
-      "Linear Regression",
-      "RFM analysis",
-      "KMeans",
-      "scikit-learn-style ML pipelines",
-      "Agentic AI (n8n)",
+      "Pandas",
+      "NumPy",
+      "Matplotlib",
+      "Scikit-learn",
+      "Seaborn",
+      "PyTorch",
+      "Tkinter",
     ],
   },
-  { id: "databases", label: "Databases", items: ["PostgreSQL", "Oracle"] },
+  {
+    id: "agentic-ai",
+    label: "Agentic AI",
+    items: ["n8n", "Make", "OpenAI API", "Gemini API", "Pinecone"],
+  },
   {
     id: "tools",
-    label: "Tools / Other",
+    label: "Tools & platforms",
     items: [
       "Firebase",
+      "Supabase",
       "Gradio",
       "Hugging Face Spaces",
       "Git",
       "Pyzk (biometric devices)",
-      "Tkinter",
+      "Hostinger VPS",
     ],
   },
 ];
 
-/** Rendered as circular badges. */
-export const spokenLanguages: readonly string[] = ["Urdu", "Hindi", "English"];
 
 /* ------------------------------------------------ certifications & awards */
 
@@ -645,10 +842,14 @@ export interface ContactContent {
   readonly supportingLine: string;
   readonly methods: readonly ContactMethod[];
   /**
-   * Whether the terminal-skinned message form ships alongside the direct links. Still
-   * unconfirmed by Abdul (`CONTENT_BRIEF.md`'s last line) — a working form needs a backend
-   * (Resend or a serverless function), so this stays `false` and the links ship on their own
-   * until that call is made. Tracked in `PROGRESS.md` -> Known issues.
+   * Whether the terminal-skinned message form ships alongside the direct links.
+   *
+   * `CONTENT_BRIEF.md`'s last open question — form or links only — was **answered by Abdul on
+   * 2026-08-27: ship the working form**, with each submission emailed to him. It posts to
+   * `app/api/contact/route.ts`, which sends through Resend.
+   *
+   * Kept as a flag rather than deleted: it is the switch that takes the form down (falling
+   * back to the direct links, which never stop working) without touching component code.
    */
   readonly formEnabled: boolean;
 }
@@ -680,8 +881,65 @@ export const contact: ContactContent = {
       icon: "linkedin",
     },
   ],
-  formEnabled: false,
+  formEnabled: true,
 };
+
+/**
+ * The four contact nodes the Contact section renders as orbs.
+ *
+ * **Assembled from what already exists, never restated.** GitHub lives in `identity.socials`
+ * (it is a profile, not a contact method); the other three come straight out of
+ * `contact.methods`. Deriving the list rather than writing a fourth literal is what guarantees
+ * the orbs cannot drift out of sync with the rest of the site — change the email in `identity`
+ * and the orb follows.
+ *
+ * Order is deliberate: the two things a recruiter opens first, then the two direct lines.
+ */
+/** Short supporting lines for the social orbs. Captions only. */
+const NODE_HINTS: Record<string, string> = {
+  github: "View work",
+  linkedin: "Connect",
+  instagram: "Follow",
+};
+
+/**
+ * The social profiles the Contact section renders as orbs — GitHub, LinkedIn, Instagram.
+ *
+ * **Orbs are for profiles, not for reachable values.** An orb hides what it points at behind an
+ * icon, which is right for a profile you click through to and wrong for an email address or a
+ * phone number: those are things a visitor needs to *read*, copy, or dial from a printed page.
+ * Those two live in `directContacts` below and are rendered as their actual values.
+ *
+ * Built straight from `identity.socials`, in that order, and an entry with no matching social is
+ * skipped rather than faked — a removed profile means one fewer orb, never a dead link.
+ */
+export interface ContactNode {
+  readonly id: string;
+  readonly label: string;
+  readonly hint: string;
+  readonly href: string;
+  readonly icon: IconName;
+}
+
+export const contactNodes: readonly ContactNode[] = identity.socials.map((social) => ({
+  id: social.icon,
+  label: social.label,
+  hint: NODE_HINTS[social.icon] ?? "",
+  href: social.href,
+  icon: social.icon,
+}));
+
+/**
+ * Email and phone, shown as their real values rather than hidden behind an icon.
+ *
+ * Sourced from `contact.methods`, so the address and number stay in one place — `identity` — and
+ * the `mailto:` / `tel:` hrefs are the ones the rest of the site already uses.
+ */
+export type DirectContact = ContactMethod;
+
+export const directContacts: readonly DirectContact[] = contact.methods.filter(
+  (method) => method.id === "email" || method.id === "phone",
+);
 
 /* ------------------------------------------------------------- navigation */
 
@@ -700,6 +958,18 @@ export const navItems: readonly NavItem[] = [
   { id: "projects", label: "Projects", href: "#projects" },
   { id: "contact", label: "Contact", href: "#contact" },
 ];
+
+/**
+ * The technologies used to build this portfolio, rendered in the footer as a compact build
+ * signature. Keep this focused on the parts a visitor can meaningfully inspect rather than
+ * mirroring every utility package in `package.json`.
+ */
+export const portfolioStack = [
+  { id: "nextjs", label: "Next.js" },
+  { id: "tailwind", label: "Tailwind CSS" },
+  { id: "gsap", label: "GSAP" },
+  { id: "framer-motion", label: "Framer Motion" },
+] as const;
 
 /**
  * Canonical origin, used by `generateMetadata`, the sitemap and OG tags in Phase 13.

@@ -16,6 +16,20 @@ import { palette } from "@/lib/tokens";
  */
 
 export const alt = `${identity.fullName} — ${identity.roles[0]}`;
+
+/**
+ * The card's strapline: the **first sentence** of `identity.tagline`.
+ *
+ * **This used to be a hardcoded string, and it silently went stale.** When the tagline was
+ * broadened on 2026-08-29 the card kept advertising "scalable, high-performance web
+ * applications" — the one thing the new positioning was meant to stop saying — and nothing
+ * caught it, because a literal cannot drift *detectably*. `CLAUDE.md` §3 forbids inline copy for
+ * exactly this reason. Deriving it means the card can never disagree with the site again.
+ *
+ * Only the first sentence: the tagline closes on a call to action ("Let's turn your complex
+ * ideas into...") that belongs on the page, not on a preview card, which is read at a glance.
+ */
+const strapline = identity.tagline.slice(0, identity.tagline.indexOf(". ") + 1);
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -31,8 +45,8 @@ export default function OpengraphImage() {
           justifyContent: "center",
           padding: "80px",
           backgroundColor: palette["bg-base"],
-          // Mirrors the site's ambient violet glow.
-          backgroundImage: `radial-gradient(circle at 20% 20%, ${palette["accent-violet"]}33, transparent 55%), radial-gradient(circle at 85% 80%, ${palette["accent-cyan"]}22, transparent 55%)`,
+          // Mirrors the site's ambient copper/teal glow.
+          backgroundImage: `radial-gradient(circle at 20% 20%, ${palette["accent-copper"]}33, transparent 55%), radial-gradient(circle at 85% 80%, ${palette["accent-teal"]}22, transparent 55%)`,
         }}
       >
         <div
@@ -41,7 +55,7 @@ export default function OpengraphImage() {
             fontSize: 26,
             letterSpacing: "0.3em",
             textTransform: "uppercase",
-            color: palette["accent-violet"],
+            color: palette["accent-copper"],
           }}
         >
           {identity.location}
@@ -65,7 +79,7 @@ export default function OpengraphImage() {
             display: "flex",
             marginTop: 20,
             fontSize: 44,
-            color: palette["accent-indigo"],
+            color: palette["accent-gold"],
           }}
         >
           {identity.roles[0]}
@@ -81,7 +95,7 @@ export default function OpengraphImage() {
             color: palette["text-secondary"],
           }}
         >
-          Building scalable, high-performance web applications powered by AI.
+          {strapline}
         </div>
       </div>
     ),

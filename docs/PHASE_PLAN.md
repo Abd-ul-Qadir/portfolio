@@ -9,6 +9,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 0 — Project Setup & Foundations
 
 **Tasks**
+
 - `create-next-app` (TypeScript, App Router, Tailwind, ESLint)
 - Install: `framer-motion`, `gsap`, `@gsap/react`, `lucide-react`, `lenis`, `clsx`,
   `tailwind-merge`
@@ -19,6 +20,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 - Empty section components stubbed for the full page (Hero/About/Skills/Services/Experience/Projects/Contact) so the page assembles top to bottom even before they're built out
 
 **Acceptance criteria**
+
 - `npm run dev` runs clean, no console errors
 - Blank-but-styled shell renders with the base color/typography from `DESIGN_SYSTEM.md`
 - `PROGRESS.md` initialized with Session 1 logged
@@ -28,6 +30,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 1 — Content Intake & Information Architecture
 
 **Tasks**
+
 - Read `docs/CONTENT_BRIEF.md`. Any field still `[TODO]`: build the section around it, note
   it in `PROGRESS.md` Known Issues — do not invent specifics (dates, employer names, metrics)
 - Define final sitemap: `/`, `/projects/[slug]` (confirmed needed — each project has a full
@@ -37,6 +40,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   field in `CONTENT_BRIEF.md`, not just the ones needed by the first few sections
 
 **Acceptance criteria**
+
 - Content typed and imported with no `any`, matches `CONTENT_BRIEF.md` structure
 - Every remaining placeholder is listed in `PROGRESS.md`
 
@@ -45,6 +49,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 2 — Design System Implementation
 
 **Tasks**
+
 - `tailwind.config.ts`: color tokens, gradient utilities, shadow presets, radius scale,
   glass-surface utility — all from `DESIGN_SYSTEM.md`, nothing ad hoc
 - Base primitives: `Button`, `Badge`, `GlassCard`, `GradientText`, `SectionHeading`,
@@ -55,6 +60,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   Background layer section — a single low-opacity CSS/canvas layer, not a particle system
 
 **Acceptance criteria**
+
 - Primitives render correctly against the dark background at each breakpoint
 - No raw hex values or magic Tailwind arbitrary values outside `tailwind.config.ts`
 - `NoiseOverlay` is barely perceptible and has no measurable frame-rate cost
@@ -64,6 +70,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 3 — Global Interaction Layer
 
 **Tasks**
+
 - `useReducedMotion` hook (wraps `matchMedia('(prefers-reduced-motion: reduce)')`) and
   `useIsTouchDevice` hook — both consumed by every effect component from here on
 - `lib/gsap.ts` — register `ScrollTrigger` once, and wire Lenis's scroll position into it
@@ -83,6 +90,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   per consumer. Services cards (Phase 7) and hero CTAs (Phase 5) both depend on this existing
 
 **Acceptance criteria**
+
 - Cursor tracks smoothly with no jank on desktop, is entirely absent on a touch-simulated
   viewport, and is entirely absent with reduced-motion forced on
 - Build one throwaway pinned `ScrollTrigger` test element to confirm Lenis and GSAP agree on
@@ -96,6 +104,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 4 — Loader & Navbar
 
 **Tasks**
+
 - `Loader`: the boot-sequence effect from `DESIGN_SYSTEM.md` (name/role line, progress bar,
   four status lines — `INITIALIZING SYSTEM...` etc.), timed to ~1–1.5s total. Either GSAP or
   Framer Motion is fine here (it's a linear, self-contained sequence, not scroll-driven) — pick
@@ -110,6 +119,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   don't reach for GSAP ScrollTrigger here
 
 **Acceptance criteria**
+
 - Loader shows exactly once per browser session; navigating to a project detail page and back
   to `/` does not replay the boot sequence
 - Navbar's active-section indicator correctly tracks which section is in view while scrolling
@@ -120,10 +130,11 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 5 — Hero Section + Constellation Effect (hero-ambient)
 
 **Tasks**
+
 - `ConstellationCanvas`: a hand-rolled `<canvas>` component (not Three.js/React Three
   Fiber — see `CLAUDE.md` §2), built generically from the start with particle count,
   connection distance, node styling, and interactivity strength all as config props. Build it
-  this way *now* because Phase 6 (About) and Phase 10 (Skills) both reuse this exact component
+  this way _now_ because Phase 6 (About) and Phase 10 (Skills) both reuse this exact component
   with different config — don't build a second implementation later. Particles drift slowly, a
   connecting line draws between any two within a distance threshold (opacity falls off with
   distance), gentle pointer-reactive parallax across the field, particle count scales down on
@@ -140,6 +151,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   no typing/deleting animation
 
 **Acceptance criteria**
+
 - Smooth on a mid-range laptop; on mobile either a lighter particle count or a static fallback
   is used (your call, log which in `PROGRESS.md`)
 - Hero copy pulls from `content/data.ts`, not hardcoded
@@ -154,6 +166,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 6 — About Section
 
 **Tasks**
+
 - Bio copy from `CONTENT_BRIEF.md`
 - Portrait image (flag as `[TODO]` in `PROGRESS.md` if the asset isn't available yet) with the
   **portrait-tied** configuration of Phase 5's `ConstellationCanvas`: a tighter node cluster,
@@ -166,6 +179,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   `DESIGN_SYSTEM.md`
 
 **Acceptance criteria**
+
 - The text reveal is genuinely tied to scroll position (scrub back up, words dim again), not a
   fire-once `whileInView` animation
 - The portrait constellation is visibly tighter/denser than the hero-ambient field, confirming
@@ -176,6 +190,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 7 — Services (Bento Grid + Magnetic 3D Cards)
 
 **Tasks**
+
 - Bento-style grid for services/what-I-do from `CONTENT_BRIEF.md`, `lucide-react` icon per
   item, checkmark-bulleted sub-points where relevant
 - `GlassCard` + hover: mouse-following 3D tilt (**3–6° max** — a cap, not a target), a soft glow
@@ -186,6 +201,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 - Scroll-triggered staggered entrance (`whileInView`)
 
 **Acceptance criteria**
+
 - Grid reflows sensibly mobile → tablet → desktop (not just a squeezed single column at every
   size if content allows better use of tablet width)
 - `:focus-visible` gets an equivalent static glow/border state — tilt and cursor-spotlight have
@@ -196,6 +212,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 8 — Experience Timeline
 
 **Tasks**
+
 - A vertical line that **grows as the user scrolls** through the section — a GSAP ScrollTrigger
   scrub tied directly to scroll progress (this is scrubbed, pinned-adjacent work, so GSAP per
   `CLAUDE.md` §2, not a fixed-duration Framer Motion draw)
@@ -207,6 +224,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
   badge — **this is the phase where that decision is implemented**
 
 **Acceptance criteria**
+
 - Line growth is genuinely scroll-scrubbed — scrolling back up retracts it, it isn't a
   one-shot reveal
 - Screen reader announces the timeline as an ordered list
@@ -217,6 +235,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 9 — Projects Showcase + Certifications & Awards
 
 **Tasks**
+
 - Project cards on `/`: image, name, one-line pitch, tech tags. On scroll into view: image
   starts slightly zoomed with a dark overlay, overlay fades out, title slides in, tech tags
   stagger in after. On hover (desktop only): image shifts slightly toward the cursor position
@@ -233,6 +252,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 - `next/image` for every project/certificate/award image, lazy-loaded below the fold
 
 **Acceptance criteria**
+
 - All images have real `alt` text (from `CONTENT_BRIEF.md`, not filenames)
 - Broken/missing links degrade gracefully (button disabled or hidden, not a dead click) —
   expect several `[TODO]` live links until those are filled in
@@ -243,14 +263,14 @@ phase until the previous one is checked off in `PROGRESS.md`.
 ## Phase 10 — Skills (Floating AI Ecosystem), Contact, Footer
 
 **Tasks**
+
 - Skills — **not progress bars, not cards**: a centered node (`AI ENGINEER` or similar) with
   the skill nodes gently floating/orbiting around it, connected by thin lines back to the
   center — a third context/config for Phase 5's `ConstellationCanvas` line-connection
   approach, not a new implementation. Map each of the four core skills' proficiency percentage
   from `CONTENT_BRIEF.md` to node size and/or glow intensity; reveal the exact percentage in a
   hover/info panel rather than printing it as a bar-fill label. The remaining stack (Databases,
-  Tools, etc. — no percentage given) renders as a plain tag list. Spoken languages as circular
-  badges (Urdu / Hindi / English), on-palette colors
+  Tools, etc. — no percentage given) renders as a plain tag list.
 - Contact: terminal-styled real, accessible form (semantic `<label>`s, keyboard-operable,
   screen-reader-announced validation) **or** the three direct contact links, per whatever was
   confirmed during Phase 1 — if still unconfirmed, ship the three direct links and flag the
@@ -258,6 +278,7 @@ phase until the previous one is checked off in `PROGRESS.md`.
 - Footer
 
 **Acceptance criteria**
+
 - Skills renders as an orbiting node system matching `DESIGN_SYSTEM.md`, not bars or cards —
   double-check this explicitly, since the old site's progress-bar pattern is an easy default to
   fall back into
@@ -272,6 +293,7 @@ This is the "old content animates out, new content animates in" requirement — 
 carefully, it's a deliberate scope decision, not a shortcut.
 
 **Tasks**
+
 - **Everywhere:** build a shared `Reveal` effect component (fade + translateY + slight scale on
   enter via `whileInView`, firing once per section, not re-triggering every scroll direction
   change) and use it consistently across sections instead of ad hoc per-section reveal logic
@@ -294,7 +316,8 @@ scroll-jack treatment everywhere, that's a straightforward extension of the same
 section — flag it as a scope change in `PROGRESS.md`'s decision log.
 
 **Acceptance criteria**
-- Smooth scrolling up *and* down through the flagship transition, no layout shift
+
+- Smooth scrolling up _and_ down through the flagship transition, no layout shift
 - The flagship transition is confirmed built with GSAP ScrollTrigger — not Framer Motion's
   `useScroll`/`useTransform`
 - Under reduced motion, every scroll-linked effect collapses to a plain fade — no parallax, no
@@ -309,6 +332,7 @@ is a layer stitched on top of finished sections, not a replacement for their own
 animations.
 
 **Tasks**
+
 - **Hero → About:** fold a traveling gradient blob/glow into the same GSAP ScrollTrigger-scrubbed
   timeline built in Phase 11 — don't build a second, competing timeline for this
 - **About → Skills:** the ambient background dot-grid becomes more visible/defined
@@ -318,6 +342,7 @@ animations.
 - **Projects → Contact:** background gradually darkens
 
 **Acceptance criteria**
+
 - Every transform in this layer is GSAP ScrollTrigger-scrubbed
 - Under reduced motion, every one collapses to a plain cross-fade — no pinning, no blob travel,
   no morph, just content in the right order with an instant or fade transition
@@ -327,6 +352,7 @@ animations.
 ## Phase 13 — 404, Metadata & SEO Pass
 
 **Tasks**
+
 - Custom `not-found.tsx` — lost-in-space/constellation motif fits the theme, with a clear way
   back to the homepage
 - `generateMetadata` per route: unique `<title>` and description (not a single global title
@@ -334,6 +360,7 @@ animations.
 - OG image, `sitemap.xml`, `robots.txt`, favicon set
 
 **Acceptance criteria**
+
 - Every route has a distinct title/description
 - Lighthouse SEO ≥ 95
 
@@ -342,6 +369,7 @@ animations.
 ## Phase 14 — Performance, Accessibility, Easter Egg & Launch
 
 **Tasks**
+
 - Confirm every canvas/mouse-tracking component is `next/dynamic` with `ssr: false`
 - Image optimization pass, font subsetting check, bundle size sanity check
 - Full keyboard-only pass through the whole page; full reduced-motion pass
@@ -354,6 +382,7 @@ animations.
 - Deploy to Vercel, verify production URL
 
 **Acceptance criteria**
+
 - Lighthouse ≥ 90 across all four categories, scores recorded in `PROGRESS.md`
 - Easter egg works and is genuinely undocumented anywhere in the visible UI
 - Deployed URL works and matches local build

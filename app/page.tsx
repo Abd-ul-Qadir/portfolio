@@ -1,3 +1,4 @@
+import { ScrollRevealController } from "@/components/effects/ScrollRevealController";
 import { SectionTransitions } from "@/components/effects/SectionTransitions";
 import { About } from "@/components/sections/About";
 import { Contact } from "@/components/sections/Contact";
@@ -12,6 +13,7 @@ import { Skills } from "@/components/sections/Skills";
 export default function Home() {
   return (
     <>
+      <ScrollRevealController />
       {/* Phase 12: the boundaries between sections, scrubbed. The hero has no scroll
           transform any more, so this owns every boundary that still has one. */}
       <SectionTransitions />

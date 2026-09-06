@@ -11,29 +11,41 @@ responding when touched, not from constant movement.
 ## Color tokens
 
 ```
---bg-base:        #08090D   /* page background */
---bg-surface:      #0E1016   /* raised sections, nav */
+--bg-base:        #090B0A   /* carbon-black page background */
+--bg-surface:      #111511   /* warm raised surfaces, nav */
 --bg-glass:        rgba(255,255,255,0.04)   /* card fill, use with backdrop-blur */
 --border-subtle:   rgba(255,255,255,0.08)   /* thin borders throughout — a signature of this look */
---border-hover:     rgba(124,58,237,0.4)    /* violet, on card/element hover */
+--border-hover:     color-mix(in srgb, #E8793E 40%, transparent) /* copper interaction edge */
 
---text-primary:    #F5F6FA
---text-secondary:  #9CA3AF
+--text-primary:    #F4F1E8   /* warm ivory */
+--text-secondary:  #A0A69F
 
---accent-violet:   #7C3AED   /* the one main accent */
---accent-indigo:   #6366F1
---accent-cyan:     #22D3EE   /* very subtle atmospheric use only — see below */
---accent-pink:     #EC4899   /* rare highlight only — sparkles, one-off emphasis */
---accent-emerald:  #34D399   /* checkmarks, success/positive states only */
+--accent-copper:       #E8793E   /* the main, ownable brand accent */
+--accent-copper-text:  #F3A66F   /* accessible small-text tint */
+--accent-gold:         #F2B84B   /* warm gradient bridge */
+--accent-teal:         #42C7A5   /* interaction and live-signal contrast */
+--accent-robot-blue:   #4D8FE8   /* robotic-portrait circuitry only */
+--accent-robot-cyan:   #63DBFF   /* robotic-portrait optics only */
+--accent-coral:        #E95D55   /* rare alert / terminal highlight */
+--accent-green:        #7BC96F   /* success and positive states only */
 
---gradient-primary: linear-gradient(135deg, var(--accent-violet), var(--accent-indigo) 50%, var(--accent-cyan))
---glow-primary:     0 0 40px rgba(124,58,237,0.25)
+--gradient-primary: linear-gradient(135deg, var(--accent-copper), var(--accent-gold) 50%, var(--accent-teal))
+--glow-primary:     0 0 40px color-mix(in srgb, var(--accent-copper) 25%, transparent)
 ```
 
-One main accent (violet), with cyan/purple used only as **very subtle atmospheric
-gradients** — soft radial light behind key sections, not flat color blocks. Large
+The palette deliberately avoids the generic violet/cyan “AI product” shorthand. Burnished copper
+is the main accent, gold supplies warmth, and mineral teal marks live interactions. These appear
+as **restrained atmospheric gradients** and signals, not large flat color blocks. Large
 typography, generous whitespace, thin borders over heavy ones, glass only where it earns its
 place (cards, nav) rather than everywhere.
+
+Steel blue and electric cyan are a deliberately narrow exception: they appear only while the
+hero's robotic portrait is being revealed, and only on the neural field's already-active local
+connections. They must not replace copper/gold/teal as the resting page palette.
+
+The code temporarily retains the old `accent-violet` / `accent-indigo` / `accent-cyan` custom
+properties as compatibility aliases while the dirty working tree is in flight. They resolve to
+the copper / gold / teal values above; new code should use the semantic names.
 
 Contrast check: `--text-primary`/`--text-secondary` against `--bg-base`/`--bg-surface` both
 clear WCAG AA. Gradient text is for short headline phrases only, never body copy.
@@ -63,9 +75,9 @@ higher-detail layer confined to the hero (see below).
 |---|------|----------|-------|
 | 1 | Custom 404 page | **Include** | Lost-in-space/constellation motif, ties to the hero |
 | 2 | Unique page titles | **Include** | `generateMetadata` per route |
-| 3 | Harsh gradients | **Soften, don't skip** | Smooth multi-stop violet→cyan gradients, used atmospherically, not hard-stop/clashing ones |
+| 3 | Harsh gradients | **Soften, don't skip** | Smooth multi-stop copper→gold→teal gradients, used atmospherically, not hard-stop/clashing ones |
 | 4 | Lucide icons | **Include** | Sole icon set, used consistently everywhere |
-| 5 | Rainbow coloring | **Skip as literal full-spectrum** | One main accent + subtle atmosphere keeps this cohesive; a real rainbow fights that |
+| 5 | Rainbow coloring | **Skip as literal full-spectrum** | Copper leads; gold and teal support it. A real rainbow fights that hierarchy. |
 | 6 | Drop shadows | **Include** | Neutral for elevation, colored glow for hover/active |
 | 7 | Liquid glass | **Include** | Cards, nav bar — glass only where it earns its place |
 | 8 | Bento grids | **Include, scoped to Services** | Skills is now the floating ecosystem, not a grid — bento still fits Services and, optionally, a compact tech-stack summary |

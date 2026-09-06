@@ -4,10 +4,11 @@
 > stop working, every time — see `CLAUDE.md` §0 for the exact rule. This file is the only
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
-Last updated: 2026-08-26
+Last updated: 2026-09-06
 Repo status: git initialised, Phases 0–14 committed except the Vercel deploy, which is
 blocked on Abdul's account. Real image assets wired in. The constellation has since been
-replaced by an interactive neural field — see the newest session-log entry.
+replaced by an interactive neural field. The contact form is now real and sends email via
+Resend — it needs `RESEND_API_KEY` set before it can deliver. See the newest session-log entry.
 
 ---
 
@@ -16,6 +17,17 @@ replaced by an interactive neural field — see the newest session-log entry.
 > **Phase 14 substantially complete — the build is finished and shippable.** Everything in
 > Phase 14 is done except **deploying to Vercel**, which needs Abdul's account, and the
 > final Lighthouse run against the production URL that depends on it. See Blockers.
+>
+> **Re-verified 2026-08-29, and Performance now passes.** Lighthouse on a quiet machine:
+> **Performance 95-98 / Accessibility 100 / Best Practices 100 / SEO 100**, against a bar of 90.
+> The 87-88 recorded on 2026-08-27 was machine contention, not the code — see that session's log
+> for the interleaved A/B against `HEAD` that establishes it. **Read the load caveat there before
+> re-measuring:** identical code scored 58 at 65% CPU and 98 at 12% CPU in the same sitting.
+>
+> **Plus one setup step, updated 2026-08-27:** the contact form is live and **sending** —
+> `RESEND_API_KEY` is set in `.env.local` and a test message was delivered end-to-end. Because
+> `.env.local` is gitignored, the same variable must be added to the Vercel project's environment
+> variables at deploy time, or the deployed form falls back to the 503 path.
 
 ## Phase checklist
 
@@ -44,6 +56,1573 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 4 (cont. 20) — 2026-09-06 — Personal GitHub push preparation
+
+Abdul asked to publish the portfolio to his personal GitHub without attributing the company
+account currently used elsewhere on the workstation. No remote existed and GitHub CLI was not
+authenticated. The repository had inherited the global company email `icpsportal1@gmail.com`, so
+repository-local Git identity is now explicitly `Abdul Qadir <abdulqadir12511@gmail.com>` with
+credential username `Abd-ul-Qadir`; global/company configuration was not changed.
+
+All current portfolio work was staged. `.env.local` remains ignored, `.env.example` contains no
+values, and a redacted staged-content scan found no GitHub, OpenAI or Resend credential. Lint,
+TypeScript and the production build pass across all 12 generated pages. The commit is ready, but
+publishing remains pending personal PAT authentication and creation/configuration of the personal
+GitHub remote. The PAT must be entered directly into GitHub CLI and stored by the OS credential
+manager—never placed in chat, the repository, a remote URL or Git config.
+
+### Session 4 (cont. 19) — 2026-09-06 — Navbar wordmark cache bust
+
+The transparent wordmark still appeared with its former black matte after a hard reload. The
+asset itself was verified to contain a variable alpha channel; the stale result came from Next's
+image optimizer continuing to serve the cached response for the unchanged source URL. The file
+was renamed from `wordmark.png` to `wordmark-transparent.png` and the navbar reference updated,
+forcing a new optimization URL and browser request. The old filename no longer exists.
+
+### Session 4 (cont. 18) — 2026-09-06 — Transparent navbar wordmark
+
+Abdul asked to remove the dark rectangular background from the raster “ABDUL QADIR” navbar
+wordmark so it sits cleanly on the blurred glass. The image-generation edit path was used first,
+but both generated candidates were rejected: they altered the exact lettering, enlarged the
+canvas, and one baked in a checkerboard. The final asset therefore uses a deterministic
+luminance-to-alpha extraction from the original pixels, preserving the 156×29 lettering and
+distressed glitch texture while converting the dark matte into real transparency.
+
+`public/brand/wordmark.png` remains at the same URL and dimensions, so no component or layout
+change was needed. The optimized PNG fell from 7,190 to 2,606 bytes. A real Chrome check on the
+scrolled/blurred navbar confirmed it loads at the intended 124×23 rendered size; the result was
+visually inspected and the optimized response transferred 1,364 bytes.
+
+### Session 4 (cont. 17) — 2026-09-06 — Mobile Lighthouse cost diagnosis
+
+Abdul asked why mobile Performance is 74 despite hiding the hero portrait and disabling hover
+behavior. This was a read-only diagnosis; no product code was changed. The portrait is CSS-hidden,
+but its `priority` preload still fetched a 12.7 KB `portrait2-cutout` response at 390px. More
+importantly, touch mode disables pointer influence but still mounts the neural engine: the browser
+reported one canvas with 80 nodes, while the code retains ambient packets, the scroll story,
+Resize/Intersection observers, a scroll listener and a 30 FPS draw loop.
+
+The highest-priority issue is still the hero typewriter. It begins with an incomplete visible
+string and Lighthouse selected that role line as LCP, attributing 3.69 seconds to element render
+delay. Recommended order: render the first role statically on compact viewports; completely skip
+the neural engine on touch/compact devices in favor of the existing static field styling (or at
+least use a static frame); stop preloading the desktop-only hero image; then split/gate Lenis,
+GSAP, Framer Motion and pointer-only enhancements so their implementation chunks are not shipped
+merely to return a static mobile fallback. The About portrait's 16 KB image-delivery opportunity
+is secondary. Re-run mobile Lighthouse after each isolated change rather than changing all paths
+at once.
+
+### Session 4 (cont. 16) — 2026-09-06 — Local production Lighthouse audit
+
+Ran Lighthouse 13.4.1 against a fresh `next start` production server on localhost. No source code
+was changed during the audit. The desktop preset scored **Performance 97 / Accessibility 100 /
+Best Practices 100 / SEO 100**, with FCP 0.4s, LCP 1.0s, TBT 70ms, CLS 0.008 and Speed Index
+1.4s.
+
+The standard mobile audit was repeated and returned the same **Performance 74 / Accessibility
+100 / Best Practices 100 / SEO 100** both times. Its representative metrics were FCP 2.4s, LCP
+4.0–4.1s, TBT 300–310ms, CLS 0 and Speed Index 5.0s. The LCP element was the animated role line
+under the hero name; 3.69s of its LCP was element render delay. The main reported opportunity was
+about 45 KiB of unused JavaScript (estimated 290ms), followed by a 150ms render-blocking CSS
+estimate and 16 KiB of image-delivery savings for the About portrait. At the load check the
+workstation had 31 Chrome and 40 Node processes despite only 12.2% average CPU, so the historical
+warning about absolute local mobile scores still applies. Desktop remains above the 90 target;
+mobile currently does not. The production server and temporary JSON reports were removed after
+recording the results.
+
+### Session 4 (cont. 15) — 2026-09-06 — Footer utility row always visible
+
+Abdul reported that the copyright and Back to top control appeared to be removed after the footer
+was shortened. Both remained in the markup, but their scroll-reveal marker could keep the final
+row hidden until it crossed the observer threshold. That marker and its delay were removed, so
+the utility row is now always visible while the main footer columns retain their entrances.
+
+### Session 4 (cont. 14) — 2026-09-06 — Shorter footer stack placement
+
+Abdul found the footer too tall after the full-width “Built with” rail was added. The stack now
+sits beneath the three social links in the footer's third column, using space that was previously
+empty beside the longer identity/contact column. The badges were tightened slightly but retain
+their four inline marks and full labels. Removing the separate row reduces the desktop footer
+panel to 604px tall while keeping its information hierarchy intact.
+
+Lint, TypeScript and the production build pass. Real Chrome checks at 1440×900 and 390×844
+confirmed the stack is structurally inside the social column, all four badges render in two rows,
+and neither viewport has horizontal overflow. The desktop result was also inspected visually.
+
+### Session 4 (cont. 13) — 2026-09-06 — Optimized page-wide scroll entrances
+
+Abdul reported that the neural background moved while the foreground content simply appeared as
+he scrolled. The neural-field implementation and configuration were left untouched. A single
+`ScrollRevealController` now observes 33 deliberately marked content groups across About,
+Skills, Services, Experience, Projects, Contact and Footer. Section headings rise in consistently;
+supporting blocks use restrained rise, side or scale entrances; nearby cards receive capped
+stagger delays; and every element reveals only once.
+
+This is intentionally one native `IntersectionObserver` plus CSS opacity/`translate3d`/scale
+transitions—no new package, scroll listener, animation loop or per-item React state. Content is
+visible in SSR/no-JS and unsupported-browser paths because hiding only activates after the
+controller is ready. Reduced motion skips the controller and leaves everything immediately
+visible. The old Framer-based `Reveal` wrapper became unused and was removed; Skills and Services
+also returned to Server Components because they no longer need entrance-animation hooks. Rich
+existing effects (project-card sequencing, timeline rail, portrait interface and contact orbs)
+remain in place, while credential cards now correctly wait for viewport entry.
+
+Lint, TypeScript and the production build pass. Real Chrome checks at 1440×900 and 390×844
+confirmed a below-fold timeline item begins at opacity 0 with a translated/scaled transform,
+settles to opacity 1 and identity transform after scroll, and creates no horizontal overflow.
+The reduced-motion run stayed fully visible throughout. All three checks confirmed the neural
+canvas remains mounted.
+
+### Session 4 (cont. 12) — 2026-09-06 — Unused content cleanup
+
+Audited the source components, public assets and shared content for dead references. Removed the
+unused `spokenLanguages` import/export and corrected the Skills component documentation, which
+still described a third language-badge layer that is no longer rendered. No files were deleted:
+every source file is imported or is a Next.js route, and the apparently indirect portrait source
+and reveal-mask assets are required by the committed cut-out pipeline or Tailwind mask styling.
+Lint now completes with zero warnings or errors; TypeScript and the production build pass.
+
+### Session 4 (cont. 11) — 2026-09-06 — Engineer title consistency
+
+The web and mobile hero roles now read “Full Stack Web Engineer” and “Full Stack Mobile App
+Engineer.” This replaces “Developer” with “Engineer” for a more consistent professional identity
+alongside the primary “Full Stack AI Engineer” title.
+
+### Session 4 (cont. 10) — 2026-09-06 — Hero role headline updated
+
+The rotating role line beneath Abdul's name now cycles through four requested titles: Full Stack
+AI Engineer, Full Stack Web Developer, Full Stack Mobile App Developer, and Agentic AI Builder.
+Capitalization was normalized for presentation. The first title remains the reduced-motion
+fallback and the primary role reused by metadata, the loader, footer and system interface.
+
+### Session 4 (cont. 9) — 2026-09-06 — Focused footer stack with inline brand marks
+
+Abdul deferred the longer SEO/AEO work and asked for the portfolio's technology stack in the
+footer, then narrowed the request to the main technologies only and asked for logos. The footer
+now lists Next.js, Tailwind CSS, GSAP and Framer Motion as four compact branded badges. Their
+marks are inline, `currentColor` SVGs, so the treatment adds no image requests, icon package,
+client component, hydration or runtime JavaScript.
+
+Three.js is deliberately absent: it is not present in `package.json`, and the neural-field engine
+in `lib/neural-field.ts` is explicitly a hand-rolled 2D Canvas implementation. Lint completes
+with the one pre-existing `spokenLanguages` warning and no errors; TypeScript and the production
+build pass. Real Chrome checks at 1440×900 and 390×844 confirmed all four labels and SVG marks
+render, the badges stay inside their container, and neither viewport has horizontal overflow.
+They form one row on desktop and two clean rows on mobile.
+
+### Session 4 (cont. 8) — 2026-09-06 — Technical SEO and personal-entity audit
+
+Abdul requested an actionable roadmap for making the portfolio and public profiles more visible
+for name-plus-role searches and Google AI features. This was a read-only audit; no site or profile
+changes were made. Current official Google, Schema.org, GitHub and LinkedIn guidance was checked.
+
+The portfolio already has server-rendered copy, descriptive route metadata, canonicals, robots
+rules, a sitemap and individual project URLs. The highest-priority gaps are the still-unconfirmed
+production domain, no `ProfilePage`/`Person` JSON-LD, no X/Twitter identity link, all project
+`repoUrl` values still null, and inconsistent Instagram URLs between the portfolio and the public
+GitHub profile. The GitHub profile's crawlable snapshot also shows Popular repositories rather
+than a profile README or curated pins. A `site:abdulqadir.dev` check returned no indexed results,
+and broad name/role searches surfaced several unrelated people, making identity disambiguation
+the central problem rather than keyword coverage alone.
+
+The roadmap delivered to Abdul prioritizes one permanent canonical domain, consistent identity
+facts and reciprocal profile links, `ProfilePage` + `Person` markup matching visible content,
+strong project READMEs/case studies, public profile cleanup, first-hand technical articles, and
+Search Console measurement. It explicitly avoids guarantees: Google says AI Overviews require no
+special markup and neither indexing, ranking, rich results nor AI-feature selection is promised;
+LinkedIn's About field is a corroborating public source, not a direct Knowledge Graph feed.
+
+### Session 4 (cont. 7) — 2026-09-06 — Robotic portrait powers the nearby neural field
+
+Abdul suggested matching the background neural network to the robotic portrait while its hover
+reveal is active, and gave latitude to choose the treatment. The result is intentionally local:
+the resting copper/gold mesh remains unchanged, preserving the portfolio's identity and keeping
+the copy side warm. While the pointer reveals the robotic portrait, only the field's already
+active circuitry eases from mineral teal into steel blue (`#4D8FE8`) and electric cyan
+(`#63DBFF`), matching the portrait's metal channels and illuminated optics.
+
+`HeroPortraitReveal` emits one small event on entry and one on exit. Only the site-wide neural
+field listens; local decorative fields do not. The engine eases one scalar palette mix inside
+its existing simulation tick and reuses the existing batched edge, packet, node, spark and cursor
+tendril passes. There is no new animation loop, React state, per-pointer event allocation, canvas,
+filter, shadow blur, or dependency. A second 64px cached glow sprite is generated once, following
+the field's established no-runtime-blur approach. Touch and reduced-motion sessions remain on the
+normal portrait path and attach no reveal listener.
+
+**Verification:** an optimized production build and `tsc --noEmit` pass. Lint has 0 errors and
+the same existing `spokenLanguages` warning. A 1440x900 production Chrome render of the activated
+state was inspected: the cool signal stays concentrated around the portrait-side pointer response,
+the warm mesh remains intact elsewhere, and horizontal overflow is 0. Temporary browser profiles
+and screenshots were removed after inspection.
+
+### Session 4 (cont. 6) — 2026-09-06 — Circular track runners replace oval axes
+
+Abdul asked to remove the ecosystem's oval gyroscope axes and make the filled bars travel around
+the remaining circular tracks. Both SVG ellipses and the associated `ecosystem-axis` animation
+were removed. The long copper/gold/teal segment now circles the primary carrier every 14s, while
+the short inner copper segment counter-rotates every 18s. The hub bezel retains its slower 22s
+rotation, giving the circular layers distinct but restrained movement.
+
+The two runners animate their SVG groups with CSS transforms around the shared viewBox centre;
+they do not animate `stroke-dashoffset`, add requestAnimationFrame work, or introduce a dependency.
+They continue to pause with the full assembly on hover/focus, and `prefers-reduced-motion` makes
+both static while removing their `will-change` promotion.
+
+**Verified:** optimized production build and `tsc --noEmit` pass; lint has 0 errors and the same
+existing `spokenLanguages` warning. The production CSS contains both 14s/18s runner animations
+and the reduced-motion layer cleanup; `git diff --check` passes.
+
+### Session 4 (cont. 5) — 2026-09-06 — Ecosystem upgraded to an animated gyroscope
+
+Abdul asked to improve the ecosystem design again and add animation without sacrificing
+optimization. The ring now has more dimensional structure while retaining the existing orbital
+interaction:
+
+- two shallow equatorial SVG paths turn the flat dial into a gyroscope-like assembly;
+- the optical well is deeper, the hub has a segmented copper/teal/gold bezel, and a quiet outer
+  calibration boundary gives the core a more deliberate instrument feel;
+- a desktop-only `Core / 04` micro-label is derived from the node count instead of duplicated
+  content;
+- the 56s main orbit, 56s counter-rotating labels, 34s gyroscope plane, and 22s hub bezel pause
+  together on pointer hover or keyboard focus, making the moving targets easier to inspect.
+
+The added motion is CSS-transform-only and consists of one SVG group plus the small masked hub
+bezel. It introduces no animation library, requestAnimationFrame loop, timer, listener, filter,
+backdrop blur, or dependency. Idle connection-paint animations remain at zero; only an active
+hover/focus connection runs. `prefers-reduced-motion` removes every ecosystem animation and the
+temporary `will-change` promotion.
+
+**Production verification (`next start`, real Chrome):** the ecosystem measures 576x576 on
+desktop and 342x342 on mobile with 0 horizontal overflow. All coupled motion pauses during real
+pointer interaction. Under reduced motion, all checked animation names resolve to `none`, their
+durations to `0s`, and the browser reports 0 active animation objects. Desktop and mobile renders
+were inspected. Optimized build and `tsc --noEmit` pass; lint has 0 errors and the same existing
+`spokenLanguages` warning. Temporary browser profiles were removed and the shared CDP helper was
+restored byte-for-byte to its repository hash.
+
+### Session 4 (cont. 4) — 2026-09-06 — Ecosystem rotor redesigned and idle paint reduced
+
+Abdul asked for a stronger rotating-ring design without losing optimization. The ecosystem now
+reads as one calibrated instrument instead of three faint dashed circles:
+
+- a static radial optical well separates the foreground rotor from the dense neural field;
+- a continuous carrier track establishes the orbit, with one asymmetric copper/gold/teal arc
+  and a fine teal precision-dot pass making its rotation legible;
+- the outer bezel combines a quiet boundary with compact gold calibration ticks;
+- the inner telemetry ring uses one short copper segment to give the hub depth;
+- all patterns use SVG `pathLength=100`, so their rhythm is identical at both responsive radii.
+
+The additional detail is eight cheap SVG circle primitives inside the **existing single rotor**;
+no new animation, timer, filter, blur, event listener or dependency was added. The shared rotation
+was slowed from 48s to 56s and promoted as one compositor layer. The four connection signals that
+previously animated `stroke-dashoffset` forever are now absent at rest; hover or keyboard focus
+starts traffic only on the active connection. This materially reduces idle paint while making the
+interaction more intentional.
+
+The component also moved its touched colors from the compatibility aliases to the new semantic
+`accent-copper`, `accent-gold` and `accent-teal` tokens.
+
+**Production verification (`next start`, real Chrome):** desktop rotor 576x576 and mobile rotor
+342x342, with 0 horizontal overflow. Idle synapse animation count is 0; the active path responds;
+the rotor computes to `ecosystem-spin` at 56s. Under reduced motion it computes to `none` / 0s,
+with 0 synapse animations. Desktop and mobile screenshots were inspected and removed. Optimized
+build and `tsc --noEmit` pass; lint has 0 errors and the same pre-existing `spokenLanguages`
+warning. The shared CDP helper was restored to its exact repository hash.
+
+### Session 4 (cont. 3) — 2026-09-06 — Purple AI-default palette replaced
+
+Abdul called out the violet/cyan theme as the generic palette AI tools produce by default and
+asked for a different identity. The portfolio now uses a **carbon, burnished copper, warm gold,
+and mineral teal** system instead:
+
+- carbon-black `#090B0A` and warm surface `#111511` replace the blue-black base;
+- copper `#E8793E` is the main brand and interaction accent;
+- gold `#F2B84B` bridges gradients without turning them into a rainbow;
+- mineral teal `#42C7A5` marks live signals, activation and the cool end of gradients;
+- warm ivory replaces clinical white, with coral and leaf green reserved for state feedback.
+
+This is a real system-level change, not a filter over the page. `lib/tokens.ts` drives Tailwind,
+CSS variables, the canvas neural field, the animated hero/section-title gradients, cursor, cards,
+glows and the generated Open Graph image. The neural field now rests in copper/gold and activates
+in teal, so the largest visual surface no longer carries hidden purple remnants.
+
+Semantic `accent-copper` / `gold` / `teal` / `coral` / `green` tokens were added. The old
+violet/indigo/cyan token identifiers remain as compatibility aliases to those new values for now;
+that preserves the existing dirty component tree and produces no duplicate visual palette. New
+code should use the semantic names. `docs/DESIGN_SYSTEM.md` records both the new direction and
+this temporary compatibility rule.
+
+**Accessibility and verification:** primary text measures 17.48:1 on the page background;
+secondary text 7.94:1; the small-text copper tint 9.86:1; the base copper 6.80:1; and teal 9.35:1.
+All also clear AA on the raised surface. A production Chrome render confirmed the new palette in
+the hero, portrait composition, navigation, neural field and CTAs. Optimized build and
+`tsc --noEmit` pass; lint has 0 errors and the same pre-existing `spokenLanguages` warning.
+Temporary screenshots were removed after inspection.
+
+### Session 4 (cont. 2) — 2026-09-06 — Moving gradients on the hero name and section titles
+
+Abdul asked for visible gradient motion in his name and the section titles. The hero now applies
+one slow white → violet → cyan colour wave across the complete `Abdul Qadir` lockup instead of a
+short highlight on only the surname. The signature rail and terminal-node entrance remain intact.
+
+Every `SectionHeading` accent phrase now receives a more pronounced violet → cyan → white moving
+gradient, scoped through the shared component so all six sections stay consistent. The stable
+white lead-in preserves headline readability while the important trailing phrase carries motion.
+
+This remains CSS-only: no new client component, dependency, event listener or animation library
+work was added. The animated area is restricted to the glyphs, uses a slow 5.2–5.8 second cycle,
+and becomes a static gradient under `prefers-reduced-motion`.
+
+**Verified:** optimized production build and `tsc --noEmit` pass; lint has 0 errors and only the
+pre-existing `spokenLanguages` warning. The production stylesheet contains the shared
+`display-gradient-flow` keyframes and both scoped component rules; `git diff --check` passes.
+
+### Session 4 (cont.) — 2026-09-06 — Navbar decluttered; hero signature and section-title system
+
+Abdul said the navbar still felt crowded and asked for a cooler animated name plus stronger
+section titles, while preserving the optimization work. This pass simplifies the hierarchy
+instead of compressing the same number of elements into smaller type.
+
+**Navbar.** The redundant role tagline and all `01`–`06` indices are gone from the always-visible
+desktop row. The six plain section labels retain the active pill/underline, and a quiet divider
+now separates navigation from the résumé action. The full row starts at `xl` (1280px); narrower
+laptops and tablets use the existing two-column disclosure. The numbered navigation remains
+inside that disclosure, where the extra wayfinding helps rather than competes. At the 1138px
+width from Abdul's screenshot the resting header is now only the wordmark and menu button; the
+opened menu uses the whole bounded shell and gives every destination room.
+
+**Hero name.** `Abdul Qadir` is now a signature lockup: the real, server-rendered heading stays
+visible throughout, while a violet-to-cyan signal rail draws once beneath it, resolves into a
+lit terminal node, and a short highlight crosses the gradient surname. The effects are CSS-only,
+finite, and do not wait for hydration. Under `prefers-reduced-motion`, the complete rail and node
+render immediately with **zero animation objects**.
+
+**Shared section titles.** `SectionHeading` now has a fine cyan/violet vertical rail, corner tick,
+live eyebrow row and fading signal line. The treatment is implemented once in the shared Server
+Component, so About, Skills, Services, Experience, Projects and Contact all receive the same
+hierarchy without client JavaScript, new dependencies or duplicated styles.
+
+**Production verification (`next start`, real Chrome):**
+
+| check | result |
+|---|---|
+| responsive widths | 390 / 1138 / 1440, **0 horizontal overflow** at all three |
+| crowded-width behavior | 1138: desktop row hidden, menu control visible; opened panel 1096x225 |
+| wide navigation | 1440: 6 section links, no indices, no role tagline |
+| hero signature | heading visible; rail reaches final `scaleX(1)` state |
+| section-title primitive | rail and signal gradients computed at mobile and desktop widths |
+| reduced motion | media query true; name subtree has 0 animation objects; heading opacity 1 |
+| quality gates | optimized build and `tsc --noEmit` pass; lint 0 errors, one pre-existing `spokenLanguages` warning |
+
+Temporary browser probes/screenshots were removed, and `scripts/cdp.mjs` was restored to its
+exact repository hash after the sandbox-only test adjustment.
+
+**Next up:** unchanged — deploy to Vercel, add `RESEND_API_KEY` there, set/confirm the real
+production domain, and run the final Lighthouse check against that URL.
+
+### Session 4 — 2026-09-06 — Navbar and footer redesign, with a smaller runtime footprint
+
+Abdul asked to improve the navbar and footer while keeping the site optimized. Both now read as
+parts of the same AI-system interface rather than a utility bar at the top and three plain text
+columns at the bottom. No dependency was added, no content was invented, and the existing dirty
+working tree was preserved.
+
+**Navbar — a bounded instrument panel.** The hero state remains visually transparent with the
+existing masked readability veil. After 24px of scroll, the navigation now resolves into a
+floating, rounded glass shell rather than putting `backdrop-filter` across the full viewport
+width. That is both the visual improvement and the optimization: the browser blurs only the
+`max-w-6xl` panel. The shell has a token-derived directional tint, a restrained inset highlight,
+and neutral elevation; it compacts from 78px total header height to 70px.
+
+Navigation items now carry generated `01`–`06` indices, a quiet pill-shaped active surface, and
+the existing Framer Motion underline. The supplied wordmark remains in `next/image`; at `xl` it
+gains the real `identity.roles[0]` beside a small live-status node. No new text literal can drift
+from content. The full desktop controls now start at `lg`, not `md`: six destinations plus the
+résumé CTA were too dense for a 768px tablet. At 768px the compact disclosure is used instead.
+
+The mobile menu is now a two-column system grid with the same indices and active treatment,
+followed by the full-width résumé action. At 390px it measures **364x213px**, stays inside the
+viewport, and opens/closes from the existing native button. Escape behavior and scroll-spy logic
+are unchanged.
+
+**Footer — a server-rendered closing console.** The footer is still a Server Component and adds
+no hydration. It is now one structured panel with:
+
+- a strong identity column sourced entirely from `identity`;
+- the two visible direct-contact values sourced from `directContacts`;
+- all six section destinations as indexed navigation cells;
+- GitHub, LinkedIn and Instagram rows using the existing inline brand marks;
+- a clearer back-to-top control and a restrained `AQ` watermark.
+
+The panel intentionally has **no `backdrop-filter`**. Its legibility over the neural field comes
+from token-derived static gradients, so the footer does not add another large blur region. The
+top signal bus also no longer runs forever: its base line is static and the travelling packet is
+authored `paused` at time 0, starting only while the footer is hovered or has keyboard focus.
+Under reduced motion that animation is absent entirely.
+
+**Production verification (`next start`, real Chrome):**
+
+| check | result |
+|---|---|
+| responsive widths | 390 / 768 / 1424, **0 horizontal overflow** at all three |
+| tablet breakpoint | 768: desktop controls `display:none`, mobile control `display:flex` |
+| scrolled nav | glass class present; `blur(18px) saturate(1.35)` on the bounded shell; 9999px radius |
+| mobile disclosure | real Tab to menu button + activation; `aria-expanded=true`; panel 364x213 |
+| footer destinations | 6 section links / 3 social links / 2 direct contacts |
+| footer keyboard surface | 12 native focusable anchors, all covered by the global focus-visible treatment |
+| footer idle animation | `bus-signal` present but **paused at currentTime 0** |
+| reduced motion | media query confirmed true; `bus-signal` has no animation object |
+| visual render | desktop footer 709px tall; mobile footer reflows to one clean column |
+| quality gates | `npm run build` pass; `tsc --noEmit` pass; lint 0 errors, one pre-existing `spokenLanguages` warning |
+
+The first production build attempt could not reach Google Fonts from the filesystem sandbox;
+rerunning with the required network permission passed all 12 generated pages. Temporary browser
+probes/screenshots were removed after verification and the shared CDP helper was restored
+byte-for-byte.
+
+**Next up:** unchanged — deploy to Vercel, add `RESEND_API_KEY` there, set/confirm the real
+production domain, and run the final Lighthouse check against that URL.
+
+### Session 3 (cont.) — 2026-08-29 — Phase 13 / 14 re-run. **Performance now passes: 95-98.**
+
+Re-ran both phases after this session's content work. **Phase 13 passes. Phase 14 passes on every
+criterion that can be checked locally**, including Performance, which failed the last audit.
+
+**⚠ One real bug found — the OG card had gone stale, silently.**
+`app/opengraph-image.tsx` carried the strapline as a **hardcoded string**: *"Building scalable,
+high-performance web applications powered by AI."* When the tagline was broadened earlier today,
+the social card kept advertising the exact positioning the change was meant to retire — and
+nothing caught it, because a literal cannot drift *detectably*. This is what `CLAUDE.md` §3's
+"never hardcode copy in a component" rule is for. It now derives from `identity.tagline` (first
+sentence only — the tagline closes on a CTA that does not belong on a preview card).
+
+**Phase 13 — PASSES.**
+
+| criterion | result |
+|---|---|
+| Distinct title + description per route | 6/6 distinct (4 project pages, `/`, 404) |
+| `sitemap.xml` | 5 URLs incl. the new `calorie-counter-ai`; `/api/contact` correctly absent |
+| `robots.txt`, OG image, favicon | present — OG 1200x630 PNG, icon 2.4 KiB |
+| Canonical + `og:` tags | present on `/` |
+| **Lighthouse SEO** | **100** (bar: 95) |
+
+*Unchanged blocker:* `siteUrl` is still `abdulqadir.dev`; sitemap, canonicals and OG URLs all
+derive from it. **Set it before deploying.**
+
+**Phase 14 — PASSES except the deploy.**
+
+| criterion | result |
+|---|---|
+| SSR completeness | all 7 sections + all content in the server HTML with JS off |
+| Keyboard pass | **59 focus stops, all `:focus-visible`, all with a focus ring, all scrolled into view** |
+| Reduced motion | **0 running animations at every scroll position**; 0 of 4 service cards, 4 project cards, 12 timeline entries, 40 skill items, 37 headings left invisible |
+| Easter egg | `sudo hire-me` reveals both lines, announced via live region; **0 occurrences in the shipped HTML**, referenced nowhere outside `EasterEgg.tsx` |
+| Accessibility / Best Practices / SEO | **100 / 100 / 100** |
+| **Performance** | **95, 97, 98** on a quiet machine — **passes the >=90 bar** |
+| Deploy | still blocked on Abdul's Vercel account |
+
+**How Performance was settled, because the first numbers said the opposite.** The first three runs
+gave **58 / 68 / 70** — worse than the 87-88 that already failed the last audit. That was the
+machine, not the code, and it was proved rather than assumed:
+
+- The first runs happened at **65% CPU with 44 Chrome and 21 node processes and two other dev
+  servers up**. Later runs at **12% CPU** gave **98 / 97 / 95** on byte-identical code. TBT moved
+  **472ms -> 44ms** across that same code. That 8x swing is the whole story.
+- **Interleaved A/B against `HEAD` (60b6bf9, pre-session)** in one sitting, five pairs:
+
+  | pair | baseline | current |
+  |---|---|---|
+  | 1 | 56 | 67 |
+  | 2 | 66 | 69 |
+  | 3 | 64 | **97** |
+  | 4 | 89 | 96 |
+  | 5 | 74 | 83 |
+
+  **Current wins all five.** The load-insensitive metric is the clearest: **LCP baseline
+  ~2.1s vs current ~1.0-1.3s**, and **total payload 2002 KiB -> 516 KiB**. That 4x is this
+  session's mask-stencil fix landing — `HEAD` still ships the 1 MB PNG as a CSS mask.
+
+**Method note for the next person.** Building a worktree at `HEAD` to A/B against needs a real
+`npm ci` in it: Turbopack rejects a junctioned `node_modules` outright ("Symlink [project]/
+node_modules is invalid, it points out of the filesystem root"), on the same drive as well as
+across drives. And remove such a junction with `cmd //c rmdir`, never `rm -rf` — the latter
+recurses into the *target* and would delete the real `node_modules`.
+
+**Two probe mistakes worth not repeating**, both of which produced alarming false failures:
+`element.focus()` does **not** match `:focus-visible` (48 of 58 elements looked ring-less; real
+Tab keypresses showed 0), and counting *off-screen* elements at `opacity: 0` flags every
+`whileInView` that has correctly not fired yet (70 false positives).
+
+### Session 3 (cont.) — 2026-08-29 — Services rebuilt around Abdul's four offers
+
+Abdul restated what he sells: **AI-powered web apps, mobile apps, AI agents, AI automations, AI
+SaaS, ERP and CRM** — and gave four cards with their stacks.
+
+**The four cards now are** web apps / cross-platform mobile apps / AI agents & automations /
+AI SaaS, ERP & CRM. That retires the old fourth card, "AI/ML Powered Apps": *integrating trained
+models for predictive analytics* is a technique, not something a client buys, and it overlapped
+the other three rather than standing beside them. The replacement is the business-platform work
+that is already in `experience` (the ICPS ERP, the Pyora CRM), so it is an offer he can evidence.
+
+**AI became the through-line rather than one card's subject.** Every card names a model layer,
+because that is the positioning: not "web development, and separately some AI".
+
+**New: a `stack` field on `Service`, rendered as `Badge`s at the foot of each card** — the same
+component project cards use, so a technology looks identical wherever it appears. Two decisions
+worth keeping:
+
+- **Slash notation, not one badge per technology.** `Django / Flask / FastAPI` as a single badge.
+  Spelling all nine out turned the 1-column bento cells into a wall of chips that buried the
+  description above them.
+- **The row is pinned to the card foot with `mt-auto` inside a wrapper.** The bento gives cards
+  different heights; without it each stack row floats wherever its own copy ends and the grid
+  reads ragged. Measured after: stack rows land at an identical offset within each row pair
+  (453/453 and 419/419 at 1424px).
+
+**Two layout bugs found and fixed by looking at it, not by reasoning about it:**
+
+1. **The icon tile stretched to the full card width.** Making the card `flex flex-col` (needed
+   for `mt-auto`) turned that `inline-flex` span into a flex item, and a flex item defaults to
+   `align-self: stretch` — a 50px tile silently became a 717px bar. `self-start` fixes it. Worth
+   remembering: *any* `inline-flex`/`inline-block` child of a card becomes stretch-aligned the
+   moment that card is made a flex column.
+2. **`Android & iOS` was a badge in the mobile card's stack.** It is a platform, not a
+   technology, and the bullet above already said it. It also cost layout: as a narrow cell that
+   card wrapped to three badge rows, making it the tallest in its row and leaving a hollow band
+   in the wide card beside it.
+
+**Also updated, because the brief's opening line is a positioning statement:** `identity.tagline`
+and the first sentence of `identity.bio` both said "web applications" only, which undersold four
+fifths of the work. Both now name the full range. Verified the longer tagline does not push the
+hero CTAs below the fold — 3 lines at 1424px (CTA bottom 589 of 805), 4 lines at 390px (563 of
+844).
+
+Verified: no horizontal overflow at 390 / 768 / 1424; all four cards keyboard-focusable and
+`aria-labelledby` their own titles; stack rows are real `<ul>`/`<li>`; reduced motion settles to
+**0 running animations** (40 with motion on). `build`, `lint`, `tsc --noEmit` clean apart from
+the pre-existing `spokenLanguages` warning.
+
+**Icon set changed:** `code-2` / `rocket` / `share-2` retired (nothing else referenced them),
+`globe` / `workflow` / `layout-dashboard` added. `Workflow` rather than `Bot` for the agents
+card — a node graph matches the site's own neural-field language, where a cartoon robot face
+would have cheapened it.
+
+### Session 3 (cont.) — 2026-08-29 — New robotic portrait wired into the hero reveal
+
+Abdul replaced the hero's AI-portrait source: `public/robotic_portrait.jpeg` is gone, and
+`public/portrait-robotic.jpg` (832x1248) takes its place. He also deleted both derived files, so
+the hero was requesting a **404** for `/robotic-portrait-cutout.png` until this was done.
+
+**The pipeline did the work; only the source path changed.** `scripts/cutout.py` now reads
+`public/portrait-robotic.jpg`, and re-running it regenerated `robotic-portrait-cutout.png` and
+`portrait-reveal-mask.png`. Subject coverage came back at **59.2%** — byte-identical to the
+previous run, as it must be: the matte is keyed from `portrait2.jpeg`, which did not change.
+
+**Registration was checked before regenerating, because the whole effect depends on it.** The
+robotic layer is keyed with the *photo's* matte and layered at identical geometry, so a source
+whose pose has drifted would slide the robot's features against the photograph's. A 50/50 blend
+of the two crops showed hair, jaw, collar, lapels and tie all landing within a couple of pixels.
+The script raises if the dimensions differ, but nothing can catch a drifted pose automatically —
+**blend the two crops by eye before accepting any future replacement.**
+
+Where the new figure *does* differ is the body: its shoulders are much broader and its arms are
+posed up with the hands crossed at the chest. Neither matters. `HERO_CROP`'s bottom edge (925 of
+1248) sits above the hands, and the shared matte clips the broad shoulders to the human
+silhouette — the containment the script's docstring already argues for, now doing real work.
+
+Verified on a production build at 1424x805:
+
+| check | result |
+|---|---|
+| Both layers load, same natural size | 740x791 each ✓ |
+| Reveal driven onto the face | Chrome plating, lit eyes and circuitry land exactly on the photo's features |
+| Reveal driven onto the shoulder edge | No backdrop leak; the silhouette dissolves into the page as the photo does |
+| Reduced motion | Reveal not mounted, and `robotic-portrait-cutout` **never requested** |
+| Optimised payload | 66 KiB WebP (raw PNG is 1.0 MB; it never ships) |
+| `build` / `lint` / `tsc --noEmit` | Clean — only the pre-existing `spokenLanguages` warning |
+
+### Session 3 (cont.) — 2026-08-29 — Ecosystem, second pass: spheres, a well, a bezel, a tighter box
+
+A further design pass on the ecosystem, again with no new JavaScript.
+
+| change | why |
+|---|---|
+| **`.skill-node-sheen`** on every node | The discs were flat coloured circles. A radial highlight lit from the upper left plus an inset floor shadow makes them read as **spheres**. Same three-layer construction the contact orbs use — fill, highlight, content — so the reflection sits above the body and below the number. |
+| **`.ecosystem-hub`** | The hub was `glass-surface`: a flat 4% film, which made the axis the least substantial thing in its own composition. It is now a **well** — radial gradient, inner top light, floor shadow — so the orbit reads as anchored into something. |
+| **Tick bezel** | The outer band was dead space. A graduated tick ring turns it into instrumentation. **One `<circle>`, not 48 tick elements**: a wide stroke with a mostly-gap dash pattern renders as evenly spaced ticks for the cost of a single path. That was the whole point — denser composition, same cost. |
+| **Tighter box** | `ORBIT_RADIUS` 0.4 → 0.43 and the container `max-w-2xl` → `max-w-xl`. Nothing got smaller: nodes and hub are sized in `rem`, so only the empty space moved. |
+
+**⚠ The tighter box exposed a real bug on mobile, and it predates this pass.**
+
+**A node is wider than its circle** — the label underneath is what defines its footprint. On a
+phone the stage is roughly the viewport width, so the outermost labels ran past both edges and
+were **silently clipped by the section's `overflow-hidden`**: measured `left: -5`, `right: 395`
+in a 390px viewport. Nothing errored and `documentOverflows` was `false`, because the clip hid it.
+
+Fixed with `orbitRadiusFor(width)` — 0.33 under a 420px container, 0.43 above — plus a narrower
+label (`w-24 sm:w-36`). Driven off the **measured container width, not a CSS breakpoint**, because
+the SVG geometry is computed in JS and has to agree with the width the element actually got. On
+desktop the same spill is harmless and left alone: the stage is `max-w-xl` inside a much wider
+container, so labels simply extend into the space around it.
+
+Verified: nodes fully inside the viewport at 390 (253–349), 768 and 1440.
+
+**Cost: none measurable.** Interleaved A/B toggling all 12 added elements — gauges, tracks,
+sheens, bezel — gave **identical frame counts (13 vs 13)** and a 5.6 ms median-gap difference,
+which is noise. Everything added is static paint; nothing animates that did not already.
+
+**Read the load before believing any absolute number here:** that measurement ran at **93% CPU
+with 52 Chrome processes** (Abdul's own browsing). The A/B is still valid because both arms ran
+under the same load — which is exactly why this file now insists on A/B over single readings.
+
+**Accessibility held:** the number stays inside the `aria-hidden` subtree, so the four buttons'
+accessible names are still the clean skill labels; all focusable; reduced motion settles to **0
+running animations and 0 transitions**. `build`, `lint`, `tsc --noEmit` clean.
+
+### Session 3 (cont.) — 2026-08-27 — Ecosystem redesigned into instrumentation
+
+Abdul asked to improve the ecosystem's design without giving up the performance work.
+
+**What was wrong.** Proficiency was encoded *only* as node diameter and halo strength, and the
+actual figure lived in a hover panel. So at rest the section was four softly-glowing purple discs
+carrying no readable information — decorative rather than instrumented — around a hub that was a
+plain glass circle with small text in it.
+
+**What it is now:**
+
+| element | change |
+|---|---|
+| **Node** | a **gauge arc** reading the real proficiency, with the **number inside the disc** at rest |
+| **Hub** | two concentric rings (one solid, one dashed) plus the site's `status-node` pulse, so the axis reads as a core rather than a text bubble |
+| **Orbit** | ring opacity 0.28 → 0.5, plus a second tighter ring for depth |
+
+The gauge reuses the **exact masking technique `.circuit-trace` already uses** — paint a conic
+gradient over the border box, punch out the content box — with `--pct` set inline per node. It is
+a static paint: no `@property` registration, no JS, no per-frame work. A `.skill-ring-track`
+behind it gives the arc something to read against.
+
+**Accessibility held.** The number sits inside the existing `aria-hidden` subtree, so the four
+buttons' accessible names are still just `React.js`, `Python, Django & FastAPI`, `HTML, CSS & JS`,
+`Agentic AI` — not "95 React.js". The `aria-live` panel still announces the figure on focus.
+Lighthouse Accessibility **100, zero failures**, on every run.
+
+---
+
+**⚠ A performance scare that turned out to be the machine, and how it was settled.**
+
+After the redesign Lighthouse read **72–80** where it had read 93–96 an hour earlier. Three
+consecutive runs in the 70s is a pattern, not noise, and a masked conic-gradient inside a
+*continuously rotating* element is a genuinely plausible cause — masked layers can be forced to
+re-rasterise every frame. Worth taking seriously rather than dismissing.
+
+**Settled by A/B rather than by argument:** a probe build with `display: none` on `.skill-ring`
+and `.skill-ring-track` only, everything else identical.
+
+| | Lighthouse perf | TBT |
+|---|---|---|
+| rings **off** | 80 / 77 / 79 | 290–340 ms |
+| rings **on** | 79 / 72 / 73 | 300–390 ms |
+
+Overlapping. **The rings are not the cause.** The frame-gap A/B agreed — identical frame counts
+with and without them.
+
+**The real cause was measurement environment.** `Win32_Process` showed **47 Chrome processes and
+22 Node processes at 47% CPU**. Two were orphaned headless instances from this session's own
+Lighthouse runs and were killed; **the other 39 are Abdul's own browser and were deliberately left
+alone.** The 93–96 figures were taken during a quiet moment; the 70s were not.
+
+**The lesson, and it generalises:** absolute Lighthouse scores on this machine are close to
+meaningless — this session has now seen 43 to 97 on materially identical code. What *is* valid is
+an A/B where both arms are measured under the same load, which is why the probe build settled the
+question and repeated single runs never could. Check process count before believing a score.
+
+**Verified:** 4 gauges and 4 tracks render with the right `--pct` values (95 / 90 / 80 / 80); all
+four nodes keyboard-focusable with clean accessible names; reduced motion settles to **0 running
+animations and 0 transitions**; probe fully reverted (the one remaining `display: "none"` in the
+config is the pre-existing `.scan-line` reduced-motion rule); `build`, `lint`, `tsc --noEmit`
+clean.
+
+### Session 3 (cont.) — 2026-08-27 — Section spacing halved, CognoRise restored, Calorie Counter card wired
+
+**1. The gaps between sections were 320px, and that is why the page looked empty.**
+`py-section` applies the same padding top *and* bottom, so **adjacent sections stack two of
+them** — at `clamp(6rem, 12vw, 10rem)` that was 160px + 160px = **320px of dead space between
+every section**, more than a third of a 900px viewport showing nothing.
+
+Now `clamp(4rem, 7.5vw, 7rem)`: **216px combined at 1440** (was 320) and **128px on a phone**
+(was 192). Page height 11,087 → 10,671. The token carries a note to reason about the *doubled*
+figure next time it is touched.
+
+Hero → About stays larger (370px, was 422) and that is correct: the hero is `min-h-screen` with
+vertically centred content, so its own empty lower half is part of that measurement, not padding.
+
+**2. CognoRise InfoTech is back.** It was removed when Experience was synced to the CV; Abdul
+confirmed the CV omits it for space rather than as a correction to his history. The site is
+longer-form than a one-page CV, so it carries it. Original `CONTENT_BRIEF.md` content, unchanged,
+placed after OctaNet — both start in 2024 and the timeline's sort is stable, so array order
+decides, and OctaNet (April–May) is the later of the two. **The open question from two entries ago
+is now closed.**
+
+**3. Calorie Counter AI has its card image** (`/projects/calorie-counter-ai-card.jpeg`, 450x450).
+No `IMAGE PENDING` placeholders remain anywhere on the site.
+
+**⚠ Naming discrepancy, unresolved:** the card graphic is titled **"NutriAI"**, while the CV — and
+therefore `content/data.ts` — calls the project **"Calorie Counter AI"**. The alt text describes
+the artwork truthfully (it says NutriAI, because that is what is in the image), so the two names
+currently sit side by side on the card. **Abdul should pick one.** Still outstanding for this
+project: a hero image and a date. `liveUrl` stays null by design — he confirmed it is not live.
+
+**Verified:** all six timeline entries render in the right order with the right arrangements; all
+four project cards load real images (`natural` sizes non-zero, no placeholders); no horizontal
+overflow; `build`, `lint`, `tsc --noEmit` clean.
+
+### Session 3 (cont.) — 2026-08-27 — Runtime jank fixed: the field was fill-rate bound, not CPU bound
+
+Abdul: the site feels slow and laggy. That is a **runtime** complaint, so Lighthouse was the wrong
+first place to look — I measured the running page.
+
+**The diagnosis, and it is the opposite of what the code looks like.**
+
+| measurement | before |
+|---|---|
+| rAF ticks/sec, background field **on** | **20 / 20 / 23** |
+| rAF ticks/sec, field **hidden** | **36 / 40 / 48** |
+| field's **JavaScript** cost per frame | **0.79 ms** — cheap |
+| field canvas backing store | **2160x1350 = 2.9 megapixels**, repainted 60x/sec |
+
+Hiding one canvas roughly doubled the frame rate while its JS cost under a millisecond. **The
+bottleneck was rasterisation, not script.** `lib/neural-field.ts` is already well optimised where
+it counts — spatial hash for link-finding, alpha-bucketed edge batching, a cached sprite instead
+of `ctx.shadowBlur` — so there was no algorithmic fat to cut. The lever is **how many pixels it
+fills, and how often**. The engine's own `__neuralDebug` comment says exactly this: it measures
+"JavaScript and command-recording time only… the only way to tell 'the simulation is too
+expensive' from 'this machine is rasterising in software'."
+
+**Three changes, all invisible — Abdul's explicit constraint was that mesh density stays.**
+
+1. **`maxDpr` 1.5 → 1** on the site-wide field. Backing store **2.9 MP → 1.3 MP: 2.25x fewer
+   pixels per frame.** The layer is 1px lines and soft cached sprites on near-black; there is no
+   fine detail for the extra ratio to resolve.
+2. **`drawHz: 30`** — a new config. `frame()` now always `step()`s but gates `draw()`. The
+   simulation keeps full-rate timing; only the repaint is throttled. **The cap lifts while the
+   pointer is moving** (`POINTER_FRESH_MS`), so cursor reaction stays at 60fps and only ambient
+   drift is throttled — which is precisely the state the page is in while scrolling or reading.
+   `pActive` alone was not enough for this: it stays true for a pointer resting motionless, so
+   the engine now records `lastPointerAt`.
+3. **`maxBackingPixels: 2_600_000`** — a new config, clamping *area*, which `maxDpr` alone does
+   not: a 2560-wide monitor at DPR 1 is still 3.7 MP and grows quadratically with window size.
+4. `maxPackets` 110 → 60. Each packet is a dot plus a tail stroke.
+
+Both new options default to **off**, so no other call site changed behaviour.
+
+**Measured after (same machine, same session, interleaved A/B):**
+
+| | before | after |
+|---|---|---|
+| rAF ticks/sec, field on | 20 / 20 / 23 | **28 / 44 / 40** |
+| field's JS per frame | 0.79 ms | **0.30 ms** |
+| worst frame | 3.73 ms | **1.43 ms** |
+| backing store | 2.92 MP | **1.30 MP** |
+| scroll frame gap, p95 | 166 ms | **133 ms** |
+| Lighthouse desktop (4 runs) | 87 / 88 / 91 / **62** | **96 / 94 / 96 / 93** |
+| TBT | 210 ms | **80–160 ms** |
+| LCP | 1.2 s | **1.1 s** |
+
+Accessibility, Best Practices and SEO stayed at **100** throughout.
+
+**Verified unchanged:** the field still reacts to the cursor (green-channel rise over lit canvas
+pixels **+17.4**, against +19.1 before — statistically the same); reduced motion still settles to
+**0 running animations and 0 transitions**; a screenshot at DPR 1 is indistinguishable from the
+DPR 1.5 one at the same density and brightness. `build`, `lint`, `tsc --noEmit` clean.
+
+**⚠ Tier 2 was planned and then deliberately NOT done, because the measurement killed it.**
+The plan assumed ~1 MB of JavaScript worth deferring. That figure was **uncompressed, across all
+routes**. What the homepage actually downloads is **279 KiB compressed across 14 files** — a
+reasonable payload for React + GSAP + ScrollTrigger + Lenis + Framer Motion. Deferring below-fold
+sections would have shaved a little hydration work off a page now scoring 93–96, while risking
+SEO and layout stability on SSR'd content. **Not worth it.** If performance work resumes, the
+remaining cost is Script Evaluation (837 ms, mostly the React framework chunk), not payload —
+and that is not something deferring section components meaningfully moves.
+
+### Session 3 (cont.) — 2026-08-27 — Skills synced to the CV; Calorie Counter confirmed not live
+
+**Skills now uses the CV's own five categories, plus one for tooling.** The previous grouping
+(backend / frontend / data-ai-ml / databases / tools) came from `CONTENT_BRIEF.md`; it both missed
+a lot and split technologies differently from how Abdul presents them to employers.
+
+| group | source |
+|---|---|
+| Languages | CV verbatim — Python, Java, C++, C#, SQL, JavaScript, HTML/CSS |
+| Frameworks | CV verbatim — Django, FastAPI, Flask, React, React Native, Next.js |
+| Databases | CV verbatim — PostgreSQL, Oracle, MySQL, SQLite |
+| Libraries | CV verbatim — Pandas, NumPy, Matplotlib, Scikit-learn, Seaborn, PyTorch, Tkinter |
+| Agentic AI | CV verbatim — n8n, Make, OpenAI API, Gemini API, Pinecone |
+| Tools & platforms | **the one group the CV does not name**, but every item is still drawn from it — Firebase/Supabase from project stacks, Gradio + Hugging Face from Customer Segmentation, Pyzk from Pyora, Hostinger VPS from ICPS — plus Git, which the site already listed and the CV does not contradict |
+
+**Newly on the site:** Java, C++, C#, SQL, Next.js, MySQL, SQLite, NumPy, Matplotlib, Seaborn,
+Make, OpenAI API, Pinecone, Supabase, Hostinger VPS.
+
+**A judgement call worth knowing about:** the modelling techniques — KMeans, PCA, RFM analysis,
+Linear Regression, EfficientNet — are **deliberately not repeated** in Skills. They live in the
+individual project stacks, which is exactly where the CV puts them, and they already render as
+tags on those cards. Listing them twice would pad the section rather than inform it. Easy to add
+back as a seventh group if Abdul disagrees, though six is also what the layout wants: `Skills.tsx`
+tiles these three-up on `lg`, so six fills two clean rows with no orphan.
+
+**`coreSkills` is untouched** — the four scored skills that drive the ecosystem and the About
+capability panel. The CV gives no proficiencies, so there was nothing to sync.
+
+**Calorie Counter AI: `liveUrl` is now settled, not pending.** Abdul confirmed the mobile app is
+not live, so there is nothing to link to and the "Live Preview" button stays hidden by design.
+**Still pending from him: card image, hero image and a date.** Until they arrive the card shows
+the `IMAGE PENDING` placeholder at exactly the real asset's size and the detail page omits the
+Date row.
+
+**Still open:** whether **CognoRise InfoTech** was intentionally dropped from the CV or just cut
+for space — it is currently removed from the site to match. See the previous entry.
+
+**Verified:** six groups render three-up with the right items in each, no horizontal overflow;
+`build`, `lint`, `tsc --noEmit` clean.
+
+### Session 3 (cont.) — 2026-08-27 — Experience and Projects synced to the CV
+
+Abdul supplied `Resume (2).pdf` and asked for Experience and Projects to match it.
+**The CV is now the source of truth for those two arrays, not `CONTENT_BRIEF.md`** — it is newer
+and it is the document he sends to employers.
+
+**Experience: four entries became three.**
+
+| CV entry | change |
+|---|---|
+| **ICPS Pvt. Ltd.** — Full-Stack Web Developer, July 2026 – Present, Onsite | **new** — ERP system in React/Django/PostgreSQL |
+| **Pyora Solutions** — Full-Stack Web Developer, July 2025 – July 2026, Hybrid | rewritten: one role, three bullets (Pyzk attendance, POS, CRM) |
+| **OctaNet Services** — Python Developer Intern, April 2024 – May 2024 | kept, title and bullet updated to the CV's wording |
+
+**⚠ Two entries the site had are now gone, and both are deletions of real history — confirm with
+Abdul before treating them as settled:**
+1. **CognoRise InfoTech** (Python Development Intern, March–April 2024) — **the CV does not list
+   it at all.** Removed to match. If it was simply cut from the CV for space rather than
+   dropped from his history, it needs restoring here.
+2. **The separate Pyora internship** (June–Sept 2024) — the CV folds it into the single
+   July 2025 – July 2026 role and carries the Pyzk attendance work as a bullet of that role.
+
+**Projects: three became four.** `Calorie Counter AI` (React Native, Gemini API, JavaScript,
+Supabase) added and listed first, matching the CV's order. Pest Eye's pitch, `type` and stack were
+rewritten — the CV describes a **React Native mobile app *and* a ReactJS web app**, and names
+PyTorch/EfficientNet, where the site said web-only. Customer Segmentation and Netflix had their
+stacks expanded to the CV's full lists.
+
+**`Project.date` is now nullable.** The CV gives no year for Calorie Counter AI, so rather than
+invent one the field is `null` and the detail page drops the row entirely — an empty "Date" row
+reads as a bug. `MediaFrame` already handles null images, so the card shows a labelled
+`IMAGE PENDING` placeholder occupying exactly the space the real asset will.
+
+**[TODO] Calorie Counter AI** — card image supplied 2026-08-27. Still needs a **hero image** and
+a **date**, plus a decision on the name: the card art says **"NutriAI"**, the CV says "Calorie
+Counter AI". **Not** a live link — he confirmed the mobile app is not live, so the button stays
+hidden by design rather than waiting on anything.
+
+**Not touched, and worth a decision:** the CV's Technical Skills are broader than `skillGroups`
+in `content/data.ts` — it adds **Java, C#, Next.js, MySQL, SQLite, NumPy, Matplotlib, Seaborn,
+Make, OpenAI API and Pinecone**. Abdul asked for Experience and Projects only, so Skills was left
+alone. Syncing it is a small, separate change if he wants it.
+
+**Verified:** all three work entries and both education entries render in the timeline in the
+right order with the right arrangements; four project cards render, Calorie Counter first;
+`/projects/calorie-counter-ai` builds as a static route and its detail page shows **no Date row
+and no dead Live/Repo buttons**; `/projects/pest-eye` still shows its date, live link and the new
+stack. `build`, `lint`, `tsc --noEmit` clean.
+
+### Session 3 (cont.) — 2026-08-27 — About composition rebuilt: three panels down to one
+
+Abdul: *"you ruined the design of about i designed now its not looking good."* Fair. The system
+interface he briefed was the right idea; my execution of it was cluttered.
+
+**What was wrong, measured rather than felt.** The portrait was **255x319** inside a 435px column,
+losing to three boxed panels around it — "Active role" (188px wide), "Record" (188px), and the
+capability meters — all set in **10-11px mono**. Five competing frames in half a section, type too
+small to be comfortable, and "Projects 3 / Credentials 11 / BSCS" reading as a debug readout of
+numbers that are weak signal *and* already have whole sections of their own.
+
+**What replaced it: three elements, not five.**
+
+| element | treatment |
+|---|---|
+| Portrait | **397x497** — the anchor, not a thumbnail |
+| Role + location | a **caption line**, not a boxed card — same words, one less frame |
+| Core capability | the **one** framed panel, at `text-sm` instead of 11px mono |
+
+The "Record" panel is gone entirely. The visual column also widened —
+`about-reversed` from `1.15fr / 0.85fr` to `1.05fr / 0.95fr` — because the cramping was partly the
+column, not just the contents.
+
+**The panel's overlap is governed by the stage's bottom padding**, since it is anchored to the
+stage's foot. At `pb-24` it hung ~100px below the portrait and read as falling off the bottom;
+`pb-16` makes it cross the portrait's lower-left corner instead. Noted in the component, because
+it is not obvious from the markup.
+
+**Verified:** Lighthouse **a11y 100 (zero failures) / best-practices 100 / SEO 100 / performance
+91**; mobile 390 keeps the stage at 342px with the panel fully inside and no horizontal overflow;
+reduced motion settles to **0 running animations, 0 transitions, 0 elements stuck invisible**;
+`build`, `lint`, `tsc --noEmit` clean.
+
+**A measurement note worth keeping.** A first reduced-motion count returned **11 running
+animations** — all CSS *transitions* (`border-color`, `backdrop-filter`), not keyframes. They were
+the navbar's glass transition caught in flight by a scroll walk that sampled too early. With a 2s
+settle it is 0. **`getAnimations()` includes transitions; give the page time to settle before
+counting, or a passing page will look broken.**
+
+**Performance is still high-variance on this machine:** 91 here, 87/88 earlier, one 62 outlier —
+all on identical code. Treat the deployed measurement as the real one.
+
+### Session 3 (cont.) — 2026-08-27 — Phase 13 / 14 re-audit after a session of heavy change
+
+Abdul asked whether Phases 13 and 14 still hold after everything this session touched. They did
+not, in three ways — all regressions introduced by my own work, all now fixed and re-measured.
+
+**Phase 13 — PASSES.** `not-found.tsx` with its own metadata; distinct titles everywhere (root
+layout supplies `/`'s default plus a `%s` template, project pages use `generateMetadata`, 404 has
+its own); OG image, `sitemap.ts`, `robots.ts`, favicon all present; `/api/contact` correctly absent
+from the sitemap. **Lighthouse SEO 100**, against a bar of 95.
+*Unchanged pre-existing blocker:* `siteUrl` is still the placeholder `abdulqadir.dev`, and the
+sitemap, canonical tags and OG URLs all derive from it. **Set it before deploying.**
+
+**⚠ Regression 1 — Accessibility fell 100 → 90.** Two real bugs, both mine, both in code written
+this session:
+
+- **`definition-list` + `dlitem`:** the Core capability panel nested `dt`/`dd` two `div` levels
+  deep inside its `<dl>`. The spec (and axe) allow `dl > div > dt/dd`, but the terms must be the
+  wrapper's *direct* children. Restructured, with the meter as a second `dd` rather than a loose
+  `div` for the same reason.
+- **`color-contrast`:** `ScrollRevealText`'s dimmed words measured **2.39:1**
+  (`text-secondary` at `opacity: 0.45` over `bg-base`). At 20px this needs 4.5:1, not the 3:1
+  large-text allowance. Raised the floor to `0.75` (~4.8:1). The reveal still reads because the
+  bigger visual change is the colour travelling to `text-primary`, not the opacity — there is a
+  comment on it now saying **do not lower this**.
+
+**Accessibility is back to 100 with zero failing audits.**
+
+**⚠ Regression 2 — the "zero arbitrary values / zero raw colour" standard.** Phase 14 recorded it;
+`CLAUDE.md` §2 requires it. Measured against `HEAD`: **arbitrary Tailwind classes 0 → 21**, raw
+`rgba()` in `tailwind.config.ts` **4 → 14**. Restored by adding named `meta` / `micro` font sizes,
+a `grid-cols-system` token, reusing the existing `aspect-portrait`, and folding the repeated glass
+literals into `white()` / `shade()` helpers beside `baseAt()`.
+**Nine arbitrary values remain and are deliberate** — `w-[42vw]`, `sm:w-[82%]`, `h-[88%]`,
+`max-w-[30rem]`, `max-w-[860px]`, `min-[1400px]:`, etc. Those are one-off layout geometry, not
+design tokens; naming them would make the code worse, not better.
+
+**⚠ Regression 3 — a 1 MB image was being downloaded to be used as a stencil.**
+`.portrait-reveal` clipped the hero reveal with `mask-image: url('/robotic-portrait-cutout.png')`.
+A CSS mask samples **only the alpha channel**, so the colour data was never used — but the browser
+fetched the full-colour PNG **raw, outside `next/image`**. Lighthouse measured **980 KiB of wasted
+payload**, the page's largest single download.
+
+`scripts/cutout.py` now also emits `public/portrait-reveal-mask.png`: same matte, same crop, black
+RGB, half resolution (a stencil is scaled by `mask-size: contain` anyway). **1,104,991 bytes →
+9,215 bytes — 120x smaller.** Verified the reveal still clips correctly: mask and images both
+resolve to `contain` / `100% 100%`, and the reveal element's rect matches the image's exactly.
+
+Measured effect: **LCP 1.8s → 1.2s**, **total transfer ~1.5 MB → 501 KiB**, wasted image bytes
+**980 KiB → 21 KiB**.
+
+**Phase 14 — everything passes except Performance, plus the deploy.**
+
+| criterion | result |
+|---|---|
+| canvas / cursor / loader behind `next/dynamic({ ssr: false })` | unchanged and still true; the components added this session are DOM+CSS and SSR-safe |
+| full keyboard pass | **40 focus stops, 0 missing `:focus-visible`, 0 missing a focus ring** |
+| full reduced-motion pass | **0 running animations page-wide, 0 elements stuck invisible**, cursor unmounted |
+| easter egg | `sudo hire-me` still reveals both lines; `grep` confirms it is referenced nowhere outside `EasterEgg.tsx` |
+| Accessibility / Best Practices / SEO | **100 / 100 / 100** |
+| Performance | **87–88 desktop median — below the ≥90 bar.** See below. |
+| deploy | still blocked on Abdul's Vercel account |
+
+**On the Performance number, read this before acting on it.** It is the one criterion not met
+locally. What is left is JS bootup — main-thread 3.3s, two long tasks of 235ms and 179ms, TBT
+~210ms — not payload, which is now fixed. Three things to weigh:
+1. **Repeat runs on this machine spread enormously.** Three consecutive runs of *identical* code
+   gave 88, **62**, 87. This file already records a ±18 point spread from machine load alone.
+2. **The measurement was taken while a `next dev` server was also running** on :3000, competing
+   for the same CPU.
+3. **Phase 14 asks for the score against the deployed URL**, not `next start` on localhost —
+   Vercel adds Brotli and a CDN that localhost does not.
+
+So: do not treat 87 as final, and do not chase it with speculative optimisation. **Re-measure on
+the deployed site**, and if it is still under 90 there, the next real lever is deferring or
+trimming client JS — that is where the time actually goes.
+
+### Session 3 (cont.) — 2026-08-27 — Contact form goes live, and orbs become socials-only
+
+**⚠ A real Resend API key was pasted into `.env.example`, which is a *tracked* file.**
+
+`.gitignore` carries an explicit `!.env.example` negation so the template can be committed — so
+the key was one `git add` away from being published to a public repo. It was **not** committed:
+`.env.example` was still untracked, so the key never entered git history and was never pushed.
+
+Fixed by moving it to `.env.local` (covered by `.env*`, confirmed with `git check-ignore`) and
+restoring the template to a bare `RESEND_API_KEY=`. The pasted value also had a stray space after
+the `=`, which was dropped on the way across.
+
+**The rule this is a reminder of:** `.env.example` is documentation and is committed. Real
+credentials go in `.env.local` and nowhere else in the repo.
+
+**The form now actually sends.** With the key in place, a POST to `/api/contact` returned
+`{"ok":true}` and Resend accepted the message — the first genuine end-to-end delivery. Everything
+in the route had been verified except this last hop. **The remaining step is Vercel:** the same
+variable has to be set in the project's environment variables at deploy time, or the deployed form
+falls back to the 503 path.
+
+---
+
+**Orbs are now socials-only; email and phone are printed in full.** Abdul: *"show github linkedin
+instagram in orb node but show email and number so user can see"*.
+
+The reasoning is sound and worth recording, because it is the opposite of what the previous brief
+asked for: **an orb hides what it points at behind an icon.** That is right for a profile you
+click through to, and wrong for an address or a number — those are things a visitor needs to read,
+copy, or dial, and burying the two most direct ways of reaching Abdul under a glyph made them the
+two hardest to use.
+
+So: `contactNodes` is now built straight from `identity.socials` (GitHub, LinkedIn, Instagram) and
+a new `directContacts` filters `contact.methods` down to email and phone, which render as their
+real values on `mailto:` / `tel:` anchors. Both still derive from `identity` — no address or
+number is written twice anywhere.
+
+`InstagramMark` joins `BrandMarks.tsx` for the same reason the other two are there: lucide v1
+ships no brand glyphs and `CLAUDE.md` §2 makes lucide the only icon dependency.
+
+The two direct lines continue the orbs' stagger rather than starting a second one — they are
+simply the fourth and fifth nodes to settle.
+
+**Verified (production build, real headless Chrome):**
+
+| check | result |
+|---|---|
+| end-to-end send | `POST /api/contact` → **`{"ok":true}`**, accepted by Resend with the live key |
+| key safety | `.env.local` confirmed ignored by `git check-ignore`; `.env.example` back to a placeholder; key absent from git history (never committed) |
+| orbs | 3 — GitHub, LinkedIn, Instagram — real hrefs from `identity.socials`, all `target="_blank"` |
+| direct contacts | email and phone rendered as **visible values** (`abdulqadir12511@gmail.com`, `+92 324 542 24298`) on working `mailto:` / `tel:` anchors, each with an `sr-only` label so a screen reader hears "Email: …" rather than a bare string |
+| reduced motion | all orbs at opacity 1, `transform: none`, **0 running animations page-wide** |
+| mobile 390 | orbs on **one row**, direct lines stacked on two, everything inside the viewport, no horizontal overflow |
+| `build`, `lint`, `tsc --noEmit` | clean (still only the pre-existing `spokenLanguages` warning) |
+
+**Follow-up the same session — the email/phone row became a liquid-glass bar.** Abdul: *"make
+email and phone number bar liquid blur"*. `.liquid-bar` is a heavier, wetter glass than
+`.glass-surface`: `blur(22px) saturate(140%)`, a diagonal gradient so the surface has a
+direction, and a one-pixel inner highlight along the top edge — the meniscus is what stops it
+reading as a flat tint. It is a pill on `sm` and up with a hairline between the two values, and
+becomes a `rounded-3xl` stacked panel below that, where a pill would force the phone number to
+wrap. Measured: 496x54 as a row at 1440, 282x99 stacked at 390, inside the viewport at both.
+
+**Only the standard `backdrop-filter` is declared** — no hand-written `-webkit-` twin. Writing
+both lets the production minifier dedupe them down to the prefixed property alone, which Chrome
+honours and Firefox does not; that bug flattened every glass surface on the site once already.
+
+### Session 3 (cont.) — 2026-08-27 — Contact: terminal shrinks to the form, links become orbs
+
+Abdul asked to keep the form inside a compact terminal window and replace the large terminal that
+listed GitHub / LinkedIn / email / phone with four floating orbs.
+
+**What the section was.** One large terminal holding a `$ connect --with` prompt, three full-width
+rows for email/phone/LinkedIn, a résumé row, and *then* the form. The secondary path (the links)
+was the loudest thing in the section, and the shell chrome had stopped being a frame and become
+the design.
+
+**What it is now.** The terminal wraps the form and nothing else — capped at `max-w-2xl` and
+centred, chrome reduced to three dots and a title, no prompt line and no fake command. Below it,
+four glass orbs; below those, the résumé as a quiet text link.
+
+**The fourth link had to be found, not invented.** `contact.methods` only holds email, phone and
+LinkedIn — **GitHub lives in `identity.socials`**. So `contactNodes` in `content/data.ts` is
+*derived*: GitHub from the social, the other three looked up from `contact.methods` by id, in the
+order the section presents them. Each entry is skipped rather than faked if its source disappears,
+so a removed method means one fewer orb, never a dead link. Verified live: the four hrefs are
+`github.com/Abd-ul-Qadir`, the real LinkedIn profile, `mailto:abdulqadir12511@gmail.com` and
+`tel:+9232454224298`, with the two profiles opening in a new tab and `mailto:`/`tel:` staying in
+place.
+
+**Brand marks: `components/ui/BrandMarks.tsx`.** `lucide-react` v1 ships no GitHub or LinkedIn
+glyph, and `CLAUDE.md` §2 makes lucide the sole icon dependency. The decision log had already
+settled what to do when these were genuinely needed — inline SVG, not a second icon package — so
+that is what this is.
+
+**The orbs are three layers on purpose.** The anchor owns size, perspective and tilt; the
+*surface* is the sphere (a gradient lit from the top-left plus an inner highlight, so it reads
+convex rather than as a flat disc); the *sheen* is the reflection, which only appears on hover.
+Splitting them lets the reflection sit above the glass and below the glyph, which is the order
+real glass has. The tilt is written per-orb from that orb's own `pointermove` — no global
+listener, no rAF loop, no React state, and clearing the properties on leave lets the CSS
+transition ease it home.
+
+**One tidy-up the change exposed:** `ContactForm`'s root still carried
+`mt-8 border-t border-border-subtle pt-8`, which existed to separate it from the list of links
+above it. With the list gone that left a stray divider and a band of empty space at the top of the
+terminal. Removed from both the form and its success panel.
+
+**⚠ CORRECTION, again, to the hover-testing note.** The entry below says the earlier "hover does
+not register" finding was caused by `--viewport`'s touch emulation. That is *half* right —
+`--viewport` does disable pointer effects, and dropping it does restore `(hover: hover)`,
+`(pointer: fine)` and the custom cursor. But CSS **`:hover` still does not apply** from
+`Input.dispatchMouseEvent` even in desktop mode: an orb parked under a `--mouse` sweep reported
+`matches(":hover") === false` with its sheen still at 0.
+
+**So the standing rule is:** JS pointer *listeners* can be driven synthetically (that is how the
+About interaction and the hero reveal were verified), but CSS `:hover` cannot be simulated here at
+all. Verify hover-styled declarations through the **`:focus-visible` / `:focus-within` path**,
+which for these orbs is the same declaration list.
+
+**A second false alarm, recorded because the fix would have been wrong.** The tilt appeared not to
+reset on leave. It does — React derives `onPointerLeave` from `pointerout`, so a bare dispatched
+`pointerleave` is an event React never observes. Dispatching `pointerout` with an outside
+`relatedTarget`, which is what a real pointer produces, clears it correctly. **Do not "fix"
+`onPointerLeave` handlers based on a dispatched `pointerleave`.**
+
+**Verified (production build, real headless Chrome):**
+
+| check | result |
+|---|---|
+| orb targets | 4 orbs, real hrefs, profiles `_blank`, `mailto:`/`tel:` in place |
+| accessible names | "GitHub — View work", "LinkedIn — Connect", "Email — Send a message", "Phone — Call or text" (one name per link; the visible label and hint are `aria-hidden` duplicates) |
+| entrance stagger | mid-flight opacities **0.99 / 0.93 / 0.73 / 0.12** — one by one, in the briefed order |
+| focus state | lift `translateZ ≈ 13.1px`, sheen opacity ~1, border → `border-hover`, hint fades in — and **all three other orbs stay at 0** |
+| tilt | `--tilt-x/y` written on pointer move, **cleared on a real leave** |
+| reduced motion | all four orbs at opacity 1, orb `transform: none`, **0 running animations page-wide** |
+| mobile 390 | **2×2**, 72px orbs, all inside the viewport, no horizontal overflow, form 292px wide |
+| form intact | labels, `aria-invalid`, `aria-describedby`, focus-to-first-error, live region, error clearing, sending state, success panel, POST to `/api/contact` with honeypot — all unchanged |
+| API route | still answers (503 without `RESEND_API_KEY`, as designed) |
+| `build`, `lint`, `tsc --noEmit` | clean (still only the pre-existing `spokenLanguages` warning) |
+
+**Scroll choreography untouched.** `SectionTransitions` scrubs the Projects → Contact darkening off
+`#contact`, and the field's story reads `data-section-inner`; both attributes are exactly where
+they were. Nothing in this change goes near the pinned/reel system.
+
+### Session 3 (cont.) — 2026-08-27 — About becomes an AI system interface (and the neural portrait is deleted)
+
+Abdul's follow-up brief **rules out the neural portrait built earlier the same session**: no
+network, no constellation, no particle field in About, because the hero owns the human/robot
+interaction and the background owns the neural field. What he wants instead is an *instrument
+panel* — "viewing the engineer as an intelligent system".
+
+**So `lib/neural-portrait.ts`, `components/effects/NeuralPortrait.tsx` and
+`NeuralPortraitMount.tsx` were deleted, not left lying around.** They were about two hours old.
+Keeping unused engine code because it was expensive to write is how a codebase rots; the reasoning
+that produced it is preserved in the entry below, which is the part worth keeping.
+`PortraitParallax.tsx` also went — the composition owns its own pointer handling now.
+
+**What replaced it: `components/effects/SystemInterface.tsx`.** The portrait anchors a
+two-column micro-layout of three glass modules, every value derived from `content/data.ts`:
+
+| module | source | shown |
+|---|---|---|
+| Active role | `identity.roles[0]`, `identity.location` | Full Stack AI Engineer · Pakistan |
+| Record | `projects.length`, `certifications.length + awards.length`, `education[0]` | 3 · 11 · BSCS 2021–2025 |
+| Core capability | `coreSkills.slice(0, 3)` | React.js 95, Python/Django/FastAPI 90, HTML/CSS/JS 80 |
+
+Nothing is typed in by hand and nothing is invented — change the content and the panel changes.
+
+**The depth technique, which is the whole reason this costs nothing.** The stage owns
+`perspective`; the layer inside owns `preserve-3d` plus a single rotation driven by two custom
+properties; each module carries a *static* `translateZ`. Because the children sit at different
+depths inside one rotating 3D space, **one animated transform produces differential parallax
+across all of them** — no per-module maths, no rAF loop, no React state. The pointer handler
+writes two strings to one element, rAF-throttled. Measured: layers at z 0 / 74 / 116 shift
+1.1 / 4.3 / 6.1 px at half deflection.
+
+**⚠ A bug I wrote and caught before it shipped, worth knowing about generally: Framer Motion
+overwrites `transform` on the element it animates.** The first version put `translateZ` in the
+`style` of the same `motion.div` that animated `opacity/y/scale`. It *looks* correct — until the
+entrance finishes and FM's own transform replaces it, silently flattening the composition to 2D
+with no error anywhere. The fix is the `DepthLayer` wrapper: depth on the outer element, entrance
+on the motion element inside. **Never put a static transform on a Framer Motion element that
+animates transform properties.**
+
+**Two design corrections I only caught by rendering and looking:**
+
+1. **The first arrangement buried his face.** Three panels floated over the portrait; ACTIVE ROLE
+   sat across his cheek and RECORD across his chin. The portrait is supposed to be the thing the
+   system is reading, so the modules moved into their own column and only the capability panel
+   crosses the portrait — across the *torso*, never the face.
+2. **CORE CAPABILITY was clipping the BSCS row.** Fixed from measurements, not by eye: the panel's
+   top landed at 252 against a column ending at 268. Removing the bordered wrapper on the BSCS row
+   and taking the stage's foot from `pb-16` to `pb-24` puts it at 282 against 259 — 23px clear,
+   still crossing ~39px of torso.
+
+**Layout: the copy column now comes first in the DOM** (`lg:grid-cols-about-reversed` + `order`),
+so reading order and the stacked mobile order are heading → text → visual, which is the hierarchy
+the brief asks for. The bio, the Focus/Backend/Frontend list and both badges are **byte-identical**
+— only their column moved.
+
+**Verified (production build, real headless Chrome):**
+
+| check | result |
+|---|---|
+| entrance stagger | at 630 ms the three modules read **0.8 / 0.32 / 0** — arriving one by one, settled by ~900 ms |
+| differential parallax | z 0 / 74 / 116 → **1.12 / 4.25 / 6.10 px** shift, `--sx`/`--sy` written on pointer move |
+| idle cost | all three sheens `opacity: 0`, `animation-play-state: paused` — a resting composition animates nothing but the drift |
+| float drift | `module-float` running on all three with **distinct delays** (-2.4s / -1.2s / -4.8s), not merely declared |
+| keyframes emitted | `module-float` and `module-sheen` present **exactly once** each in the built CSS (see the 2026-08-26 entry — this project silently dropped keyframes before) |
+| reduced motion | modules at full opacity, bars at their real 95/90/80% with no animation, **pointer vars never written**, **0 running animations page-wide** |
+| mobile 390 | clean single-column stack — portrait 0–428, then 459–546, 564–685, 718–862. No overlap, nothing covering text |
+| no collisions | Record ends 259, capability starts 282 |
+| `build`, `lint`, `tsc --noEmit` | clean (still only the pre-existing `spokenLanguages` warning) |
+
+**Not verified:** a real frame-rate number, for the reason in the entry below — rAF is throttled
+in this headless window. The composition has no animation loop at all (one CSS drift per module,
+one transform written on pointer move), so the structural risk is very low, but it is not a
+measurement.
+
+### Session 3 (cont.) — 2026-08-27 — About: the AI Neural Portrait, and a correction to the hover caveat
+
+Abdul asked for a new visual for the **existing** About section: an "AI Neural Portrait" — his
+photo at the centre of a procedurally generated neural network that assembles around it — with
+his copy untouched, and explicitly *not* another constellation.
+
+**Stack decision, taken deliberately.** The brief said "use React Three Fiber / Three.js if
+appropriate" *and* "do not create unnecessary additional Three.js canvases; reuse existing
+Three.js/R3F infrastructure". This project ships **no Three.js at all**, and `CLAUDE.md` §2 makes
+native `<canvas>` the default with WebGL a scoped upgrade rather than a reach. So "reuse the
+existing infrastructure" resolves to the `NeuralField` engine/shell/mount pattern, and that is
+what this follows. Depth is real in the model — every node carries a `z` driving its size,
+brightness and parallax — and projected by hand. No dependency was added.
+
+**Three new files, mirroring the field's separation of concerns:**
+
+- `lib/neural-portrait.ts` — the engine. Simulation lives entirely outside React.
+- `components/effects/NeuralPortrait.tsx` — lifecycle shell only.
+- `components/effects/NeuralPortraitMount.tsx` — `ssr: false` import, viewport deferral, mobile
+  simplification.
+- `components/effects/PortraitParallax.tsx` — the portrait's own cursor tilt, ref-driven.
+
+**What actually makes it not-a-constellation, structurally rather than cosmetically.** The field
+scatters nodes at random and links whatever falls within a radius — that reads as stars: even,
+isotropic, no centre. This engine has *neither* random placement nor proximity linking. Nodes sit
+on concentric **shells**, evenly spaced by angle with bounded deterministic jitter, and every link
+is one of three kinds: `ring` (angular neighbours), `radial` (to the nearest node on the shell
+*inside*, which is what makes it read as network layers), and `core` (innermost shell to the
+portrait's rim). The result has an unmistakable centre and an unmistakable direction of flow.
+
+**The old portrait-tied `NeuralFieldMount` inside the card was removed.** It was a second instance
+of the hero's own engine, clipped to a rectangle — precisely the "smaller repeat of the
+background" the brief rules out. Keeping both would have been noise.
+
+**Two things I got wrong first and had to see on screen to catch:**
+
+1. **The network was invisible.** Drawn over the site-wide field at similar density and
+   brightness, a designed structure just reads as more background mesh. `.ecosystem-scrim` (the
+   Skills fix for the same problem) tops out at 56% of the page colour and was *not* enough here;
+   `.neural-portrait-scrim` sinks the field to 88% locally. That, plus a contrast lift on the
+   links and nodes, is what makes it a distinct object.
+2. **The portrait was a flat grey disc.** The source photo has a light studio backdrop; cropped to
+   a circle on a near-black page it looked pasted on — the same problem `scripts/cutout.py` grades
+   away for the hero. Fixed with `.portrait-well`, a vignette that is fully transparent across the
+   middle 34% so **the face is untouched** and only the backdrop is carried down to the page.
+
+**Geometry is a matched pair and must be changed together:** the DOM circle is 62% of the stage,
+the canvas overflows the stage by 12% (6% below `sm`), and `portraitRadius` / `shellRadii` in the
+engine are derived from those two numbers. The comments in both files say so.
+
+---
+
+**⚠ CORRECTION to the caveat in the entry two above.** That entry claims simulated pointer hover
+"does not register at all in this headless setup". **That was wrong, and the reason is
+`scripts/cdp.mjs --viewport`:** the flag sets `mobile: true` *and* enables touch emulation, so the
+browser reports `(hover: none)` / `(pointer: coarse)` / `maxTouchPoints: 5`. Every pointer effect
+on the site is correctly disabled in that mode — including the custom cursor, which is simply not
+mounted. Hover was never broken; I was testing in touch mode.
+
+**The rule going forward:** run `cdp.mjs` **without `--viewport`** to exercise pointer behaviour,
+and **with** it to exercise the touch/mobile branch. Both are useful; they are not interchangeable.
+
+That correction let me close the loose end from the hero work: **the hero portrait reveal is
+verified.** `--ro` goes 0 → 0.319 with the radius tracking the cursor and decaying after leave,
+the reveal element's rect matches the image's exactly, and its mask resolves to `contain` /
+`100% 100%` — identical to the images' `object-contain object-right-bottom`. Containment is
+structural, as intended.
+
+---
+
+**Verified (production build, real headless Chrome):**
+
+| check | result |
+|---|---|
+| assembly is progressive | ink 0 before in view, then 4% → 13% → 39% → 64% → 97% of final, settling ~1.9s |
+| assembly waits for view | nothing drawn at all until the canvas is 35% on screen |
+| interaction | mean green channel over lit pixels 132.8 → **166.2** with the pointer on the network, decaying back after it leaves (green separates activation-cyan from structural violet/indigo) |
+| portrait parallax | `none` → `perspective(900px) rotateX(0deg) rotateY(-0.863deg)`, clears on leave |
+| reduced motion | network rendered **statically** (2751 ink), pointer changes it by **0 pixels**, no tilt, **0 running animations page-wide** |
+| per-frame cost | **0.017 ms**, by wrapping rAF callbacks and timing them, 4x interleaved A/B (0.596 vs 0.579 ms mean) |
+| mobile 390 | canvas 383px inside a 390px viewport, two shells, 4 packets, bio still visible, no horizontal overflow |
+| tablet 768 | canvas 536px, contained, no overflow |
+| `build`, `lint`, `tsc --noEmit` | clean (still only the pre-existing `spokenLanguages` warning) |
+
+**On the frame-rate measurement, read this before quoting a number:** rAF is *throttled* in this
+headless window — raw frame intervals came back at 200 ms, then 66.7/83.3 ms with `--viewport`,
+which are scheduling artefacts, not cost. The 0.017 ms figure above measures the callback work
+itself and is the trustworthy one. A real fps reading still needs a real browser.
+
+**Also unmeasured:** the pointer branch's own cost. `--viewport` (the only mode where rendering
+ran) puts the engine in touch mode, where `influenceRadius: 0` skips the per-node distance work.
+That is 27 distance calculations per frame, so the risk is negligible, but it is not measured.
+
+**Content untouched**, as asked: the bio, the Focus/Backend/Frontend list and both badges are
+byte-identical. Only the portrait's frame changed.
+
+### Session 3 (cont.) — 2026-08-27 — Hero portrait: cropped to head-and-chest, enlarged, anchored flush right
+
+Abdul sent a reference frame and asked for the hero portrait cropped to that height, then bigger,
+then flush to the section's right edge. **Fair criticism landed mid-task — he had to ask for each
+step instead of getting a composed result.** Recording that here because the lesson is not about
+this portrait: when a request is about how something *looks*, render it, look at it, and judge it,
+rather than making the smallest literal change and handing back the next decision.
+
+**1. The crop.** `HERO_CROP` in `scripts/cutout.py`, applied inside `emit()` so both files
+necessarily share it — the robotic layer is revealed through a mask that assumes pixel-identical
+geometry, so cropping them at separate call sites could silently drift. Final box
+`(0, 40, 828, 925)` of the 832x1248 source: head-and-chest, ~6% headroom.
+
+The right bound is the **subject's silhouette edge, not the frame's**. Measured, not guessed: the
+photo's alpha runs to column 827 and the robotic variant's to 823, so 828 trims the key's ~4
+transparent columns without touching either silhouette. Those columns matter because the hero now
+anchors this image flush to the section's right edge, where they would read as a gap.
+
+**2. The size — and the thing that was actually capping it.** The portrait sat in the grid's
+0.85fr column, which is ~450px at 1440. No amount of `max-w-*` could beat that, which is why it
+kept reading as a small inset picture. It is now **positioned against the section** (`absolute
+bottom-0 right-0`, full height) with the grid keeping an empty cell as a spacer so the copy still
+cannot run under it. Rendered subject width went 449 → 741 at 1440.
+
+**3. Width steps with the viewport: `42vw → 46vw (xl) → 52vw (≥1400px)`, capped at 860px.** A flat
+52vw looked right at 1440 and *wrong* at 1024, where it took over half the screen and crowded the
+CTAs — the copy column does not shrink proportionally, because the tagline keeps its `max-w-xl`.
+Verified there is a clear channel between the tagline and the subject at every desktop width.
+
+**Three things had to move together, and the code says so in three places:** the images'
+`object-position`, `.portrait-reveal`'s `maskPosition` in `tailwind.config.ts`, and `HERO_CROP`.
+The mask is what clips the robotic reveal to the silhouette; if its position disagrees with the
+images' `object-position`, the clip slides off the subject by exactly that gap and the rim/scan
+layers paint outside the body. Both are `right bottom` again after a detour through `bottom`.
+
+**A dead end worth not repeating.** First attempt sized the box to the asset's own ratio (a new
+`aspect-hero-portrait` token) so `object-contain` would not letterbox. That *shrank the box*,
+which unanchored the portrait from the hero baseline and left it floating in mid-air with a gap
+beneath. The 4:5 box is taller than the cropped asset on purpose: `object-contain
+object-right-bottom` pins the image to its bottom edge, so the baseline is preserved and the crop
+alone enlarges the head. The token was reverted. **Do not "fix" the box to match the asset ratio.**
+
+`.hero-portrait`'s bottom feather also moved 76% → 88%: at 76% it was tuned for a near-full-length
+asset with torso to spare, and against the tight crop it started around the tie knot and ate most
+of the chest.
+
+**Verified (production build, real headless Chrome):**
+
+| check | result |
+|---|---|
+| both cut-outs regenerated | subject coverage **59.2%**, matching the recorded reference |
+| flush right | **0px gap** from the viewport's right edge at 1024 / 1280 / 1440 / 1920 |
+| subject size at 1440 | 741px wide, up from 449 |
+| copy clearance | tagline ends before the subject begins at 1024 (28px) and 1280 (19px); at 1440+ the head sits above the tagline band, confirmed by screenshot |
+| horizontal overflow | none at 390 / 768 / 1024 / 1280 / 1440 / 1920 |
+| below `lg` | portrait and its spacer both `display: none`, heading still renders |
+| `build`, `lint`, `tsc --noEmit` | clean (still only the pre-existing `spokenLanguages` warning) |
+
+**Not verified:** the cursor reveal itself. Simulated hover does not register in this headless
+setup (see the caveat in the previous entry), so the robotic layer's alignment rests on the
+mask/`object-position` pairing being correct by construction rather than on a measurement.
+**Abdul should move the cursor over the portrait once and confirm the robot stays inside the
+silhouette.**
+
+### Session 3 (cont.) — 2026-08-27 — Hero cut-outs regenerated, and a résumé download button in the navbar
+
+Two requests. Abdul deleted `public/portrait2-cutout.png` and `public/robotic-portrait-cutout.png`
+and asked for them back, and asked for a "beautiful download resume button in hero or navbar".
+
+**The cut-outs cost one command, which is the whole point of `scripts/cutout.py` being
+committed.** `python scripts/cutout.py <preview_dir>` rebuilt both from the surviving sources
+(`public/portrait2.jpeg`, `public/robotic_portrait.jpeg`). The run reported **subject coverage
+59.2%** — *exactly* the figure this file already recorded as the stable reference, which is what
+confirms the matte came back identical rather than merely plausible. Both files serve 200 from a
+production build and the hero decodes the cut-out at its expected size.
+
+This is the second time that script has paid for itself. **Do not delete it, and do not
+re-derive a cut-out by hand.**
+
+---
+
+**The résumé button went in the navbar, not the hero.** Abdul said "hero or navbar", so this was
+a judgement call: the hero already carries two CTAs (View Projects / Get In Touch) whose entrance
+stagger and scroll transform are tuned, and a third would both crowd that row and mean the
+résumé disappears the moment you scroll. In the navbar it is *persistently* reachable, which is
+what a résumé link is for. Easy to move if Abdul wants it in both.
+
+`components/ui/ResumeButton.tsx`, used twice by `Navbar` — desktop bar and mobile menu.
+
+**Built from the site's existing vocabulary rather than as a new effect:** the border charge is
+the same `.circuit-card` / `.circuit-trace` pair the service and credential cards already use, so
+the one always-visible CTA reads as part of the running system. It costs nothing at rest — the
+trace is authored `opacity: 0` / `animation-play-state: paused` and only the parent's
+`:hover` / `:focus-visible` starts it.
+
+**A second field, `identity.resumeDownloadUrl`.** `resumeUrl` (the Drive *preview* page) stays
+where it is, feeding the Contact panel row — that one is for reading. The button needs the file,
+so it points at Drive's `uc?export=download` endpoint. Verified against the live URL: it answers
+`Content-Disposition: attachment; filename="Resume.pdf"`, 155 KB, **no virus-scan interstitial**
+(Drive only interposes that for large files). Because the response is an attachment the browser
+downloads *without navigating away*, so the button deliberately carries **no `target="_blank"`**
+— a new tab would just be left behind empty. It also carries no `download` attribute, which
+browsers ignore cross-origin anyway.
+
+`Button`'s link branch gained an optional `onClick`, so the mobile menu can close itself when the
+download starts. Navigation stays the link's job, so middle-click and Cmd-click still work.
+
+**⚠ A cascade trap worth keeping: `motion-reduce:` cannot override a `group-*` variant.**
+
+The icon drops 2px on hover. The reduced-motion off-switch was written the obvious way,
+`motion-reduce:transform-none` — and it did nothing: under reduced motion the icon still jumped.
+`group-hover:translate-y-0.5` compiles to **two** class selectors (`.group:hover .group-hover\:…`)
+and `motion-reduce:transform-none` to **one**, so the group variant wins the cascade no matter
+what the media query says. Being inside `@media (prefers-reduced-motion: reduce)` does not raise
+specificity.
+
+The fix is to gate the rule rather than fight it: `motion-safe:group-hover:translate-y-0.5`, so
+under reduced motion the declaration does not exist at all. **Any `motion-reduce:` override of a
+`group-*` / `peer-*` variant in this codebase is silently dead — use `motion-safe:` on the
+variant instead.** Verified both ways: `transform: none` reduced, `matrix(1,0,0,1,0,2)` normal.
+
+---
+
+**Verified (production build at `next start`, real headless Chrome):**
+
+| check | result |
+|---|---|
+| cut-outs regenerated | subject coverage **59.2%**, matching the recorded reference; both files serve `200`; hero decodes the portrait |
+| button href | the `uc?export=download` URL, **no `target`** |
+| trace at rest | `opacity: 0`, `animation-play-state: paused`, **0 running animations** |
+| trace on focus | opacity 1, running, `--trace-angle` advancing 16.0° → 66.7° in 600 ms (≈ 360°/4.4 s, matching the authored 4.5 s), and **no other trace on the page woke up** |
+| icon nudge | `translateY(2px)` on focus, normal motion |
+| keyboard | wordmark → 6 nav links → Résumé, `:focus-visible` at every stop |
+| reduced motion | edge still lights (`opacity: 1`) but `animation: none`, icon `transform: none`, **0 running animations page-wide** |
+| mobile 390px | no résumé link visible until the menu opens; then full-width (342 px in a 390 px viewport), closes the menu on tap; no horizontal overflow |
+| `build`, `lint`, `tsc --noEmit` | clean (still the one pre-existing `spokenLanguages` warning from Abdul's own `Skills.tsx` edit) |
+
+**Measurement caveat — SUPERSEDED, see the newest entry.** This originally recorded that
+simulated hover "does not register at all in this headless setup". The real cause was
+`scripts/cdp.mjs --viewport`, which enables touch emulation and therefore *correctly* disables
+every pointer effect on the site. Run without `--viewport` to test hover; the trace's
+`:focus-visible` verification below stands on its own either way.
+
+### Session 3 — 2026-08-27 — The three missing links, and a real contact form that emails Abdul
+
+Abdul supplied the last outstanding links and asked for a working contact form: *"want to add
+contact form where they can contact me. when user submits form send notificaion on my mail."*
+
+**The links, all three now wired in `content/data.ts`:**
+
+| field | value |
+|---|---|
+| `identity.resumeUrl` | the Google Drive share link (opens Drive's preview page, so every consumer treats it as an external link, not a download) |
+| Pest Eye `liveUrl` | `https://pesteyee.netlify.app/` |
+| Netflix Stock Price Predictor `liveUrl` | `https://netflix-stock-price-predictor-p9li.onrender.com/` |
+
+**Still `[TODO]`: the two repo links.** Abdul gave live URLs only. `repoUrl` stays `null` for
+both, and Phase 9's rule still holds — the button is hidden rather than dead.
+
+The résumé had no consumer anywhere (the field had been `null` since Phase 1), so it needed a
+home. It went into the Contact panel as a dashed-border row under the three contact methods,
+**not** as a fourth `contact.methods` entry: a CV is not a way of contacting someone, it just
+belongs in the same reach-out moment. It renders only when `resumeUrl` is non-null.
+
+---
+
+**The contact form — `CONTENT_BRIEF.md`'s last open question, finally answered.** The brief
+ended by asking whether the contact section ships a working form or just the three direct
+links. Abdul chose the form, delivered by email. `contact.formEnabled` is now `true`.
+
+Three new files, and the split between them is the design:
+
+- **`lib/contact-form.ts`** — the field shape, the length limits and `validateContactForm`,
+  imported by *both* sides. The client runs it so the user gets an instant error instead of a
+  round trip; the server runs the same function because anything can POST to the route
+  directly. One module is what stops the two from drifting into disagreeing about what a valid
+  message is.
+- **`app/api/contact/route.ts`** — validate, then honeypot, then rate limit, and only then
+  send. Sending is deliberately last, so junk costs nothing but CPU.
+- **`components/sections/ContactForm.tsx`** — the terminal skin over a genuine form.
+
+**Why a route handler rather than a client-side POST to a form service:** the Resend API key is
+a send-anything credential and has to stay server-side. It also keeps validation, rate limiting
+and the email's shape ours to control.
+
+**The links stay above the form and were not touched.** They are plain anchors that work with
+JavaScript off, with a missing API key, and with Resend down. The form is the convenience
+layered on top — nobody who needs to reach Abdul depends on the part that can fail.
+
+**Details worth not re-deriving:**
+
+- **The honeypot answers `200 ok`.** Telling a bot it was caught teaches it to try again
+  differently; letting it believe it succeeded keeps it posting into a void. Nothing is sent.
+- **Every value is HTML-escaped into the email body**, and CR/LF is stripped from the subject
+  line — that is header injection, and the form is a public endpoint.
+- **Rate limit is 5/hour/IP, in-process, and is explicitly *not* a security boundary.**
+  Serverless instances do not share memory, so a cold instance starts empty. It raises the cost
+  of casual abuse; if real abuse appears the fix is a shared store, not a bigger Map.
+- **A missing `RESEND_API_KEY` is treated as misconfiguration, not user error:** loud
+  `console.error` for whoever deployed it, `503`, and the visitor is handed the direct email
+  address. The form never silently swallows a message it could not deliver.
+
+---
+
+**⚠ A verification trap, logged because I fell into it and nearly "fixed" working code.**
+
+First browser check reported every invalid field row still painting its *subtle* border, not
+the pink one — `data-invalid="true"` was on the element, `matches()` confirmed the selector hit,
+and the rule was present in the loaded stylesheet. It looked exactly like a specificity bug.
+
+It was a **300 ms `transition: border-color` on `.terminal-field`, sampled at 300 ms.**
+`getComputedStyle` during a transition returns the interpolated value, not the target. Sampling
+at 50/200/400/800 ms showed it resolving cleanly to `rgb(236, 72, 153)`.
+
+The rule now: **when a computed style disagrees with a rule you can see matching, check for a
+transition on that property before touching the CSS.** This file has now recorded two separate
+phantom regressions caused by measuring at the wrong moment (the other being frame rate) — both
+times the code was already correct.
+
+---
+
+**Verified (production build at `next start`, real headless Chrome via `scripts/cdp.mjs`):**
+
+| check | result |
+|---|---|
+| route: empty body / bad email / short message | `400` with per-field errors, all three fields |
+| route: honeypot filled | `200 {"ok":true}`, nothing sent |
+| route: malformed JSON | `400` |
+| route: valid, no API key | `503`, body names the direct email address |
+| route: valid, bogus API key | `502` — Resend's rejection is **handled, not thrown** |
+| rate limit | 5 valid POSTs pass, the 6th returns `429` |
+| labels | all three are real `<label for>` pairs; `type="email"`, `autoComplete` set |
+| invalid submit | `aria-invalid="true"`, `aria-describedby` resolves to the error text, focus moves to the first bad field, polite live region announces the summary |
+| error clears | fixing one field clears only that field's error; the others stay |
+| keyboard | résumé link → name → email → message → submit → mailto, `:focus-visible` at every stop, honeypot never reached |
+| sending state | button disabled and relabelled, all three fields disabled, status "Sending your message…" |
+| success state | form replaced by a `role="status"` confirmation + "Send another message" |
+| reduced motion | **0 running animations page-wide** while sending (25 in the control run) |
+| responsive | 390 / 768 / 1440 — no horizontal overflow at any width, error text wraps inside the viewport |
+| `build`, `lint`, `tsc --noEmit` | clean (the one warning is still the pre-existing unused `spokenLanguages` from Abdul's own edit to `Skills.tsx`) |
+
+**The one path that could not be tested here: a genuinely successful send.** It needs Abdul's
+real Resend key. Everything up to and including Resend's own rejection of a bad key is
+verified; the success *UI* was exercised with a stubbed `fetch`.
+
+**Next up / needs Abdul:**
+
+1. **Create a Resend account at https://resend.com and generate an API key.** Sign up with
+   **abdulqadir12511@gmail.com** — while the sender is Resend's shared `onboarding@resend.dev`,
+   Resend only delivers to the account owner's address.
+2. Put it in `.env.local` as `RESEND_API_KEY=...` (see `.env.example`), restart the dev server,
+   and send one real message end to end.
+3. Add the same variable to the Vercel project when the deploy happens.
+4. Still outstanding from before: the Vercel deploy itself, the Lighthouse re-run against the
+   deployed URL, the two repo links, and the navbar wordmark SVG.
 
 ### Session 2 (cont.) — 2026-08-26 — A signal language across the whole page, and a dead-keyframes bug
 
@@ -2100,6 +3679,19 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-08-27 — `resend` added as a dependency (`CLAUDE.md` §2 requires logging this).** It is
+  not a UI/animation/particle package, so it does not compete with anything in §2; it is the
+  mail transport for the contact form, and it is the provider `CONTENT_BRIEF.md` itself named.
+  Chosen over Web3Forms/Formspree because the API key stays server-side in a route handler
+  instead of shipping to the browser, and over Gmail SMTP + Nodemailer because Gmail SMTP is
+  unreliable from serverless functions. It is confined to `app/api/contact/route.ts` — no
+  client component imports it, so it adds nothing to the client bundle.
+- **2026-08-27 — form error states reuse `accent-pink`; no new "danger" token was invented.**
+  `DESIGN_SYSTEM.md` has no error colour. Rather than guess one (`CLAUDE.md` §1 forbids that),
+  the invalid state uses the existing `accent-pink`, which measures ~5.6:1 on `bg-base` and so
+  passes AA for the error text. Colour is never the only signal: the row also carries written
+  text wired up with `aria-describedby`, and the control carries `aria-invalid`.
+
 - **2026-08-26 — the Phase 12 Hero → About travelling blob is deleted, and the macro-layer is
   largely superseded by the field's scroll story.** `PHASE_PLAN.md` Phase 12 specifies a
   travelling gradient blob folded into the hero timeline. Abdul asked for it removed: it read
@@ -2218,8 +3810,11 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
   wired 2026-08-21.** Zero image placeholders remain.
 - **Navbar wordmark is a 156x29 raster** and looks jagged. Needs an SVG or a 2-3x PNG from
   Abdul.
-- **The hero portrait cut-out is derived, not supplied.** Regenerate it if `portrait.png`
-  changes; a real background-removed export would be better than any luminance key.
+- **The hero portrait cut-outs are derived, not supplied — but regenerating them is one
+  command.** `python scripts/cutout.py` rebuilds both `portrait2-cutout.png` and
+  `robotic-portrait-cutout.png` from the committed sources. Re-run successfully on 2026-08-27
+  after Abdul deleted both, reproducing the reference **59.2% subject coverage** exactly. A real
+  background-removed export would still beat any derived key, if one is ever available.
 - **Loader still appears ~600ms after first paint** when motion is enabled, instead of
   covering the page from the first frame. See the session entry dated 2026-08-21 for the full
   fix (SSR the overlay + an inline `<head>` script setting `data-loader`).
@@ -2233,15 +3828,20 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
   *Programming for Everybody (Getting Started with Python)* (University of Michigan), and both
   the Hult Prize and Data Fest entries turned out stronger/more specific than the brief said
   (Hult is a **winning team**, not just participation).
-- **Links still `[TODO]`:** résumé/CV link; live + repo links for **Pest Eye** and **Netflix
-  Stock Price Predictor** (Customer Segmentation's Hugging Face Space was recovered from its
-  screenshot and is wired). All five certification links are now resolved — four Coursera
-  verify URLs, and n8n opens a lightbox as it has no public URL. Phase 9 must degrade these gracefully (button hidden/disabled, never a
-  dead click).
-- **Open content question:** `CONTENT_BRIEF.md` ends by asking whether the contact section
-  ships a working form (needs Resend or a serverless function) or just the three direct
-  links. Unanswered — Phase 10 ships the three links and keeps this flagged unless Abdul
-  says otherwise first.
+- **Links — mostly resolved 2026-08-27.** ~~Résumé/CV link~~ (Google Drive share link, wired
+  into `identity.resumeUrl` and rendered as a row in the Contact panel) and ~~live links for
+  **Pest Eye** and **Netflix Stock Price Predictor**~~ are all supplied and wired.
+  **Still outstanding: the `repoUrl` for those same two projects** — Abdul gave live URLs only.
+  Both stay `null`, so the repo button is hidden rather than dead, per Phase 9's rule. All five
+  certification links were already resolved — four Coursera verify URLs, and n8n opens a
+  lightbox as it has no public URL.
+- ~~**Open content question:** working contact form or just the three direct links?~~
+  **Answered 2026-08-27: both.** The three links are unchanged and the form ships below them,
+  posting to `/api/contact` and delivered by Resend. See the Session 3 log entry.
+  **`RESEND_API_KEY` is set locally as of 2026-08-27** and a real message was delivered
+  end-to-end (`{"ok":true}` from Resend). It lives in `.env.local`, which is gitignored — **it is
+  therefore not in the repo and will not travel to Vercel by itself.** The one remaining step is
+  adding the same variable to the Vercel project's environment variables at deploy time.
 - **Service sub-points are derived, not supplied.** The checkmark bullets under each service
   card (e.g. "React front-ends", "Business process automation") are condensed restatements of
   that service's own description in `CONTENT_BRIEF.md` — `PHASE_PLAN.md` Phase 7 asks for
@@ -2264,6 +3864,23 @@ would be misleading.**
 | SEO            | **100**        | **100**                 | 2026-08-21 |
 
 Desktop: LCP 0.7s, TBT 40ms, CLS 0.
+
+**Re-measured 2026-08-27**, after this session's About / Contact / Hero rework, on a local
+production build (`next build` + `next start`), Lighthouse CLI, desktop preset, three runs:
+
+| Category       | 2026-08-27 (desktop) | vs 2026-08-21 |
+|----------------|----------------------|---------------|
+| Performance    | **93–96** after the 2026-08-27 raster fix (was 87–91) | recovered |
+| Accessibility  | **100**              | held (after fixing two regressions — see the session log) |
+| Best Practices | **100**              | held |
+| SEO            | **100**              | held |
+
+Desktop: LCP 1.2s, TBT ~210ms, CLS 0.008, total transfer 501 KiB.
+
+**The drop is bootup time, not payload** — payload got substantially *better* this session
+(1.5 MB → 501 KiB, after the 1 MB CSS-mask PNG was replaced with a 9 KB stencil). The remaining
+cost is client JS execution. Measure it on the deployed URL before acting on it: three runs of
+identical code here gave 88 / 62 / 87, and a `next dev` server was competing for CPU throughout.
 
 **Read the mobile number carefully before acting on it:**
 - Lighthouse's default preset applies **4× CPU throttling and slow-4G**, on top of a dev

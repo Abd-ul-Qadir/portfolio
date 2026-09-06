@@ -2,10 +2,10 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import Image from "next/image";
-
+import { ResumeButton } from "@/components/ui/ResumeButton";
 import { identity, navItems } from "@/content/data";
 import { useReducedMotion } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
@@ -14,16 +14,14 @@ import { cn } from "@/lib/utils";
 const SPY_IDS = ["hero", ...navItems.map((item) => item.id)];
 
 /**
- * Veiled over the hero, glass once scrolled — plus a scroll-spy active-section indicator and
- * an animated underline on the current item.
+ * A transparent hero navigation that compacts into a bounded glass instrument panel.
  *
- * Both states tint *down* toward the page background rather than washing white, because the
- * bar sits over the live neural field: see `.glass-nav` / `.nav-veil` in `tailwind.config.ts`
- * for why `.glass-surface` is the wrong treatment here.
- *
- * Framer Motion, deliberately: this is a **discrete state transition** (transparent → glass)
- * and a `layoutId` underline, not a timeline scrubbed to scroll position, so it is not
- * ScrollTrigger's job (`CLAUDE.md` §2, `PHASE_PLAN.md` Phase 4).
+ * The glass lives on the max-width shell rather than the full viewport-width header. That is
+ * both a stronger composition and a smaller backdrop-filter area. Framer Motion is used only
+ * for the discrete active underline and mobile disclosure, never for scroll scrubbing. The
+ * complete link row only appears at `xl`: six destinations plus the resume action need genuine
+ * breathing room, so intermediate laptop widths get the compact disclosure instead of a row of
+ * increasingly tiny labels.
  */
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -31,14 +29,6 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const reducedMotion = useReducedMotion();
 
-  /**
-   * Scroll-spy plus the transparent -> glass switch.
-   *
-   * An IntersectionObserver with a band across the middle of the viewport marks a section
-   * active while it occupies the reading area. Deliberately *not* computed from cached
-   * `offsetTop` values: Phase 11 pins the hero with ScrollTrigger, which changes section
-   * offsets while scrolling, and cached offsets would silently go stale.
-   */
   useEffect(() => {
     const sections = SPY_IDS.map((id) => document.getElementById(id)).filter(
       (element): element is HTMLElement => element !== null,
@@ -67,7 +57,6 @@ export function Navbar() {
     };
   }, []);
 
-  // Close the mobile menu on Escape, and whenever a link is followed.
   useEffect(() => {
     if (!menuOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -78,135 +67,149 @@ export function Navbar() {
   }, [menuOpen]);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-nav transition-all duration-500 ease-smooth",
-        scrolled || menuOpen
-          ? "glass-nav border-x-0 border-t-0 shadow-elevated"
-          : "border-transparent bg-transparent",
-      )}
-    >
-      {/* At rest over the hero the bar carries no surface of its own, which left the nav
-          labels sitting directly on the neural mesh — bright cyan connections crossed the
-          12px mono text and made it unreadable. This veil darkens and blurs just the band
-          behind the labels and fades out before it ends, so the bar still reads as
-          transparent over the hero rather than as a solid strip.
-
-          Cross-faded rather than conditionally rendered, so it hands over to `.glass-nav`
-          smoothly instead of popping at the 24px scroll threshold. */}
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-nav px-3 pt-3 sm:px-5">
+      {/* At rest, this masked veil keeps the live neural field from crossing the labels while
+          preserving the intended transparent-over-hero appearance. */}
       <div
         aria-hidden
         className={cn(
-          "nav-veil pointer-events-none absolute inset-x-0 top-0 h-32 transition-opacity duration-500 ease-smooth",
+          "nav-veil pointer-events-none fixed inset-x-0 top-0 h-32 transition-opacity duration-500 ease-smooth",
           scrolled || menuOpen ? "opacity-0" : "opacity-100",
         )}
       />
 
-      <nav
-        aria-label="Primary"
+      <div
         className={cn(
-          // `relative` so the nav paints above the absolutely-positioned veil behind it.
-          "relative mx-auto flex max-w-6xl items-center justify-between px-6 transition-height duration-500 ease-smooth sm:px-8",
-          scrolled ? "h-14" : "h-20",
+          "pointer-events-auto relative mx-auto max-w-6xl overflow-hidden border transition-all duration-500 ease-smooth",
+          scrolled || menuOpen ? "glass-nav" : "border-transparent bg-transparent",
+          menuOpen ? "rounded-panel" : "rounded-pill",
         )}
       >
-        <a href="#hero" aria-label={`${identity.fullName}, back to top`} className="flex items-center">
-          {/* Abdul's own wordmark. The source is 156x29, so it is rendered at 124px wide —
-              under its native size, which keeps it from looking soft on 2x displays. It is
-              light-on-dark artwork already, so no filter is needed. */}
-          <Image
-            src="/brand/wordmark.png"
-            alt={identity.fullName}
-            width={124}
-            height={23}
-            priority
-            className="h-auto w-wordmark"
-          />
-        </a>
-
-        <ul className="hidden items-center gap-8 md:flex">
-          {navItems.map((item) => {
-            const isActive = activeId === item.id;
-            return (
-              <li key={item.id} className="relative">
-                <a
-                  href={item.href}
-                  aria-current={isActive ? "true" : undefined}
-                  className={cn(
-                    "relative block py-2 font-mono text-xs uppercase tracking-label transition-colors duration-300",
-                    isActive
-                      ? "text-text-primary"
-                      : "text-text-secondary hover:text-text-primary",
-                  )}
-                >
-                  {item.label}
-                  {isActive ? (
-                    <motion.span
-                      layoutId="nav-underline"
-                      // Under reduced motion the underline still moves to the right item, it
-                      // just does not slide there.
-                      transition={
-                        reducedMotion
-                          ? { duration: 0 }
-                          : { type: "spring", stiffness: 380, damping: 30 }
-                      }
-                      className="absolute inset-x-0 -bottom-0.5 h-px bg-primary"
-                    />
-                  ) : null}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          className="text-text-secondary transition-colors hover:text-text-primary md:hidden"
-        >
-          {menuOpen ? (
-            <X aria-hidden className="h-5 w-5" />
-          ) : (
-            <Menu aria-hidden className="h-5 w-5" />
+        <nav
+          aria-label="Primary"
+          className={cn(
+            "relative flex items-center justify-between px-3 transition-height duration-500 ease-smooth sm:px-5",
+            scrolled ? "h-14" : "h-16",
           )}
-        </button>
-      </nav>
-
-      <AnimatePresence initial={false}>
-        {menuOpen ? (
-          <motion.div
-            id="mobile-nav"
-            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-            animate={reducedMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-            transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden md:hidden"
+        >
+          <a
+            href="#hero"
+            aria-label={`${identity.fullName}, back to top`}
+            className="flex min-w-0 items-center rounded-pill py-2"
           >
-            <ul className="flex flex-col gap-1 px-6 pb-6 sm:px-8">
-              {navItems.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    aria-current={activeId === item.id ? "true" : undefined}
-                    className={cn(
-                      "block py-2 font-mono text-sm uppercase tracking-label transition-colors",
-                      activeId === item.id
-                        ? "text-accent-violet-text"
-                        : "text-text-secondary hover:text-text-primary",
-                    )}
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
+            <Image
+              src="/brand/wordmark-transparent.png"
+              alt={identity.fullName}
+              width={124}
+              height={23}
+              priority
+              className="h-auto w-wordmark shrink-0"
+            />
+          </a>
+
+          <div className="hidden items-center gap-3 xl:flex">
+            <ul className="flex items-center gap-0.5">
+              {navItems.map((item) => {
+                const isActive = activeId === item.id;
+
+                return (
+                  <li key={item.id}>
+                    <a
+                      href={item.href}
+                      aria-current={isActive ? "true" : undefined}
+                      className={cn(
+                        "relative rounded-pill px-3 py-2 font-mono text-xs uppercase tracking-label transition-colors duration-300",
+                        isActive
+                          ? "bg-bg-glass text-text-primary"
+                          : "text-text-secondary hover:bg-bg-glass hover:text-text-primary",
+                      )}
+                    >
+                      {item.label}
+                      {isActive ? (
+                        <motion.span
+                          layoutId="nav-underline"
+                          transition={
+                            reducedMotion
+                              ? { duration: 0 }
+                              : { type: "spring", stiffness: 380, damping: 30 }
+                          }
+                          className="absolute inset-x-3 bottom-1 h-px bg-primary"
+                        />
+                      ) : null}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+
+            <div className="border-l border-border-subtle pl-3">
+              <ResumeButton />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-subtle bg-bg-glass text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary xl:hidden"
+          >
+            {menuOpen ? (
+              <X aria-hidden className="h-5 w-5" />
+            ) : (
+              <Menu aria-hidden className="h-5 w-5" />
+            )}
+          </button>
+        </nav>
+
+        <AnimatePresence initial={false}>
+          {menuOpen ? (
+            <motion.div
+              id="mobile-nav"
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              animate={reducedMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
+              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-hidden border-t border-border-subtle xl:hidden"
+            >
+              <ul className="grid grid-cols-2 gap-2 p-3 sm:p-4">
+                {navItems.map((item, index) => {
+                  const isActive = activeId === item.id;
+
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={isActive ? "true" : undefined}
+                        className={cn(
+                          "flex items-center gap-2 rounded-card border px-3 py-3 font-mono text-xs uppercase tracking-label transition-colors",
+                          isActive
+                            ? "border-border-hover bg-bg-glass text-text-primary"
+                            : "border-transparent text-text-secondary hover:border-border-subtle hover:bg-bg-glass hover:text-text-primary",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={isActive ? "text-accent-cyan" : "text-text-secondary"}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        {item.label}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+                <ResumeButton fullWidth onNavigate={() => setMenuOpen(false)} />
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </header>
   );
 }

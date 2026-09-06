@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
  * *Why the nodes are DOM elements and the lines are SVG, rather than one canvas:* every node
  * here is a real labelled control that has to be reachable by keyboard and readable by a
  * screen reader, and canvas content is neither. The line-connection *approach* is shared with
- * the `NeuralField` engine (thin lines, distance-driven opacity, violet on dark); the ambience
+ * the `NeuralField` engine (thin lines, distance-driven opacity, copper on dark); the ambience
  * behind this ecosystem is the site-wide field itself. Logged in PROGRESS.md's decision log.
  */
 
@@ -39,7 +39,25 @@ import { cn } from "@/lib/utils";
 // ring as well, which both contradicted that and duplicated them — they are already listed in
 // full, with their individual technologies, in the tag list below this ecosystem. Removing that
 // ring is also what removes the label collisions the two rings caused between them.
-const ORBIT_RADIUS = 0.4;
+// 0.43, not 0.4: with only four nodes the ring was leaving a wide dead band inside a 672px
+// square. Pushing them out and shrinking the box (below) makes the composition denser without
+// making anything smaller — the nodes and hub are sized in `rem`, so only the empty space moves.
+const ORBIT_RADIUS = 0.43;
+
+/**
+ * The same radius, tightened on a narrow container.
+ *
+ * **A node is wider than its circle** — the label sits under it and is what actually defines the
+ * node's footprint. On a phone the stage is roughly the viewport width, so at 0.43 the outermost
+ * labels ran past both edges and were silently clipped by the section's `overflow-hidden`
+ * (measured: `left: -5`, `right: 395` in a 390px viewport). On desktop the same spill is
+ * harmless — the stage is `max-w-xl` inside a much wider container, so labels simply extend into
+ * the space around it.
+ *
+ * Driven off the measured container width rather than a CSS breakpoint, because the SVG geometry
+ * is computed in JS and has to agree with whatever width the element actually got.
+ */
+const orbitRadiusFor = (width: number) => (width > 0 && width < 420 ? 0.33 : ORBIT_RADIUS);
 
 /**
  * Gap, in viewBox units, between a connection's end and the circle it meets.
@@ -88,18 +106,18 @@ function nodeSize(proficiency: number) {
  * Now both carry it: a 95% skill sits visibly brighter than an 80% one before you touch
  * anything.
  *
- * Built from `--accent-violet` through `color-mix` so it stays a token, never a hex literal
+ * Built from `--accent-copper` through `color-mix` so it stays a token, never a hex literal
  * (`CLAUDE.md` §2). Unscored stack groups get a deliberately faint halo — present enough to
  * belong to the same system, dim enough that they never compete with the scored skills.
  */
 function nodeGlow(proficiency: number, isActive: boolean) {
   if (isActive) {
-    return `0 0 48px color-mix(in srgb, var(--accent-violet) 65%, transparent)`;
+    return `0 0 48px color-mix(in srgb, var(--accent-copper) 65%, transparent)`;
   }
   const t = (proficiency - 80) / 15;
   const blur = Math.round(18 + t * 24);
   const strength = Math.round(24 + t * 26);
-  return `0 0 ${blur}px color-mix(in srgb, var(--accent-violet) ${strength}%, transparent)`;
+  return `0 0 ${blur}px color-mix(in srgb, var(--accent-copper) ${strength}%, transparent)`;
 }
 
 /**
@@ -117,8 +135,8 @@ function nodeFill(proficiency: number) {
   const edge = Math.round(16 + t * 12);
   return (
     `radial-gradient(circle at 50% 40%, ` +
-    `color-mix(in srgb, var(--accent-violet) ${core}%, transparent) 0%, ` +
-    `color-mix(in srgb, var(--accent-indigo) ${edge}%, transparent) 58%, ` +
+    `color-mix(in srgb, var(--accent-copper) ${core}%, transparent) 0%, ` +
+    `color-mix(in srgb, var(--accent-gold) ${edge}%, transparent) 58%, ` +
     `transparent 80%)`
   );
 }
@@ -158,13 +176,17 @@ export function SkillEcosystem() {
 
   /** viewBox units per CSS pixel. 0 until the first measurement lands. */
   const unit = box.width > 0 ? 100 / box.width : 0;
+  const orbitRadius = orbitRadiusFor(box.width);
   /** Where a connection starts: the hub's edge, plus a little air. */
   const hubEdge = (box.hub / 2) * unit + LINE_GAP;
 
   const active = nodes.find((node) => node.id === activeId) ?? null;
 
   return (
-    <div ref={rootRef} className="relative mx-auto aspect-square w-full max-w-2xl">
+    <div
+      ref={rootRef}
+      className="ecosystem-stage relative mx-auto aspect-square w-full max-w-xl"
+    >
       {/* Local well in the background field — see `.ecosystem-scrim`. Sits behind everything
           this component draws but above the site-wide field, which is `fixed` at `-z-20`. */}
       <div aria-hidden className="ecosystem-scrim pointer-events-none absolute -inset-16" />
@@ -173,7 +195,7 @@ export function SkillEcosystem() {
           ring and the nodes all turn together, so the geometry stays rigid while it spins.
           The hub and the info panel are deliberately OUTSIDE it — the hub is the axis and its
           lettering must stay upright, and the panel is UI, not part of the orbit. */}
-      <div className="absolute inset-0 animate-ecosystem-spin motion-reduce:animate-none">
+      <div className="ecosystem-rotor absolute inset-0 animate-ecosystem-spin motion-reduce:animate-none">
       {/* Connecting lines back to the centre. Decorative — every node they connect is a
           real labelled control in the DOM below. */}
       <svg
@@ -200,31 +222,129 @@ export function SkillEcosystem() {
             x2="100"
             y2="100"
           >
-            <stop offset="0%" stopColor="var(--accent-violet)" />
-            <stop offset="100%" stopColor="var(--accent-cyan)" />
+            <stop offset="0%" stopColor="var(--accent-copper)" />
+            <stop offset="52%" stopColor="var(--accent-gold)" />
+            <stop offset="100%" stopColor="var(--accent-teal)" />
           </linearGradient>
+          <radialGradient id={`${gradientId}-well`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--bg-surface)" stopOpacity="0.74" />
+            <stop offset="72%" stopColor="var(--bg-base)" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="var(--bg-base)" stopOpacity="0" />
+          </radialGradient>
         </defs>
-        {/* The orbit itself, drawn faintly. `DESIGN_SYSTEM.md` describes the nodes as
-            "floating/orbiting" the hub; without the path they sit on, four nodes on a cross
-            read as a static diagram rather than as a system with a shape. */}
+
+        {/* A static optical well separates the rotor from the site-wide neural field without
+            paying for another blur or backdrop-filter region. */}
         <circle
           cx="50"
           cy="50"
-          r={ORBIT_RADIUS * 100}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth="0.15"
-          strokeDasharray="0.9 2.6"
-          opacity="0.28"
+          r={orbitRadius * 100 + 5}
+          fill={`url(#${gradientId}-well)`}
+          stroke="var(--border-subtle)"
+          strokeWidth="0.16"
         />
 
-        {nodes.map((node, index) => {
+        {/* Primary carrier: the continuous line is the track; the asymmetric filled signal
+            rotates independently around it. This uses a transform on one SVG group rather than
+            animating stroke paint every frame. `pathLength=100` keeps the pattern identical at
+            both responsive radii. */}
+        <circle
+          cx="50"
+          cy="50"
+          r={orbitRadius * 100}
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="0.32"
+          opacity="0.9"
+        />
+        <g className="ecosystem-track-runner animate-ecosystem-track motion-reduce:animate-none">
+          <circle
+            cx="50"
+            cy="50"
+            r={orbitRadius * 100}
+            pathLength="100"
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth="0.72"
+            strokeLinecap="round"
+            strokeDasharray="18 7 3 72"
+            opacity="0.92"
+          />
+        </g>
+        <circle
+          cx="50"
+          cy="50"
+          r={orbitRadius * 100}
+          pathLength="100"
+          fill="none"
+          stroke="var(--accent-teal)"
+          strokeWidth="0.24"
+          strokeLinecap="round"
+          strokeDasharray="0.25 2.25"
+          opacity="0.48"
+        />
+
+        {/* Precision bezel: one boundary and one dashed circle create the graduated edge.
+
+            **One `<circle>`, not 48 tick elements.** A wide stroke with a mostly-gap dash
+            pattern renders as evenly spaced ticks for the cost of a single path — the whole
+            point being that this stays cheap while the composition gets denser. */}
+        <circle
+          cx="50"
+          cy="50"
+          r={orbitRadius * 100 + 5}
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="0.18"
+          opacity="0.8"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={orbitRadius * 100 + 5}
+          pathLength="100"
+          fill="none"
+          stroke="var(--accent-gold)"
+          strokeWidth="1.15"
+          strokeDasharray="0.22 2.28"
+          opacity="0.42"
+        />
+
+        {/* Inner telemetry track anchors the hub. Its short copper runner travels in the
+            opposite direction, separating it clearly from the outer signal without an oval
+            axis or any per-frame JavaScript. */}
+        <circle
+          cx="50"
+          cy="50"
+          r={orbitRadius * 100 * 0.62}
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="0.2"
+          opacity="0.72"
+        />
+        <g className="ecosystem-track-runner animate-ecosystem-track-reverse motion-reduce:animate-none">
+          <circle
+            cx="50"
+            cy="50"
+            r={orbitRadius * 100 * 0.62}
+            pathLength="100"
+            fill="none"
+            stroke="var(--accent-copper)"
+            strokeWidth="0.38"
+            strokeLinecap="round"
+            strokeDasharray="14 86"
+            strokeDashoffset="34"
+            opacity="0.72"
+          />
+        </g>
+
+        {nodes.map((node) => {
           const dx = Math.cos(node.angle);
           const dy = Math.sin(node.angle);
           // A connection runs from the hub's edge to the node's edge, never centre to centre:
           // ending at the centres put the line *through* both circles.
           const nodeEdge =
-            ORBIT_RADIUS * 100 - ((nodeSize(node.proficiency) * box.rem) / 2) * unit - LINE_GAP;
+            orbitRadius * 100 - ((nodeSize(node.proficiency) * box.rem) / 2) * unit - LINE_GAP;
           const x1 = 50 + dx * hubEdge;
           const y1 = 50 + dy * hubEdge;
           const x = 50 + dx * nodeEdge;
@@ -250,26 +370,27 @@ export function SkillEcosystem() {
                 opacity={isActive ? 1 : 0.75}
                 className="transition-all duration-500 ease-smooth"
               />
-              {/* The signal travelling that connection: one short dash sweeping the line's
-                  length, inward toward the hub. Pure CSS on an SVG stroke — no JS and no
-                  per-frame work — and it stops dead under reduced motion. Each connection is
-                  delayed so they never pulse in unison. */}
+              {/* Connection traffic is now interaction-driven. Resting used to run four SVG
+                  stroke animations forever; hover/focus starts one signal on the active path,
+                  making the response clearer while removing continuous paint work. */}
               <line
                 x1={x1}
                 y1={y1}
                 x2={x}
                 y2={y}
-                stroke="var(--accent-cyan)"
+                stroke="var(--accent-teal)"
                 strokeWidth={isActive ? 1 : 0.7}
                 strokeLinecap="round"
                 // Dash and travel distance both derive from the measured span, so the pulse
                 // sweeps exactly the visible segment however long it happens to be.
                 strokeDasharray={`2 ${Math.max(span - 2, 1)}`}
-                opacity={isActive ? 0.95 : 0.7}
-                className="animate-synapse-flow transition-all duration-500 ease-smooth motion-reduce:animate-none motion-reduce:opacity-0"
+                opacity={isActive ? 0.95 : 0}
+                className={cn(
+                  "transition-opacity duration-300 ease-smooth motion-reduce:animate-none motion-reduce:opacity-0",
+                  isActive && "animate-synapse-flow",
+                )}
                 style={
                   {
-                    animationDelay: `${index * 0.8}s`,
                     "--flow-span": span,
                   } as CSSProperties
                 }
@@ -282,8 +403,8 @@ export function SkillEcosystem() {
       {/* Orbiting skill nodes. */}
       <ul className="contents">
         {nodes.map((node) => {
-          const x = 50 + Math.cos(node.angle) * ORBIT_RADIUS * 100;
-          const y = 50 + Math.sin(node.angle) * ORBIT_RADIUS * 100;
+          const x = 50 + Math.cos(node.angle) * orbitRadius * 100;
+          const y = 50 + Math.sin(node.angle) * orbitRadius * 100;
           const size = nodeSize(node.proficiency);
           const isActive = activeId === node.id;
 
@@ -314,7 +435,7 @@ export function SkillEcosystem() {
                   orbit turned, which is exactly the drift Abdul reported. The circle's centre
                   is one button-padding plus half a diameter down from the top. */}
               <div
-                className="animate-ecosystem-counterspin motion-reduce:animate-none"
+                className="ecosystem-counterrotor animate-ecosystem-counterspin motion-reduce:animate-none"
                 style={{ transformOrigin: `50% ${BUTTON_PAD + size / 2}rem` }}
               >
               <motion.button
@@ -326,33 +447,56 @@ export function SkillEcosystem() {
                 onBlur={() => setActiveId(null)}
                 data-cursor-label="INFO"
                 data-skill-node={node.id}
-                className="flex w-28 flex-col items-center gap-2 rounded-card p-1 sm:w-36"
+                className="flex w-24 flex-col items-center gap-2 rounded-card p-1 sm:w-36"
                 // **No independent bob.** Each node used to drift +/-8px on its own timer,
                 // but the connections are drawn in the SVG and do not drift with it — so the
                 // circles detached from the ends of their own lines, by the same 8px, on a
                 // loop. The orbit's rotation already supplies the "gently floating" motion
                 // `DESIGN_SYSTEM.md` asks for, and it moves the lines and the nodes together.
               >
-                {/* The circle is the node: its diameter and glow carry the proficiency.
-                    The label sits outside it, so a long skill name can never overflow it. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "block shrink-0 rounded-pill border transition-all duration-300 ease-smooth",
-                    isActive ? "border-accent-violet" : "border-border-subtle",
-                  )}
-                  // The glow is inline rather than a `shadow-*` class because its strength is
-                  // a function of this node's proficiency, which Tailwind cannot express as a
-                  // static utility. An inline `boxShadow` would also silently win over a
-                  // class-based one, so the active state is folded into the same ramp instead
-                  // of being layered on top of it.
-                  style={{
-                    width: `${size}rem`,
-                    height: `${size}rem`,
-                    background: nodeFill(node.proficiency),
-                    boxShadow: nodeGlow(node.proficiency, isActive),
-                  }}
-                />
+                {/* The node: a lit disc, a gauge arc reading its proficiency, and the number
+                    itself. The label sits outside, so a long skill name can never overflow it.
+
+                    **The number is visible at rest on purpose.** It used to appear only in the
+                    hover panel, which left four glowing discs carrying no readable information
+                    — the ecosystem looked decorative rather than instrumented. */}
+                <span aria-hidden className="relative block shrink-0">
+                  <span
+                    className={cn(
+                      "relative grid place-items-center rounded-pill border transition-all duration-300 ease-smooth",
+                      isActive ? "border-accent-copper" : "border-border-subtle",
+                    )}
+                    // The glow is inline rather than a `shadow-*` class because its strength is
+                    // a function of this node's proficiency, which Tailwind cannot express as a
+                    // static utility. An inline `boxShadow` would also silently win over a
+                    // class-based one, so the active state is folded into the same ramp instead
+                    // of being layered on top of it.
+                    style={{
+                      width: `${size}rem`,
+                      height: `${size}rem`,
+                      background: nodeFill(node.proficiency),
+                      boxShadow: nodeGlow(node.proficiency, isActive),
+                    }}
+                  >
+                    {/* Convex highlight, above the fill and below the number. */}
+                    <span className="skill-node-sheen" />
+
+                    {/* Scaled to the disc rather than fixed, so it fills the 5rem node and
+                        still fits inside the 3.25rem one. */}
+                    <span
+                      className="relative font-mono font-medium tabular-nums leading-none text-text-primary"
+                      style={{ fontSize: `${size * 0.28}rem` }}
+                    >
+                      {node.proficiency}
+                    </span>
+                  </span>
+
+                  <span className="skill-ring-track" />
+                  <span
+                    className={cn("skill-ring", isActive && "opacity-100")}
+                    style={{ ["--pct" as string]: node.proficiency }}
+                  />
+                </span>
                 <span
                   className={cn(
                     "text-center font-mono text-node transition-colors duration-300",
@@ -372,10 +516,28 @@ export function SkillEcosystem() {
       {/* The centre node. */}
       <div
         ref={hubRef}
-        className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-pill glass-surface text-center shadow-glow sm:h-28 sm:w-28 lg:h-32 lg:w-32"
+        className="ecosystem-hub absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-1.5 rounded-pill border border-border-subtle text-center sm:h-28 sm:w-28 lg:h-32 lg:w-32"
       >
+        {/* A slowly rotating copper/teal bezel and quiet static calibration boundary make the
+            axis read as a processing core. */}
+        <span
+          aria-hidden
+          className="ecosystem-hub-bezel"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -inset-6 rounded-pill border border-dashed border-border-subtle opacity-35"
+        />
+        {/* The site's existing "the system is on" signal, reused rather than reinvented. */}
+        <span aria-hidden className="status-node" />
         <span className="px-3 font-mono text-eyebrow uppercase text-text-primary">
           AI Engineer
+        </span>
+        <span
+          aria-hidden
+          className="hidden font-mono text-micro uppercase tracking-label text-text-secondary sm:block"
+        >
+          Core / {String(nodes.length).padStart(2, "0")}
         </span>
       </div>
 
@@ -389,7 +551,7 @@ export function SkillEcosystem() {
         {active ? (
           <div className="rounded-card glass-surface px-4 py-3 text-center shadow-elevated">
             <p className="text-sm font-medium text-text-primary">{active.label}</p>
-            <p className="mt-1 font-mono text-xs text-accent-violet-text">
+            <p className="mt-1 font-mono text-xs text-accent-copper-text">
               {active.proficiency !== null
                 ? `${active.proficiency}% proficiency`
                 : "Supporting stack"}

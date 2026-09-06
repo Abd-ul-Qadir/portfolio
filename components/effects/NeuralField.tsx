@@ -11,6 +11,8 @@ import {
 } from "@/lib/neural-field";
 import { cn } from "@/lib/utils";
 
+const ROBOTIC_REVEAL_EVENT = "portfolio:robotic-reveal";
+
 export type { NeuralFieldConfig };
 
 interface NeuralFieldProps extends NeuralFieldConfig {
@@ -117,6 +119,10 @@ export default function NeuralField({ className, story, ...config }: NeuralField
       lastMove = 0;
       engine.clearPointer();
     };
+    const onRoboticReveal = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      engine.setRoboticReveal(detail?.active === true);
+    };
 
     let scrollQueued = false;
     const onScroll = () => {
@@ -170,6 +176,12 @@ export default function NeuralField({ className, story, ...config }: NeuralField
       document.addEventListener("pointerleave", onPointerLeave);
       window.addEventListener("scroll", onScroll, { passive: true });
       if (story) {
+        // Only the site-wide field follows the hero portrait. Local decorative fields retain
+        // their own palette and never pay for this listener. The touch configuration sets the
+        // influence radius to zero and has no portrait reveal, so it skips the listener too.
+        if ((configRef.current.influenceRadius ?? 0) > 0) {
+          window.addEventListener(ROBOTIC_REVEAL_EVENT, onRoboticReveal);
+        }
         // Deferred a frame: this component is dynamically imported, so the sections it needs
         // to measure may not be laid out at the moment it mounts.
         requestAnimationFrame(() => {
@@ -188,6 +200,7 @@ export default function NeuralField({ className, story, ...config }: NeuralField
       window.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerleave", onPointerLeave);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener(ROBOTIC_REVEAL_EVENT, onRoboticReveal);
       engine.destroy();
     };
     // `story` is constant per call site in practice, but it genuinely changes what this effect

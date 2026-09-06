@@ -127,6 +127,7 @@ export function Experience() {
                 <li
                   key={entry.id}
                   data-entry={entry.id}
+                  data-scroll-reveal="right"
                   className="relative pl-10 sm:pl-14"
                 >
                   <span

@@ -4,6 +4,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { usePointerEffectsEnabled } from "@/lib/hooks";
 
+/** Two events per interaction let the existing canvas loop match the robotic reveal palette. */
+const ROBOTIC_REVEAL_EVENT = "portfolio:robotic-reveal";
+
 interface HeroPortraitRevealProps {
   /** The robotic layer. Rendered above the normal portrait and masked to the cursor. */
   children: ReactNode;
@@ -111,6 +114,12 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
       if (!raf) raf = window.requestAnimationFrame(frame);
     };
 
+    const setNetworkActivation = (active: boolean) => {
+      window.dispatchEvent(
+        new CustomEvent(ROBOTIC_REVEAL_EVENT, { detail: { active } }),
+      );
+    };
+
     const onPointerMove = (event: PointerEvent) => {
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
@@ -122,6 +131,7 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
     const onEnter = (event: PointerEvent) => {
       inside = true;
       targetR = 1;
+      setNetworkActivation(true);
       // Jump the *position* to the entry point instead of easing to it, or the window slides
       // in from wherever it was last left, which reads as a stray object crossing the photo.
       const rect = el.getBoundingClientRect();
@@ -135,6 +145,7 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
     const onLeave = () => {
       inside = false;
       targetR = 0;
+      setNetworkActivation(false);
       wake();
     };
 
@@ -143,6 +154,7 @@ export function HeroPortraitReveal({ children }: HeroPortraitRevealProps) {
     el.addEventListener("pointerleave", onLeave);
 
     return () => {
+      if (inside) setNetworkActivation(false);
       resize.disconnect();
       el.removeEventListener("pointerenter", onEnter);
       el.removeEventListener("pointermove", onPointerMove);

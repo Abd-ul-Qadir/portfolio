@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
 
-import { tokens, violetAt } from "./lib/tokens";
+import { brandAt, tokens } from "./lib/tokens";
 
 /**
  * Single source of truth for the design tokens in `docs/DESIGN_SYSTEM.md`.
@@ -17,6 +17,18 @@ type TokenName = keyof typeof tokens;
 const v = (name: TokenName) => `var(--${name})`;
 
 /** Page background at a given alpha, derived from the token rather than restated. */
+/**
+ * The white highlights the glass surfaces are built from.
+ *
+ * Named here rather than repeated as literals across `.system-module`,
+ * `.contact-orb-surface`, `.contact-orb-sheen` and `.liquid-bar`, so the whole glass family
+ * shares one definition and a change lands everywhere at once — Phase 14's "no raw colour
+ * outside the token layer" standard.
+ */
+const white = (alpha: number) => `rgba(255,255,255,${alpha})`;
+/** Neutral drop shadows. Colourless unless something is hovered (`DESIGN_SYSTEM.md` #6). */
+const shade = (alpha: number) => `rgba(0,0,0,${alpha})`;
+
 const baseAt = (percent: number) =>
   `color-mix(in srgb, ${v("bg-base")} ${percent}%, transparent)`;
 
@@ -49,6 +61,19 @@ const keyframes = {
   "arrow-nudge": {
     "0%, 100%": { transform: "translateY(0)" },
     "50%": { transform: "translateY(6px)" },
+  },
+  /**
+   * The About system modules' idle drift. Translate-only so it stays on the compositor, and
+   * deliberately tiny — this is a panel settling in space, not a floating balloon.
+   */
+  "module-float": {
+    "0%, 100%": { transform: "translateY(0)" },
+    "50%": { transform: "translateY(-6px)" },
+  },
+  /** The scanning sheen that crosses a module's surface on hover. */
+  "module-sheen": {
+    from: { transform: "translateX(-120%)" },
+    to: { transform: "translateX(220%)" },
   },
   /**
    * A short dash travelling the length of a skill connection, from the outer node in
@@ -114,6 +139,21 @@ const keyframes = {
     "0%, 10%": { backgroundPosition: "130% 0, 0 0" },
     "55%, 100%": { backgroundPosition: "-30% 0, 0 0" },
   },
+  /** A visible colour wave across display text; deliberately slow to avoid visual noise. */
+  "display-gradient-flow": {
+    "0%, 100%": { backgroundPosition: "100% 50%" },
+    "50%": { backgroundPosition: "0% 50%" },
+  },
+  /** Draws the hero name's signature rail once, using only a compositor transform. */
+  "name-signal-draw": {
+    from: { transform: "scaleX(0)" },
+    to: { transform: "scaleX(1)" },
+  },
+  /** Brings the terminal point online after the hero name's rail reaches it. */
+  "name-node-online": {
+    from: { transform: "translateY(-50%) scale(0)", opacity: "0" },
+    to: { transform: "translateY(-50%) scale(1)", opacity: "1" },
+  },
   /** A packet falling down the Experience rail. The packet is 22% tall, so 455% clears it. */
   "packet-fall": {
     "0%": { transform: "translate3d(0, -100%, 0)", opacity: "0" },
@@ -168,8 +208,14 @@ const config: Config = {
           dot: v("cursor-dot"),
         },
         accent: {
+          copper: v("accent-copper"),
+          "copper-text": v("accent-copper-text"),
+          gold: v("accent-gold"),
+          teal: v("accent-teal"),
+          coral: v("accent-coral"),
+          green: v("accent-green"),
+          /** Compatibility aliases; new work should use the semantic palette names above. */
           violet: v("accent-violet"),
-          /** Text/icon-safe violet — see the note in `lib/tokens.ts`. */
           "violet-text": v("accent-violet-text"),
           indigo: v("accent-indigo"),
           cyan: v("accent-cyan"),
@@ -199,6 +245,12 @@ const config: Config = {
       gridTemplateColumns: {
         /** About: portrait column narrower than the text column. */
         about: "minmax(0, 0.8fr) minmax(0, 1.2fr)",
+        /**
+         * About, with the copy first in the DOM: the copy takes the wider first track and the
+         * system composition the narrower second one. `about` is kept because other layouts
+         * still read portrait-first.
+         */
+        "about-reversed": "minmax(0, 1.05fr) minmax(0, 0.95fr)",
         /** Hero: copy gets the majority, portrait sits beside it. */
         hero: "minmax(0, 1.15fr) minmax(0, 0.85fr)",
       },
@@ -212,6 +264,13 @@ const config: Config = {
         display: ["clamp(2.75rem, 8vw, 6rem)", { lineHeight: "1.02", letterSpacing: "-0.03em" }],
         heading: ["clamp(2rem, 4.5vw, 3.25rem)", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
         eyebrow: ["0.75rem", { lineHeight: "1", letterSpacing: "0.3em" }],
+        /**
+         * The two sizes below `eyebrow`, for the About system panels and the contact orb
+         * captions. Named rather than written inline: `CLAUDE.md` §2 puts type scale in the
+         * theme, and Phase 14 recorded "zero Tailwind arbitrary values" as a standard.
+         */
+        meta: ["0.6875rem", { lineHeight: "1.35" }],
+        micro: ["0.625rem", { lineHeight: "1.4" }],
         /** The contextual label inside the expanded cursor ring. */
         cursor: ["0.5rem", { lineHeight: "1", letterSpacing: "0.15em" }],
         /** Skill-ecosystem node labels — small enough to sit inside a circular node. */
@@ -219,7 +278,18 @@ const config: Config = {
       },
       /** Generous, consistent section rhythm — the whitespace is doing real work here. */
       spacing: {
-        section: "clamp(6rem, 12vw, 10rem)",
+        /**
+         * Vertical breathing room per section, applied as `py-section` — so **adjacent sections
+         * stack two of these**, and that total is what a reader actually sees as the gap.
+         *
+         * Was `clamp(6rem, 12vw, 10rem)`: 160px a side at desktop, so **320px of dead space
+         * between every section** — more than a third of a 900px viewport showing nothing, which
+         * is exactly what it looked like. Now 108px a side at 1440 (216px combined) and 64px on a
+         * phone (128px combined). Still generous; no longer a void.
+         *
+         * If this is ever raised again, remember to reason about the *doubled* figure.
+         */
+        section: "clamp(4rem, 7.5vw, 7rem)",
         /** Navbar wordmark. Below the artwork's native 156px so it stays sharp at 2x. */
         wordmark: "124px",
       },
@@ -262,8 +332,11 @@ const config: Config = {
         /** Deliberately unhurried — a signal passing, not a chase light. */
         "synapse-flow": "synapse-flow 3.2s linear infinite",
         /** Slow enough to read as a system idling, not as a carousel. Keep both in step. */
-        "ecosystem-spin": "ecosystem-spin 48s linear infinite",
-        "ecosystem-counterspin": "ecosystem-counterspin 48s linear infinite",
+        "ecosystem-spin": "ecosystem-spin 56s linear infinite",
+        "ecosystem-counterspin": "ecosystem-counterspin 56s linear infinite",
+        /** Signal bars orbit their circular tracks without animating SVG stroke paint. */
+        "ecosystem-track": "ecosystem-spin 14s linear infinite",
+        "ecosystem-track-reverse": "ecosystem-counterspin 18s linear infinite",
       },
     },
   },
@@ -383,6 +456,81 @@ const config: Config = {
         },
 
         /**
+         * Hero-name signature. The readable glyphs never disappear or move: a slow gradient
+         * travels through them while the decorative rail draws once. The name remains real,
+         * server-rendered text, so neither the initial paint nor meaning waits for hydration.
+         */
+        ".hero-name": {
+          position: "relative",
+          display: "inline-block",
+          paddingBottom: "0.18em",
+          isolation: "isolate",
+        },
+        ".hero-name-copy": {
+          position: "relative",
+          zIndex: "1",
+          display: "inline-block",
+          textWrap: "balance",
+          backgroundImage: `linear-gradient(110deg, ${v("text-primary")} 0%, ${v(
+            "text-primary",
+          )} 30%, ${v("accent-copper")} 46%, ${v("accent-teal")} 62%, ${v(
+            "text-primary",
+          )} 78%, ${v("text-primary")} 100%)`,
+          backgroundSize: "240% 100%",
+          backgroundPosition: "100% 50%",
+          backgroundRepeat: "no-repeat",
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          color: "transparent",
+          animation: "display-gradient-flow 5.8s ease-in-out infinite",
+          filter: `drop-shadow(0 0 18px ${brandAt(18)})`,
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            backgroundPosition: "45% 50%",
+            filter: "none",
+          },
+        },
+        ".hero-name-signal": {
+          position: "absolute",
+          left: "0.04em",
+          right: "0.04em",
+          bottom: "0",
+          height: "2px",
+          transformOrigin: "left center",
+          transform: "scaleX(0)",
+          backgroundImage: `linear-gradient(to right, ${v("accent-copper")}, ${v(
+            "accent-teal",
+          )} 72%, transparent)`,
+          animation: "name-signal-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards",
+          "&::after": {
+            content: '\"\"',
+            position: "absolute",
+            right: "0",
+            top: "50%",
+            width: "0.14em",
+            height: "0.14em",
+            minWidth: "0.55rem",
+            minHeight: "0.55rem",
+            borderRadius: "9999px",
+            backgroundColor: v("accent-cyan"),
+            boxShadow: v("glow-primary"),
+            transform: "translateY(-50%) scale(0)",
+            opacity: "0",
+            animation:
+              "name-node-online 0.35s cubic-bezier(0.22, 1, 0.36, 1) 1.02s forwards",
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            transform: "scaleX(1)",
+            animation: "none",
+            "&::after": {
+              transform: "translateY(-50%) scale(1)",
+              opacity: "1",
+              animation: "none",
+            },
+          },
+        },
+
+        /**
          * Services cards (Phase 7). `card-tilt` supplies the perspective the 3D rotation is
          * read against; `card-spotlight` is the soft glow that follows the cursor inside the
          * card, positioned from the `--spot-x` / `--spot-y` custom properties that
@@ -395,7 +543,7 @@ const config: Config = {
         ".card-spotlight": {
           "--spot-x": "50%",
           "--spot-y": "50%",
-          backgroundImage: `radial-gradient(220px circle at var(--spot-x) var(--spot-y), ${violetAt(18)}, transparent 70%)`,
+          backgroundImage: `radial-gradient(220px circle at var(--spot-x) var(--spot-y), ${brandAt(18)}, transparent 70%)`,
         },
 
         /**
@@ -421,14 +569,18 @@ const config: Config = {
          * mesh whose activated connections are bright cyan, and a white wash at 16px blur does
          * not stop a lit line reading straight through 12px mono labels. This tints *down*
          * toward the page background instead, so the labels always have a dark ground.
-         * `saturate` keeps the blurred violet/cyan behind it from going grey and lifeless.
+         * `saturate` keeps the blurred copper/teal behind it from going grey and lifeless.
          */
         ".glass-nav": {
-          backgroundColor: baseAt(72),
-          backdropFilter: "blur(20px) saturate(140%)",
+          backgroundImage: `linear-gradient(135deg, ${baseAt(88)} 0%, ${baseAt(
+            72,
+          )} 55%, ${baseAt(82)} 100%)`,
+          backdropFilter: "blur(18px) saturate(135%)",
           borderWidth: "1px",
           borderStyle: "solid",
           borderColor: v("border-subtle"),
+          boxShadow: `0 18px 54px -28px ${shade(0.92)}, inset 0 1px 0 ${white(0.06)}`,
+          isolation: "isolate",
         },
 
         /**
@@ -478,6 +630,361 @@ const config: Config = {
         },
 
         /** Dimmed, blurred backdrop behind a modal dialog. */
+        /**
+         * A deeper well than `.ecosystem-scrim`, behind the About system composition.
+         *
+         * The ecosystem's scrim tops out at 56% of the page colour, which is enough for a ring
+         * of labelled nodes. It is not enough here: the site-wide field's bright copper mesh
+         * runs straight under these glass modules, and translucent surfaces over a busy
+         * background read as dirty rather than as glass. Sinking the field to 88% locally is
+         * what gives the panels something clean to sit on.
+         */
+        ".system-scrim": {
+          backgroundImage: `radial-gradient(circle at 50% 50%, ${baseAt(88)} 0%, ${baseAt(
+            76,
+          )} 42%, ${baseAt(34)} 68%, transparent 86%)`,
+        },
+
+        /**
+         * The liquid-glass bar holding the visible email and phone.
+         *
+         * Heavier and wetter than `.glass-surface`: a stronger blur with a saturation lift, a
+         * diagonal gradient so the surface has a direction, and a one-pixel inner highlight
+         * along the top edge — which is what reads as a meniscus rather than a flat tint. It
+         * carries the two values a visitor is most likely to copy, so it is the one element in
+         * the group that should feel like a physical object you could pick up.
+         *
+         * **Only the standard `backdrop-filter` is declared, never a hand-written
+         * `-webkit-` twin.** Writing both lets the production minifier dedupe them down to the
+         * prefixed one alone, which Chrome honours and Firefox does not — that bug flattened
+         * every glass surface on the site once already. See the note above `.glass-surface`.
+         */
+        ".liquid-bar": {
+          position: "relative",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+          backgroundImage: `linear-gradient(150deg, ${white(0.085)} 0%, ${white(0.025)} 46%, ${white(0.06)} 100%), linear-gradient(${baseAt(
+            58,
+          )}, ${baseAt(58)})`,
+          backdropFilter: "blur(22px) saturate(140%)",
+          boxShadow:
+            `inset 0 1px 0 ${white(0.14)}, inset 0 -1px 0 ${shade(0.35)}, 0 22px 44px -26px ${shade(0.95)}`,
+          transition: "border-color 380ms cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        ".liquid-bar:hover, .liquid-bar:focus-within": {
+          borderColor: v("border-hover"),
+        },
+        /** The hairline between the two values. Vertical on a row, horizontal when stacked. */
+        ".liquid-bar-divider": {
+          backgroundColor: v("border-subtle"),
+        },
+
+        /**
+         * The convex highlight that turns a skill node from a flat disc into a sphere.
+         *
+         * Same three-layer construction the contact orbs use — fill, then highlight, then
+         * content — so the reflection sits above the body but below the number. A radial
+         * highlight lit from the upper left plus an inset floor shadow is what reads as
+         * curvature; the previous flat fill read as a coloured circle.
+         *
+         * Kept as a separate layer rather than folded into the node's inline `boxShadow`,
+         * because that value is a function of proficiency and an inline shadow would silently
+         * win over a class-based one.
+         */
+        ".skill-node-sheen": {
+          position: "absolute",
+          inset: "0",
+          borderRadius: "9999px",
+          pointerEvents: "none",
+          backgroundImage: `radial-gradient(68% 54% at 34% 24%, ${white(0.17)} 0%, transparent 66%)`,
+          boxShadow: `inset 0 1px 1px ${white(0.16)}, inset 0 -10px 20px -8px ${shade(0.6)}`,
+        },
+
+        /** The ecosystem's sole idle-motion carrier. Every orbit layer and node rides this
+         * compositor transform instead of owning another ring animation. */
+        ".ecosystem-rotor": {
+          backfaceVisibility: "hidden",
+          willChange: "transform",
+          "@media (prefers-reduced-motion: reduce)": {
+            willChange: "auto",
+          },
+        },
+        ".ecosystem-track-runner": {
+          transformBox: "view-box",
+          transformOrigin: "center",
+          willChange: "transform",
+          "@media (prefers-reduced-motion: reduce)": {
+            willChange: "auto",
+          },
+        },
+        /** Freeze the coupled rotor/counter-rotors together while a person is inspecting it.
+         * Besides making moving targets easier to use, this suspends every transform
+         * animation in the assembly for the duration of pointer or keyboard interaction. */
+        ".ecosystem-stage:hover .ecosystem-rotor, .ecosystem-stage:hover .ecosystem-counterrotor, .ecosystem-stage:hover .ecosystem-track-runner, .ecosystem-stage:hover .ecosystem-hub-bezel, .ecosystem-stage:focus-within .ecosystem-rotor, .ecosystem-stage:focus-within .ecosystem-counterrotor, .ecosystem-stage:focus-within .ecosystem-track-runner, .ecosystem-stage:focus-within .ecosystem-hub-bezel":
+          {
+            animationPlayState: "paused",
+          },
+
+        /**
+         * The ecosystem's hub. A *well* rather than a disc: lit slightly from above, floor
+         * shadowed, so the axis reads as something the orbit is anchored into. `glass-surface`
+         * gave it a flat 4% film that made it the least substantial thing in its own composition.
+         */
+        ".ecosystem-hub": {
+          isolation: "isolate",
+          backgroundImage: `radial-gradient(circle at 50% 32%, ${v("bg-surface")} 0%, ${baseAt(
+            90,
+          )} 58%, ${baseAt(97)} 100%)`,
+          boxShadow: `inset 0 1px 0 ${white(0.1)}, inset 0 -14px 28px -14px ${shade(0.85)}, ${v(
+            "glow-primary",
+          )}`,
+        },
+        ".ecosystem-hub-bezel": {
+          position: "absolute",
+          inset: "-0.7rem",
+          borderRadius: "9999px",
+          padding: "1px",
+          pointerEvents: "none",
+          backgroundImage: `conic-gradient(from -28deg, ${v("accent-copper")} 0deg 72deg, transparent 72deg 156deg, ${v("accent-teal")} 156deg 232deg, transparent 232deg 318deg, ${v("accent-gold")} 318deg 360deg)`,
+          mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          maskComposite: "exclude",
+          opacity: "0.82",
+          animation: "ecosystem-spin 22s linear infinite",
+          willChange: "transform",
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            willChange: "auto",
+          },
+        },
+
+        /**
+         * The proficiency gauge around a skill node.
+         *
+         * **Why this replaced "size and glow carry the number".** Encoding proficiency only as
+         * diameter and halo meant the actual figure — the most interesting thing the ecosystem
+         * knows — was invisible until you hovered, and four softly-glowing discs read as
+         * decoration rather than as instrumentation. This draws the value as an arc, so a 95
+         * and an 80 differ *legibly* and not just in brightness.
+         *
+         * Same masking trick as `.circuit-trace`: paint a conic gradient over the border box and
+         * punch out the content box, leaving a 2px ring. `--pct` is a unitless number set inline
+         * per node. Nothing animates, so the gradient needs no `@property` registration — this
+         * is one static paint per node, no JS and no per-frame work.
+         */
+        ".skill-ring": {
+          position: "absolute",
+          inset: "-0.4rem",
+          borderRadius: "9999px",
+          padding: "2px",
+          pointerEvents: "none",
+          backgroundImage: `conic-gradient(from -90deg, ${v("accent-teal")} 0%, ${v(
+            "accent-copper",
+          )} calc(var(--pct) * 1%), transparent calc(var(--pct) * 1%))`,
+          /* Alpha-only stencils. `#000` here is a mask, not a design colour. */
+          mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          maskComposite: "exclude",
+          opacity: "0.75",
+          transition: "opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        /** The unfilled remainder of the gauge, so the arc reads against a track. */
+        ".skill-ring-track": {
+          position: "absolute",
+          inset: "-0.4rem",
+          borderRadius: "9999px",
+          padding: "2px",
+          pointerEvents: "none",
+          backgroundImage: `linear-gradient(${v("border-subtle")}, ${v("border-subtle")})`,
+          mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          maskComposite: "exclude",
+        },
+
+        /**
+         * A contact orb: a glass interface node, not a social button.
+         *
+         * Three layers on purpose. The anchor owns the size, the perspective and the tilt; the
+         * *surface* is the sphere (a gradient lit from the top-left plus an inner highlight, so
+         * it reads as convex rather than as a flat disc); the *sheen* is the reflection that
+         * only appears on hover. Splitting them lets the reflection sit above the glass and
+         * below the glyph, which is the ordering real glass has.
+         *
+         * The tilt defaults to 0deg here and is overwritten per-orb from `pointermove`, so the
+         * resting state is correct with no JS having run at all — and clearing the properties
+         * on leave lets this transition ease it home.
+         */
+        ".contact-orb": {
+          "--tilt-x": "0deg",
+          "--tilt-y": "0deg",
+          position: "relative",
+          display: "grid",
+          placeItems: "center",
+          width: "4.5rem",
+          height: "4.5rem",
+          borderRadius: "9999px",
+          perspective: "520px",
+          transformStyle: "preserve-3d",
+          transform:
+            "perspective(520px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(0)",
+          transition:
+            "transform 380ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
+          "@media (prefers-reduced-motion: reduce)": {
+            transform: "none",
+            transition: "box-shadow 200ms linear",
+          },
+        },
+        /** Lifts toward the reader. `translateZ` rather than `scale` so the tilt stays true. */
+        ".contact-orb:hover, .contact-orb:focus-visible": {
+          transform:
+            "perspective(520px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(14px)",
+          "@media (prefers-reduced-motion: reduce)": { transform: "none" },
+        },
+        ".contact-orb-surface": {
+          position: "absolute",
+          inset: "0",
+          borderRadius: "9999px",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+          backgroundImage: `radial-gradient(120% 120% at 30% 22%, ${white(0.11)} 0%, ${white(0.035)} 42%, ${white(0.015)} 70%), linear-gradient(${baseAt(
+            72,
+          )}, ${baseAt(72)})`,
+          backdropFilter: "blur(14px)",
+          boxShadow:
+            `inset 0 1px 1px ${white(0.13)}, 0 16px 30px -18px ${shade(0.95)}`,
+          transition:
+            "border-color 380ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        ".group:hover .contact-orb-surface, .contact-orb:focus-visible .contact-orb-surface": {
+          borderColor: v("border-hover"),
+          boxShadow: `inset 0 1px 1px ${white(0.2)}, 0 20px 34px -18px ${shade(0.95)}, ${v(
+            "glow-primary",
+          )}`,
+        },
+        /**
+         * The reflection. A soft crescent across the upper-left of the sphere, faded in on
+         * hover — restrained on purpose: a full specular highlight on four orbs at once is the
+         * "excessive sci-fi" the brief rules out.
+         */
+        ".contact-orb-sheen": {
+          position: "absolute",
+          inset: "0",
+          borderRadius: "9999px",
+          pointerEvents: "none",
+          opacity: "0",
+          backgroundImage:
+            `radial-gradient(60% 45% at 32% 24%, ${white(0.22)} 0%, transparent 70%)`,
+          transition: "opacity 380ms cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        ".group:hover .contact-orb-sheen, .contact-orb:focus-visible .contact-orb-sheen": {
+          opacity: "1",
+        },
+
+        /**
+         * The About composition's 3D stage.
+         *
+         * Perspective lives on this wrapper and `preserve-3d` on the layer inside it, which is
+         * what makes the depth *real* rather than simulated: each module carries a static
+         * `translateZ`, and the single rotation written to the inner layer on pointer move
+         * therefore parallaxes them by different amounts for free. One animated transform for
+         * the whole composition — no per-module JS, no rAF loop, nothing for React to re-render.
+         */
+        ".system-stage": {
+          perspective: "1400px",
+          perspectiveOrigin: "50% 45%",
+        },
+        ".system-space": {
+          transformStyle: "preserve-3d",
+          // The pointer writes these; the defaults are the resting state, so the composition is
+          // correct before any pointer has ever moved and on touch devices that have none.
+          "--sx": "0",
+          "--sy": "0",
+          transform:
+            "rotateX(calc(var(--sy) * -5deg)) rotateY(calc(var(--sx) * 5.5deg))",
+          transition: "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
+        },
+        /**
+         * A floating information panel.
+         *
+         * Glass, but a *quieter* glass than `.glass-surface`: these sit in front of the
+         * portrait, so the same 4% white fill that reads as a card on the page reads as a smear
+         * over a photograph. The gradient gives the surface a direction — lit from the top-left,
+         * like every other panel in the composition — which is most of what separates "premium
+         * glass" from "translucent rectangle".
+         */
+        ".system-module": {
+          position: "relative",
+          borderRadius: "0.9rem",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+          backgroundImage: `linear-gradient(140deg, ${white(0.07)} 0%, ${white(0.025)} 42%, ${white(0.045)} 100%), linear-gradient(${baseAt(
+            88,
+          )}, ${baseAt(88)})`,
+          backdropFilter: "blur(14px)",
+          boxShadow: `0 18px 40px -24px ${shade(0.9)}`,
+          transition:
+            "border-color 320ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+          overflow: "hidden",
+        },
+        ".system-module:hover, .system-module:focus-within": {
+          borderColor: v("border-hover"),
+          boxShadow: `0 18px 40px -24px rgba(0,0,0,0.9), ${v("glow-primary")}`,
+        },
+        /**
+         * The sheen that crosses a module on hover. Authored `paused` and started by the
+         * parent, so a resting composition animates nothing at all — the same discipline
+         * `.circuit-trace` uses.
+         */
+        ".system-sheen": {
+          position: "absolute",
+          top: "0",
+          bottom: "0",
+          width: "45%",
+          pointerEvents: "none",
+          opacity: "0",
+          backgroundImage:
+            `linear-gradient(100deg, transparent 0%, ${white(0.09)} 50%, transparent 100%)`,
+          transition: "opacity 260ms ease-out",
+          animation: "module-sheen 1.1s ease-out",
+          animationPlayState: "paused",
+          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+        },
+        ".system-module:hover .system-sheen, .system-module:focus-within .system-sheen": {
+          opacity: "1",
+          animationPlayState: "running",
+        },
+        /**
+         * Idle drift. Each module sets its own `--float-delay` so they never move in lockstep,
+         * which is the difference between "a system idling" and "a carousel".
+         */
+        ".system-float": {
+          animation: "module-float 7s ease-in-out infinite",
+          animationDelay: "var(--float-delay, 0s)",
+          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+        },
+
+        /**
+         * Sinks the About portrait's own studio backdrop into the page.
+         *
+         * The source photograph has a *light grey* backdrop. Cropped to a circle and dropped on
+         * a near-black page it reads as a flat grey disc stuck onto the layout — the same
+         * "pasted on rather than lit by the scene" problem `scripts/cutout.py` grades away for
+         * the hero, except here the raw photo is used deliberately (the circle wants a filled
+         * frame, not a floating cut-out).
+         *
+         * The fix is a vignette, not a filter: the face stays completely untouched — the
+         * gradient is transparent across the middle 40% — and only the backdrop around it is
+         * carried down to the page colour. Off-centre vertically because the subject is not
+         * centred in a 4:5 crop.
+         */
+        ".portrait-well": {
+          backgroundImage: `radial-gradient(circle at 50% 38%, transparent 20%, ${baseAt(
+            46,
+          )} 46%, ${baseAt(86)} 74%, ${baseAt(97)} 100%)`,
+        },
+
         ".scrim-backdrop": {
           backgroundColor: baseAt(80),
           backdropFilter: "blur(4px)",
@@ -642,6 +1149,74 @@ const config: Config = {
           },
 
         /**
+         * Shared section-heading frame. A fine vertical rail and fading horizontal signal give
+         * the heading a recognizable silhouette without placing it inside another card. All
+         * decoration is static, token-derived and rendered by CSS on the Server Component.
+         */
+        ".section-heading": {
+          position: "relative",
+          width: "100%",
+          paddingLeft: "clamp(1rem, 2vw, 1.5rem)",
+          "&::before": {
+            content: '\"\"',
+            position: "absolute",
+            left: "0",
+            top: "0",
+            bottom: "0",
+            width: "1px",
+            backgroundImage: `linear-gradient(to bottom, ${v("accent-teal")}, ${brandAt(
+              52,
+            )} 58%, transparent)`,
+          },
+          "&::after": {
+            content: '\"\"',
+            position: "absolute",
+            left: "0",
+            top: "0",
+            width: "0.75rem",
+            height: "1px",
+            backgroundColor: v("accent-cyan"),
+          },
+        },
+        ".section-heading-kicker": {
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          width: "100%",
+          gap: "0.625rem",
+          minHeight: "0.75rem",
+        },
+        ".section-heading-rule": {
+          flex: "1 1 auto",
+          maxWidth: "9rem",
+          height: "1px",
+          marginLeft: "0.25rem",
+          backgroundImage: `linear-gradient(to right, ${brandAt(55)}, transparent)`,
+        },
+        ".section-heading-title": {
+          position: "relative",
+          textWrap: "balance",
+        },
+        ".section-heading .section-heading-accent": {
+          backgroundImage: `linear-gradient(100deg, ${v("accent-copper")} 0%, ${v(
+            "accent-teal",
+          )} 42%, ${v("text-primary")} 52%, ${v("accent-copper")} 64%, ${v(
+            "accent-teal",
+          )} 100%)`,
+          backgroundSize: "220% 100%",
+          backgroundPosition: "100% 50%",
+          animation: "display-gradient-flow 5.2s ease-in-out infinite",
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            backgroundPosition: "45% 50%",
+          },
+        },
+        ".section-heading-description": {
+          position: "relative",
+          maxWidth: "42rem",
+        },
+
+        /**
          * The live status node beside every section eyebrow — the page's smallest recurring
          * "the system is on" signal, in the same node-and-ping language the ecosystem and the
          * field already speak. Built from two pseudo-elements rather than two spans, so
@@ -758,6 +1333,27 @@ const config: Config = {
          * quiet restatement that the system is still running once the content has ended.
          * `bus-signal`'s 455% is the full width in light-widths (22%).
          */
+        /**
+         * The footer's closing panel uses an opaque-enough token-derived surface instead of a
+         * second large backdrop-filter region. It therefore stays crisp over the live field
+         * without adding another expensive full-width blur.
+         */
+        ".footer-panel": {
+          position: "relative",
+          isolation: "isolate",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+          backgroundImage: `radial-gradient(circle at 8% 12%, ${brandAt(
+            13,
+          )}, transparent 34%), radial-gradient(circle at 92% 88%, color-mix(in srgb, ${v(
+            "accent-cyan",
+          )} 7%, transparent), transparent 30%), linear-gradient(145deg, ${baseAt(
+            96,
+          )}, ${baseAt(88)})`,
+          boxShadow: `0 28px 80px -42px ${shade(0.92)}, inset 0 1px 0 ${white(0.045)}`,
+        },
+
         ".signal-bus": {
           position: "absolute",
           top: "-1px",
@@ -766,6 +1362,11 @@ const config: Config = {
           height: "1px",
           overflow: "hidden",
           pointerEvents: "none",
+          backgroundImage: `linear-gradient(90deg, transparent, ${brandAt(
+            36,
+          )} 28%, color-mix(in srgb, ${v(
+            "accent-cyan",
+          )} 48%, transparent) 50%, ${brandAt(36)} 72%, transparent)`,
           "&::after": {
             content: '""',
             position: "absolute",
@@ -775,9 +1376,20 @@ const config: Config = {
             width: "22%",
             backgroundImage: `linear-gradient(90deg, transparent, ${v("accent-cyan")}, transparent)`,
             animation: "bus-signal 7.5s ease-in-out infinite",
+            animationPlayState: "paused",
+            opacity: "0",
+            transition: "opacity 240ms ease-out",
           },
           "@media (prefers-reduced-motion: reduce)": {
             "&::after": { animation: "none", opacity: "0" },
+          },
+        },
+        ".group:hover .signal-bus::after, .group:focus-within .signal-bus::after": {
+          opacity: "1",
+          animationPlayState: "running",
+          "@media (prefers-reduced-motion: reduce)": {
+            opacity: "0",
+            animationPlayState: "paused",
           },
         },
 
@@ -847,13 +1459,19 @@ const config: Config = {
           // the cursor neared an edge. Masking the container clips every child at once, so
           // containment holds for anything added here later too.
           //
-          // `contain` / `right bottom` mirror the `object-contain object-right-bottom` the
-          // images inside are laid out with, so the mask lands exactly on the rendered subject.
-          // **These must change together**: the photo is 2:3 inside a 4:5 box, so `contain`
-          // letterboxes it horizontally, and any disagreement in object-position slides the
-          // clip off the subject by that gap.
-          maskImage: "url('/robotic-portrait-cutout.png')",
-          WebkitMaskImage: "url('/robotic-portrait-cutout.png')",
+          // `contain` / `right bottom` mirror the `object-contain object-right-bottom` the images
+          // inside are laid out with, so the mask lands exactly on the rendered subject.
+          // **These must change together**: the cut-out is letterboxed inside its box by
+          // `contain`, and any disagreement in object-position slides the clip off the subject
+          // by exactly that gap.
+          // A dedicated alpha-only stencil, not the full-colour cut-out. A CSS mask samples only
+          // the alpha channel, so pointing this at the cut-out made the browser download a ~1 MB
+          // PNG *raw* — outside `next/image` — purely to use as a shape. Lighthouse measured it
+          // as 980 KiB of wasted payload and the page's largest single download. Same matte,
+          // same crop, black RGB, half resolution: 9 KB. Regenerate both with
+          // `python scripts/cutout.py`.
+          maskImage: "url('/portrait-reveal-mask.png')",
+          WebkitMaskImage: "url('/portrait-reveal-mask.png')",
           maskSize: "contain",
           WebkitMaskSize: "contain",
           maskPosition: "right bottom",
@@ -883,8 +1501,13 @@ const config: Config = {
           // needed — an earlier `mix-blend-mode: screen` version lifted the image's near-black
           // rectangle above the page background and left a visible box. This only feathers the
           // bottom crop so the subject dissolves into the section instead of ending on a line.
-          maskImage: "linear-gradient(to bottom, black 76%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, black 76%, transparent 100%)",
+          //
+          // Was 76% when the asset was a near-full-length portrait with a lot of torso to
+          // spare. The 2026-08-27 head-and-chest crop is far tighter, and at 76% the fade
+          // started around the tie knot and ate most of the chest. 88% keeps the soft edge
+          // while leaving the framing that crop was chosen for.
+          maskImage: "linear-gradient(to bottom, black 88%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 88%, transparent 100%)",
         },
 
         /** Fades a decorative layer out toward the edges so it never reads as a hard panel. */
@@ -903,6 +1526,46 @@ const config: Config = {
           backgroundImage:
             "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")",
           backgroundRepeat: "repeat",
+        },
+
+        /**
+         * A contact-form field row: the bordered line an `<input>`/`<textarea>` sits inside.
+         *
+         * The control itself stays a plain, unstyled, fully native element (transparent
+         * background, no outline of its own) and *this* is what renders as the field. That
+         * split is what makes the terminal skin a skin — `CLAUDE.md` §4 — rather than a
+         * lookalike built out of divs.
+         *
+         * Focus lives here rather than on the input because the row is what the user sees as
+         * the field. `:focus-within` fires for keyboard and pointer alike, so the focus state
+         * cannot be lost by tabbing instead of clicking, and it is a border + glow (not an
+         * `outline: none` with nothing put back).
+         */
+        ".terminal-field": {
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.75rem",
+          borderWidth: "1px",
+          borderStyle: "solid",
+          borderColor: v("border-subtle"),
+          backgroundColor: v("bg-glass"),
+          transition: "border-color 300ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        ".terminal-field:focus-within": {
+          borderColor: v("border-hover"),
+          boxShadow: v("glow-primary"),
+        },
+        /**
+         * Invalid state. Colour is never the only signal — the row also gets a written error
+         * message wired up with `aria-describedby`, and the control carries `aria-invalid`, so
+         * the state survives both colour-blindness and a screen reader.
+         */
+        ".terminal-field[data-invalid='true']": {
+          borderColor: v("accent-pink"),
+        },
+        ".terminal-field[data-invalid='true']:focus-within": {
+          borderColor: v("accent-pink"),
+          boxShadow: `0 0 24px color-mix(in srgb, ${v("accent-pink")} 22%, transparent)`,
         },
       });
     }),

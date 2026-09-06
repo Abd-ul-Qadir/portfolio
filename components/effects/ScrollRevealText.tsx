@@ -22,6 +22,12 @@ interface ScrollRevealTextProps {
  *
  * Under reduced motion no ScrollTrigger is created at all and every word renders at full
  * brightness immediately.
+ *
+ * **The dimmed start is 0.75 opacity, not lower, and that floor is a hard accessibility
+ * constraint rather than a taste call.** `text-secondary` at 0.45 over `bg-base` measures
+ * **2.39:1** — Lighthouse flagged it, and at 20px this text needs 4.5:1, not the 3:1 large-text
+ * allowance. 0.75 measures ~4.8:1. The reveal still reads, because the bigger visual change is
+ * the colour travelling to `text-primary`, not the opacity. Do not lower this.
  */
 export function ScrollRevealText({ text, className }: ScrollRevealTextProps) {
   const container = useRef<HTMLParagraphElement>(null);
@@ -37,7 +43,7 @@ export function ScrollRevealText({ text, className }: ScrollRevealTextProps) {
 
       gsap.fromTo(
         wordElements,
-        { color: "var(--text-secondary)", opacity: 0.45 },
+        { color: "var(--text-secondary)", opacity: 0.75 },
         {
           color: "var(--text-primary)",
           opacity: 1,

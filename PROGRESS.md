@@ -4,9 +4,10 @@
 > stop working, every time — see `CLAUDE.md` §0 for the exact rule. This file is the only
 > thing that survives a context reset; treat every edit to it as important as an edit to code.
 
-Last updated: 2026-09-06
-Repo status: git initialised, Phases 0–14 committed except the Vercel deploy, which is
-blocked on Abdul's account. Real image assets wired in. The constellation has since been
+Last updated: 2026-09-07
+Repo status: published at `https://github.com/Abd-ul-Qadir/portfolio`; `main` tracks `origin/main`.
+Phases 0–14 are committed except the Vercel deploy, which is blocked on Abdul's account.
+Real image assets wired in. The constellation has since been
 replaced by an interactive neural field. The contact form is now real and sends email via
 Resend — it needs `RESEND_API_KEY` set before it can deliver. See the newest session-log entry.
 
@@ -56,6 +57,17 @@ not when the happy path looks fine.)*
 
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
+
+### Session 4 (cont. 21) — 2026-09-07 — Personal GitHub publication
+
+The personal PAT was authenticated through GitHub CLI as `Abd-ul-Qadir` and stored in the
+Windows keyring. The existing empty public repository `Abd-ul-Qadir/portfolio` is now `origin`,
+and `main` has been pushed with upstream tracking. Repository-local Git identity now uses
+`Abdul Qadir <96332025+Abd-ul-Qadir@users.noreply.github.com>`, tying commits unambiguously to
+the personal account without exposing an email address. The repository-specific GitHub
+credential helper resolves to `gh auth git-credential`, while the workstation's global company
+Git identity and credential helper remain unchanged. Future portfolio updates can use plain
+`git push`; `.env.local` and its Resend key were not published.
 
 ### Session 4 (cont. 20) — 2026-09-06 — Personal GitHub push preparation
 

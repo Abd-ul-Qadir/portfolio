@@ -5,6 +5,22 @@
 /* Design tokens (`--bg-base`, `--accent-violet`, ...) are emitted onto `:root`
    by the plugin in `tailwind.config.ts` — do not redeclare them here. */
 
+/* The loader shell is SSR-rendered before the page, but hidden by default. A tiny script at
+   the start of the body opts eligible first-session desktop visits into `show` before first paint.
+   Default-hidden is the safe no-JS fallback: content can never be trapped behind the shell. */
+.loader-shell {
+  display: none;
+}
+
+html[data-loader="show"],
+html[data-loader="show"] body {
+  overflow: hidden;
+}
+
+html[data-loader="show"] .loader-shell {
+  display: flex;
+}
+
 @layer base {
   html {
     /* Lenis (Phase 3) drives smooth scrolling; never set `scroll-behavior: smooth`

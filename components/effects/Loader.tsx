@@ -1,10 +1,9 @@
 "use client";
 
-import { useLenis } from "lenis/react";
 import { useEffect, useRef } from "react";
 
 import { identity } from "@/content/data";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 
 /** The four status lines from `DESIGN_SYSTEM.md`'s boot sequence. */
 const STATUS_LINES = [
@@ -15,15 +14,35 @@ const STATUS_LINES = [
 ] as const;
 
 const BAR_CELLS = 16;
-const DURATION = 1.3;
+const MIN_VISIBLE_MS = 450;
+const PROGRESS_CEILING_SECONDS = 6;
+const STATUS_THRESHOLDS = [0, 30, 60, 99] as const;
 
 interface LoaderProps {
+  /** False only for the hydration-safe shell used on skipped visits. */
+  active: boolean;
   /** Called once the sequence has finished and the overlay has faded out. */
   onDone: () => void;
 }
 
+function waitForWindowLoad(signal: AbortSignal) {
+  if (document.readyState === "complete") return Promise.resolve();
+
+  return new Promise<void>((resolve) => {
+    window.addEventListener("load", () => resolve(), { once: true, signal });
+  });
+}
+
+function waitForTwoPaints() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
 /**
- * The "AI system booting" overlay from `DESIGN_SYSTEM.md`, ~1.3s end to end.
+ * The "AI system booting" overlay from `DESIGN_SYSTEM.md`.
  *
  * Built as a single **GSAP timeline** rather than with Framer Motion: this is one linear,
  * self-contained sequence where a progress number, a block-character bar and four staged
@@ -38,80 +57,125 @@ interface LoaderProps {
  * The timeline now writes straight to DOM nodes through refs, which is invisible to React and
  * effectively free. Same sequence, same look.
  *
- * This component is never mounted under reduced motion (see `LoaderMount`) — the requirement
- * is that the loader is *skipped*, not merely faster.
+ * The progress tween approaches 92% while the browser is loading, then reaches 100% only
+ * after the window load event, fonts, and two paint frames are ready. Fast connections clear
+ * quickly; slow ones hold naturally instead of finishing on a fictional fixed timer.
  */
-export default function Loader({ onDone }: LoaderProps) {
+export default function Loader({ active, onDone }: LoaderProps) {
   const root = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
   const barEmpty = useRef<HTMLSpanElement>(null);
   const percent = useRef<HTMLSpanElement>(null);
   const lines = useRef<Array<HTMLLIElement | null>>([]);
-  const lenis = useLenis();
-
-  // Hold the page still while the sequence plays.
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    lenis?.stop();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      lenis?.start();
+    if (!active || document.documentElement.dataset.loader !== "show") return;
+
+    const controller = new AbortController();
+    const loaderWindow = window as typeof window & { __aqLoaderBootTimer?: number };
+    if (loaderWindow.__aqLoaderBootTimer !== undefined) {
+      window.clearInterval(loaderWindow.__aqLoaderBootTimer);
+      delete loaderWindow.__aqLoaderBootTimer;
+    }
+
+    const initialProgress = Number.parseInt(percent.current?.textContent ?? "0", 10) || 0;
+    const counter = { value: initialProgress };
+    let released = false;
+    let finishTween: gsap.core.Tween | undefined;
+    let fadeTween: gsap.core.Tween | undefined;
+
+    const renderProgress = () => {
+      const value = Math.round(counter.value);
+      const filled = Math.round((value / 100) * BAR_CELLS);
+
+      // Direct DOM writes — see the performance note above.
+      if (bar.current) bar.current.textContent = "█".repeat(filled);
+      if (barEmpty.current) {
+        barEmpty.current.textContent = "░".repeat(BAR_CELLS - filled);
+      }
+      if (percent.current) percent.current.textContent = `${value}%`;
+
+      lines.current.forEach((line, index) => {
+        if (line) {
+          line.dataset.visible = String(value >= STATUS_THRESHOLDS[index]);
+        }
+      });
     };
-  }, [lenis]);
 
-  useGSAP(
-    () => {
-      const counter = { value: 0 };
+    const release = () => {
+      if (released) return;
+      released = true;
+      onDone();
+    };
 
-      const revealLine = (index: number) => () => {
-        const line = lines.current[index];
-        if (line) line.dataset.visible = "true";
-      };
+    renderProgress();
 
-      const timeline = gsap.timeline({ onComplete: onDone });
+    // Ease toward a ceiling while the page is genuinely loading. It may pause there on a
+    // slow connection; 100% is reserved for the browser-ready signal below.
+    const loadingTween = gsap.to(counter, {
+      value: 92,
+      duration: PROGRESS_CEILING_SECONDS,
+      ease: "power2.out",
+      onUpdate: renderProgress,
+    });
 
-      timeline
-        .to(counter, {
-          value: 100,
-          duration: DURATION,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            const value = Math.round(counter.value);
-            const filled = Math.round((value / 100) * BAR_CELLS);
-            // Direct DOM writes — see the performance note above.
-            if (bar.current) {
-              bar.current.textContent = "█".repeat(filled);
-            }
-            // The unfilled remainder has to shrink as the filled part grows, or the bar
-            // simply gets longer instead of filling up.
-            if (barEmpty.current) {
-              barEmpty.current.textContent = "░".repeat(BAR_CELLS - filled);
-            }
-            if (percent.current) {
-              percent.current.textContent = `${value}%`;
-            }
-          },
-        })
-        // Status lines are staged against the same timeline, so they can never drift out of
-        // step with the bar.
-        .call(revealLine(0), undefined, 0)
-        .call(revealLine(1), undefined, DURATION * 0.3)
-        .call(revealLine(2), undefined, DURATION * 0.6)
-        .call(revealLine(3), undefined, DURATION * 0.92)
-        .to(root.current, { autoAlpha: 0, duration: 0.4, ease: "power2.out" }, ">");
-    },
-    { scope: root, dependencies: [onDone] },
-  );
+    const finishWhenReady = async () => {
+      await Promise.all([
+        waitForWindowLoad(controller.signal),
+        document.fonts.ready.catch(() => undefined),
+      ]);
+      await waitForTwoPaints();
+
+      const startedAt =
+        performance.getEntriesByName("aq-loader-start", "mark").at(-1)?.startTime ??
+        performance.now();
+      const remainingMinimum = Math.max(
+        0,
+        MIN_VISIBLE_MS - (performance.now() - startedAt),
+      );
+
+      if (remainingMinimum > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remainingMinimum));
+      }
+      if (controller.signal.aborted) return;
+
+      loadingTween.kill();
+      finishTween = gsap.to(counter, {
+        value: 100,
+        duration: 0.22,
+        ease: "power2.inOut",
+        onUpdate: renderProgress,
+        onComplete: () => {
+          fadeTween = gsap.to(root.current, {
+            autoAlpha: 0,
+            duration: 0.32,
+            ease: "power2.out",
+            onComplete: release,
+          });
+        },
+      });
+    };
+
+    const handleSafetyRelease = () => release();
+    window.addEventListener("aq:loader-decision", handleSafetyRelease);
+    void finishWhenReady();
+
+    return () => {
+      controller.abort();
+      window.removeEventListener("aq:loader-decision", handleSafetyRelease);
+      loadingTween.kill();
+      finishTween?.kill();
+      fadeTween?.kill();
+    };
+  }, [active, onDone]);
 
   return (
     <div
       ref={root}
-      // Announced as a status region so a screen reader that is present during the sequence
-      // is told what is happening rather than hearing a silent 1.3s gap.
+      // Announced as a status region so a screen reader present during loading is told what
+      // is happening rather than hearing a silent gap.
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-loader flex flex-col items-center justify-center gap-6 bg-bg-base"
+      className="loader-shell fixed inset-0 z-loader flex-col items-center justify-center gap-6 bg-bg-base"
     >
       <p className="font-mono text-4xl font-semibold tracking-mark text-text-primary">
         {identity.initials}
@@ -123,11 +187,11 @@ export default function Loader({ onDone }: LoaderProps) {
       {/* The bar and percentage change ~60 times a second, so they are `aria-hidden`: the
           status lines below carry the same information at a pace a screen reader can use. */}
       <p className="mt-4 font-mono text-sm text-accent-violet-text" aria-hidden>
-        <span ref={bar} />
-        <span ref={barEmpty} className="text-text-secondary">
+        <span ref={bar} data-loader-bar />
+        <span ref={barEmpty} data-loader-bar-empty className="text-text-secondary">
           {"░".repeat(BAR_CELLS)}
         </span>
-        <span ref={percent} className="ml-3 text-text-primary">
+        <span ref={percent} data-loader-percent className="ml-3 text-text-primary">
           0%
         </span>
       </p>
@@ -141,6 +205,7 @@ export default function Loader({ onDone }: LoaderProps) {
             ref={(node) => {
               lines.current[index] = node;
             }}
+            data-loader-line
             data-visible="false"
             className={
               index === STATUS_LINES.length - 1

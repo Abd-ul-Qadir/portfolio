@@ -58,6 +58,24 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 4 (cont. 22) — 2026-09-07 — Loader is first-paint and load-aware
+
+The boot loader no longer mounts after hydration on top of an already-visible hero. Its shell
+is now emitted before the page content in the initial HTML, while a tiny synchronous script at
+the start of `<body>` decides before first paint whether the visit should show it. The existing
+rules remain intact: it plays once per browser session on desktop, and is skipped for compact
+viewports and reduced motion. The shell is hidden by default, so storage/script failures cannot
+trap visitors behind an overlay; a 15-second safety release provides a second fallback.
+
+Duration is now coupled to real readiness instead of a fixed animation timer. A lightweight
+pre-hydration ticker advances the visible bar while JavaScript is still downloading, GSAP takes
+over without resetting it, and 100% is reserved for `window.load`, `document.fonts.ready`, and
+two completed paint frames. Local production verification confirmed that the loader covered the
+hero on the first observable desktop frame, completed in about 1.5 seconds on the fast path, and
+remained visible for about 7.9 seconds under a 50 KB/s + 300 ms latency throttle. Reduced-motion
+and 390 px visits skipped it without blocking content. Lint, TypeScript, and the production build
+pass across all 12 routes.
+
 ### Session 4 (cont. 21) — 2026-09-07 — Personal GitHub publication
 
 The personal PAT was authenticated through GitHub CLI as `Abd-ul-Qadir` and stored in the
@@ -3691,6 +3709,13 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 > Any time you deviate from `DESIGN_SYSTEM.md` or `CLAUDE.md` §3 (tech stack), add a line
 > here with the reason. Keeps future sessions from "fixing" an intentional choice.
 
+- **2026-09-07 — the desktop loader is readiness-driven rather than a fixed ~1.3 seconds.**
+  Abdul explicitly asked for it to reflect connection speed. The initial progress is staged
+  toward a ceiling because browsers do not expose a reliable byte-total for an entire Next.js
+  page, but it can reach 100% only after the load event, fonts, and two paint frames. The loader
+  gate is an intentionally raw first-body script: Next's `beforeInteractive` component was
+  serialized into the client script queue in this Next.js version and therefore ran too late to
+  prevent the hero's first-frame flash. Keep the raw script before `LoaderMount` and page content.
 - **2026-08-27 — `resend` added as a dependency (`CLAUDE.md` §2 requires logging this).** It is
   not a UI/animation/particle package, so it does not compete with anything in §2; it is the
   mail transport for the contact form, and it is the provider `CONTENT_BRIEF.md` itself named.
@@ -3827,9 +3852,9 @@ optional/nullable fields in Phase 1 and start blocking at Phases 6/9/10:*
   `robotic-portrait-cutout.png` from the committed sources. Re-run successfully on 2026-08-27
   after Abdul deleted both, reproducing the reference **59.2% subject coverage** exactly. A real
   background-removed export would still beat any derived key, if one is ever available.
-- **Loader still appears ~600ms after first paint** when motion is enabled, instead of
-  covering the page from the first frame. See the session entry dated 2026-08-21 for the full
-  fix (SSR the overlay + an inline `<head>` script setting `data-loader`).
+- ~~**Loader still appears ~600ms after first paint** when motion is enabled.~~ **Resolved
+  2026-09-07:** the SSR shell and synchronous first-body gate now cover the hero from the first
+  observable frame, and completion follows actual browser/font readiness.
 - **Confirm with Abdul:** `CONTENT_BRIEF.md` listed a **"Best Developer"** award, but no image
   matches it. The six award files map to six *other* awards (the strongest being the
   AIR ROBOTRONICS '24 C++ win), so "Best Developer" was dropped rather than guessed at. If it

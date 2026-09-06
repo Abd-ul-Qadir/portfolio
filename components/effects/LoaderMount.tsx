@@ -1,50 +1,45 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import Loader from "@/components/effects/Loader";
-import { useHasSeenLoader, useIsCompactViewport, useReducedMotion } from "@/lib/hooks";
+
+const LOADER_EVENT = "aq:loader-decision";
+
+function subscribe(onStoreChange: () => void) {
+  window.addEventListener(LOADER_EVENT, onStoreChange);
+  return () => window.removeEventListener(LOADER_EVENT, onStoreChange);
+}
+
+function getLoaderDecision() {
+  return document.documentElement.dataset.loader === "show";
+}
+
+// The server must emit the shell. The pre-paint script and CSS decide whether it is visible.
+function getServerLoaderDecision() {
+  return true;
+}
 
 /**
- * Decides whether the boot sequence plays at all. Two independent gates:
- *
- * 1. **Reduced motion** — skipped entirely, never merely shortened (`CLAUDE.md` §4).
- * 2. **Once per browser session** — `sessionStorage`, so returning to `/` from a project
- *    detail page does not replay it.
- * 3. **Desktop only (≥640px)** — a 1.3s opaque boot overlay owns most of the mobile LCP
- *    budget, and it measured as the single largest performance cost on the page. Phones go
- *    straight to the content; the boot sequence stays part of the desktop experience. This is
- *    the same mobile-simplification licence `CLAUDE.md` §4 grants the hero pin, and it is
- *    recorded in PROGRESS.md's decision log.
- *
- * **Why this is a static import and not `dynamic()`:** it used to be code-split, which meant
- * the chunk was only fetched *after* hydration — the loader appeared ~840ms in, on top of a
- * hero that had already been visible since the first paint. A boot screen that drops over
- * content the reader is already looking at is worse than no boot screen. Importing it
- * normally lets it mount during hydration instead. The cost is that its (small) code ships
- * even to sessions that will not show it; the gates below still prevent it *rendering*.
+ * Hydrates the loader shell emitted before the page content in the initial HTML. A tiny
+ * first-body script makes the show/skip decision before first paint using the same
+ * three rules as before: skip reduced motion, skip compact viewports, and play once per
+ * session. `useSyncExternalStore` keeps the server snapshot stable while allowing that early
+ * DOM decision (and the 15-second safety release) to remove the shell without a flash.
  */
 export function LoaderMount() {
-  const reducedMotion = useReducedMotion();
-  const isCompact = useIsCompactViewport();
-  const [hasSeen, markSeen] = useHasSeenLoader();
-  // Captured once: `hasSeen` flips to true the moment the sequence *starts*, and this
-  // component must keep rendering the loader it already started.
-  const [shouldPlay] = useState(() => !hasSeen);
-  const [finished, setFinished] = useState(false);
-
-  // The session is marked as soon as the sequence starts, not when it completes. If it were
-  // marked on completion, a load interrupted part-way (tab backgrounded, navigation) would
-  // replay the whole boot sequence next time — the opposite of what the gate is for.
-  useEffect(() => {
-    if (!reducedMotion && !isCompact && shouldPlay) markSeen();
-  }, [isCompact, markSeen, reducedMotion, shouldPlay]);
+  const shouldPlay = useSyncExternalStore(
+    subscribe,
+    getLoaderDecision,
+    getServerLoaderDecision,
+  );
 
   const handleDone = useCallback(() => {
-    setFinished(true);
+    document.documentElement.dataset.loader = "skip";
+    window.dispatchEvent(new Event(LOADER_EVENT));
   }, []);
 
-  if (reducedMotion || isCompact || !shouldPlay || finished) return null;
+  if (!shouldPlay) return null;
 
-  return <Loader onDone={handleDone} />;
+  return <Loader active onDone={handleDone} />;
 }

@@ -126,6 +126,24 @@ export const metadata: Metadata = {
     title: `${identity.fullName} — ${identity.roles[0]}`,
     description: identity.tagline,
   },
+  /**
+   * Google Search Console ownership verification.
+   *
+   * Emits `<meta name="google-site-verification" content="...">` into the homepage `<head>`,
+   * which is the "HTML tag" method Search Console offers.
+   *
+   * **Read from the environment on purpose.** The token is not a secret (it ships in the HTML
+   * either way), but keeping it out of the source means the value can be set in Vercel's
+   * project settings without a code change, and a fork or a preview deploy does not silently
+   * claim ownership of the production property. Unset -> the field is `undefined` and Next
+   * emits no tag at all, so this is safe to ship before the value exists.
+   *
+   * `.vercel.app` cannot use the DNS method: that requires control of the `vercel.app` zone,
+   * which belongs to Vercel. This is the right method for this domain.
+   */
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+  },
   robots: {
     index: true,
     follow: true,

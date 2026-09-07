@@ -58,6 +58,16 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 4 (cont. 25) — 2026-09-07 — Logo enlargement isolated from layout scale
+
+Abdul's before/after screenshots showed the desired larger wordmark alongside unexpectedly
+larger typography elsewhere. Although the commit diff contained no font-size change, the shared
+Tailwind spacing-token edit has been removed completely to make the scope mechanically local.
+The wordmark is back to its original 124×23 intrinsic/layout dimensions and now receives only an
+element-level 1.1 transform from its left edge. Its visible result remains about 136×25,
+while navbar links, hero type, body copy, buttons, breakpoints, and layout measurements retain
+their exact pre-change utilities and values.
+
 ### Session 4 (cont. 24) — 2026-09-07 — Navbar wordmark enlarged
 
 The navbar wordmark is slightly larger at 136×25 rendered pixels, up from 124×23. Its width

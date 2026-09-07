@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Fragment, useRef, type PointerEvent as ReactPointerEvent } from "react";
 
-import { GitHubMark, InstagramMark, LinkedInMark, XMark } from "@/components/ui/BrandMarks";
+import { GitHubMark, LinkedInMark, XMark } from "@/components/ui/BrandMarks";
 import { iconMap } from "@/components/ui/icons";
 import { contactNodes, directContacts, type ContactNode } from "@/content/data";
 import { usePointerEffectsEnabled, useReducedMotion } from "@/lib/hooks";
@@ -15,7 +15,7 @@ import { usePointerEffectsEnabled, useReducedMotion } from "@/lib/hooks";
  * **That split is the point.** An orb hides what it points at behind an icon, which is right for
  * a profile you click through to and wrong for an address or a number — those are things a
  * visitor needs to read, copy or dial, and burying them under a glyph makes the two most direct
- * ways of reaching Abdul the two hardest to use. So GitHub / LinkedIn / Instagram are orbs, and
+ * ways of reaching Abdul the two hardest to use. So GitHub / LinkedIn / X are orbs, and
  * email and phone are printed in full.
  *
  * **Every one is a real anchor**, and every value comes from `content/data.ts` — the orbs from
@@ -37,7 +37,6 @@ function NodeIcon({ node }: { node: ContactNode }) {
   // `lucide-react` v1 ships no brand marks, so all three come from `BrandMarks`.
   if (node.icon === "github") return <GitHubMark className={className} />;
   if (node.icon === "linkedin") return <LinkedInMark className={className} />;
-  if (node.icon === "instagram") return <InstagramMark className={className} />;
   if (node.icon === "x") return <XMark className={className} />;
 
   const Icon = iconMap[node.icon];

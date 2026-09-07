@@ -31,7 +31,7 @@ import {
  *   {siteUrl}/#webpage  the homepage, `about`-linked to the person
  *
  * `sameAs` is the load-bearing property: it is how Google merges the portfolio, GitHub,
- * LinkedIn, Instagram and X into one entity instead of several weak ones.
+ * LinkedIn and X into one entity instead of several weak ones.
  */
 
 /** A JSON-LD value. Deliberately not `any` — see `CLAUDE.md`'s no-`any` rule. */
@@ -53,7 +53,9 @@ const abs = (path: string) => new URL(path, siteUrl).toString();
  * Every profile that is *this* person, for `sameAs`.
  *
  * Sourced from `identity.socials`, so adding a profile there (X/Twitter, Hugging Face, Dev.to)
- * automatically strengthens the entity — there is no second list to remember.
+ * automatically strengthens the entity — there is no second list to remember. Instagram was
+ * deliberately removed 2026-08-28: it is a personal account, and `sameAs` should assert only
+ * profiles that represent the professional entity.
  */
 function sameAs(): readonly string[] {
   return identity.socials.map((social) => social.href);

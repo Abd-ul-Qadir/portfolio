@@ -23,7 +23,6 @@ export type IconName =
   | "layout-dashboard"
   | "github"
   | "linkedin"
-  | "instagram"
   | "x"
   | "mail"
   | "phone"
@@ -167,11 +166,6 @@ export const identity: Identity = {
     // X/Twitter. Confirmed live (HTTP 200) before being added: a dead profile in `sameAs`
     // actively harms entity consolidation rather than being merely useless.
     { label: "X", href: "https://x.com/AbdullQadir_", icon: "x" },
-    {
-      label: "Instagram",
-      href: "https://www.instagram.com/abdu1.qadir",
-      icon: "instagram",
-    },
   ],
 };
 
@@ -903,12 +897,11 @@ export const contact: ContactContent = {
 const NODE_HINTS: Record<string, string> = {
   github: "View work",
   linkedin: "Connect",
-  instagram: "Follow",
   x: "Follow",
 };
 
 /**
- * The social profiles the Contact section renders as orbs — GitHub, LinkedIn, Instagram.
+ * The social profiles the Contact section renders as orbs — GitHub, LinkedIn, X.
  *
  * **Orbs are for profiles, not for reachable values.** An orb hides what it points at behind an
  * icon, which is right for a profile you click through to and wrong for an email address or a

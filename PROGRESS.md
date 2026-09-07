@@ -3931,6 +3931,23 @@ from `components/ui/BrandMarks.tsx` because lucide v1 has none, and the lookup f
 X. Added an `XMark` glyph and wired it into both consumers; verified each of the four orbs now
 paints an 18x18 SVG with a real path.
 
+### Session (cont.) — 2026-08-28 — Instagram removed from the profile set
+
+Abdul's call: Instagram is a personal account and should not be presented as part of the
+professional entity. Removed from `identity.socials`, which took it out of `sameAs`, the contact
+orbs and the footer in one edit.
+
+It did **not** come out in one edit everywhere, though — worth knowing, because the same trap
+applies to any future profile removal. Instagram also had: an entry in the `IconName` union, an
+orb caption in `NODE_HINTS`, a branch in `ContactOrbs`'s `NodeIcon`, a `case` in `Footer`'s
+`SocialMark`, an `InstagramMark` glyph in `BrandMarks.tsx`, and mentions in four doc comments.
+The glyph was deleted rather than left as dead code — `git show` recovers it if Instagram is
+ever wanted back.
+
+`sameAs` now asserts three profiles: GitHub, LinkedIn, X. Verified against a production build
+that the string "instagram" appears nowhere in the served HTML, and that the three remaining
+orbs still paint their marks.
+
 ## Known issues / TODO
 
 > Anything flagged but not blocking — including any `[TODO]` placeholder content still

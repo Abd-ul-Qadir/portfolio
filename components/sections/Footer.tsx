@@ -1,7 +1,7 @@
 import { ArrowUp, ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
 
 import { Container } from "@/components/ui/Container";
-import { FramerMotionMark, GitHubMark, GsapMark, InstagramMark, LinkedInMark, NextJsMark, TailwindCssMark, XMark } from "@/components/ui/BrandMarks";
+import { FramerMotionMark, GitHubMark, GsapMark, LinkedInMark, NextJsMark, TailwindCssMark, XMark } from "@/components/ui/BrandMarks";
 import {
   directContacts,
   identity,
@@ -17,8 +17,6 @@ function SocialMark({ icon }: { icon: string }) {
       return <GitHubMark className={className} />;
     case "linkedin":
       return <LinkedInMark className={className} />;
-    case "instagram":
-      return <InstagramMark className={className} />;
     case "x":
       return <XMark className={className} />;
     default:

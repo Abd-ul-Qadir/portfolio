@@ -290,8 +290,8 @@ const config: Config = {
          * If this is ever raised again, remember to reason about the *doubled* figure.
          */
         section: "clamp(4rem, 7.5vw, 7rem)",
-        /** Navbar wordmark. Below the artwork's native 156px so it stays sharp at 2x. */
-        wordmark: "124px",
+        /** Navbar wordmark. Slightly below the artwork's native 156px to preserve clarity. */
+        wordmark: "136px",
       },
       /**
        * One z-scale for the whole site, so the stacking order is decided here and not by

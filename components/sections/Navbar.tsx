@@ -100,8 +100,8 @@ export function Navbar() {
             <Image
               src="/brand/wordmark-transparent.png"
               alt={identity.fullName}
-              width={124}
-              height={23}
+              width={136}
+              height={25}
               priority
               className="h-auto w-wordmark shrink-0"
             />

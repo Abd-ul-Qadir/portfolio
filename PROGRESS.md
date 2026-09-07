@@ -58,6 +58,14 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 4 (cont. 24) — 2026-09-07 — Navbar wordmark enlarged
+
+The navbar wordmark is slightly larger at 136×25 rendered pixels, up from 124×23. Its width
+remains a named Tailwind design token and stays below the source artwork's native 156×29 size,
+so the change does not add a larger asset request, alter navbar height, or introduce layout
+shift. The same fixed size is used at every breakpoint and still leaves the compact menu and
+desktop navigation row their existing space.
+
 ### Session 4 (cont. 23) — 2026-09-07 — Loader hydration regression fixed
 
 Abdul reported that the revised loader reached about 21% and then revealed the hero. His browser

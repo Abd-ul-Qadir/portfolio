@@ -5,20 +5,32 @@
 /* Design tokens (`--bg-base`, `--accent-violet`, ...) are emitted onto `:root`
    by the plugin in `tailwind.config.ts` — do not redeclare them here. */
 
-/* The loader shell is SSR-rendered before the page, but hidden by default. A tiny script at
-   the start of the body opts eligible first-session desktop visits into `show` before first paint.
-   Default-hidden is the safe no-JS fallback: content can never be trapped behind the shell. */
+/* The SSR loader shell covers the hero while Next's beforeInteractive gate resolves the visit.
+   The noscript fallback in app/layout.tsx prevents a JavaScript-disabled browser being trapped. */
 .loader-shell {
   display: none;
 }
 
+html.loader-pending:not([data-loader]),
+html.loader-pending:not([data-loader]) body,
 html[data-loader="show"],
 html[data-loader="show"] body {
   overflow: hidden;
 }
 
+html.loader-pending:not([data-loader]) .loader-shell,
 html[data-loader="show"] .loader-shell {
   display: flex;
+}
+
+html[data-loader="skip"] .loader-shell {
+  display: none;
+}
+
+@media (max-width: 639px), (prefers-reduced-motion: reduce) {
+  .loader-shell {
+    display: none !important;
+  }
 }
 
 @layer base {

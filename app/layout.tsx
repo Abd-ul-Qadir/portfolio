@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { CursorMount } from "@/components/effects/CursorMount";
 import { EasterEgg } from "@/components/effects/EasterEgg";
@@ -25,10 +26,9 @@ const mono = Geist_Mono({
 });
 
 /**
- * Runs at the very start of the document body before first paint. The loader shell is part of the SSR HTML,
- * but CSS keeps it hidden unless this script opts the current visit in. That prevents both
- * failure modes: the hero cannot flash before a first-session loader, and no-JS/reduced-
- * motion/compact/returning visits cannot be trapped behind an overlay.
+ * Runs before hydration through Next's supported script path. The loader shell is part of the
+ * SSR HTML and its pending class covers the hero immediately; this script resolves whether the
+ * visit should keep showing it before React becomes interactive.
  */
 const loaderGateScript = `
 (() => {
@@ -47,7 +47,10 @@ const loaderGateScript = `
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
       !window.matchMedia("(max-width: 639px)").matches;
 
-    root.dataset.loader = shouldShow ? "show" : "skip";
+    const decision = shouldShow ? "show" : "skip";
+    window.__aqLoaderDecision = decision;
+    root.dataset.loader = decision;
+    window.dispatchEvent(new Event(eventName));
 
     if (!shouldShow) return;
 
@@ -58,36 +61,28 @@ const loaderGateScript = `
     performance.mark("aq-loader-start");
 
     const renderEarlyProgress = () => {
-      if (root.dataset.loader !== "show") return;
+      if (window.__aqLoaderDecision !== "show") return;
 
       const elapsed = performance.now() -
         performance.getEntriesByName("aq-loader-start", "mark").at(-1).startTime;
       const value = Math.min(72, Math.round(72 * (1 - Math.exp(-elapsed / 3200))));
-      const filled = Math.round((value / 100) * 16);
-      const bar = document.querySelector("[data-loader-bar]");
-      const empty = document.querySelector("[data-loader-bar-empty]");
-      const percent = document.querySelector("[data-loader-percent]");
-
-      if (bar) bar.textContent = "█".repeat(filled);
-      if (empty) empty.textContent = "░".repeat(16 - filled);
-      if (percent) percent.textContent = value + "%";
-
-      document.querySelectorAll("[data-loader-line]").forEach((line, index) => {
-        line.dataset.visible = String(value >= [0, 30, 60, 99][index]);
-      });
+      window.__aqLoaderProgress = value;
     };
 
     window.__aqLoaderBootTimer = window.setInterval(renderEarlyProgress, 100);
     renderEarlyProgress();
 
     window.setTimeout(() => {
-      if (root.dataset.loader !== "show") return;
+      if (window.__aqLoaderDecision !== "show") return;
       window.clearInterval(window.__aqLoaderBootTimer);
+      window.__aqLoaderDecision = "skip";
       root.dataset.loader = "skip";
       window.dispatchEvent(new Event(eventName));
     }, 15000);
   } catch {
+    window.__aqLoaderDecision = "skip";
     root.dataset.loader = "skip";
+    window.dispatchEvent(new Event(eventName));
   }
 })();`;
 
@@ -143,14 +138,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${sans.variable} ${mono.variable}`}
+      className={`${sans.variable} ${mono.variable} loader-pending`}
       suppressHydrationWarning
     >
-      <body>
-        <script
+      <head>
+        <Script
           id="aq-loader-gate"
-          dangerouslySetInnerHTML={{ __html: loaderGateScript }}
-        />
+          strategy="beforeInteractive"
+        >
+          {loaderGateScript}
+        </Script>
+      </head>
+      <body>
+        <noscript>
+          <style>{`.loader-shell { display: none !important; }`}</style>
+        </noscript>
         {/* SSR-first: this must precede page content so the hero cannot paint ahead of it. */}
         <LoaderMount />
         {/* One continuous constellation field behind every section and route. */}

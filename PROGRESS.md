@@ -58,6 +58,27 @@ not when the happy path looks fine.)*
 > Append a new entry every session. Do not delete old entries — this is the project's
 > memory. Newest entry on top.
 
+### Session 4 (cont. 23) — 2026-09-07 — Loader hydration regression fixed
+
+Abdul reported that the revised loader reached about 21% and then revealed the hero. His browser
+log established the exact cause: the pre-hydration timer had changed React-owned bar text in the
+SSR shell, so hydration failed and React rebuilt the loader while its animation still referenced
+the discarded DOM. The raw `<script>` also produced React's "script tag while rendering" error.
+
+The gate now uses Next.js 16.3's supported `next/script` `beforeInteractive` path from `<head>`.
+The SSR-only `loader-pending` class covers the hero before that queued script executes, with CSS
+media-query skips for compact and reduced-motion visits plus a `<noscript>` escape hatch. The
+pre-hydration ticker records progress in a browser-owned global without mutating React's markup;
+`useLayoutEffect` picks up that value without resetting the display. The show/skip decision also
+lives outside the hydrated DOM so React cannot discard it. Completion now animates visibly to
+100%, holds there for 180 ms, fades, and only then unmounts the shell.
+
+A clean development-browser trace showed 0 → 28 → 52 → 73 → 95 → 100, with no hydration,
+script, or runtime errors (only the expected React DevTools and HMR messages). A production trace
+also reached and held 100% before removal, with an empty console. At 390 px and under reduced
+motion the shell existed only as SSR markup and was never visually displayed. ESLint, strict
+TypeScript, and the 12-route production build pass.
+
 ### Session 4 (cont. 22) — 2026-09-07 — Loader is first-paint and load-aware
 
 The boot loader no longer mounts after hydration on top of an already-visible hero. Its shell
@@ -3712,10 +3733,11 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
 - **2026-09-07 — the desktop loader is readiness-driven rather than a fixed ~1.3 seconds.**
   Abdul explicitly asked for it to reflect connection speed. The initial progress is staged
   toward a ceiling because browsers do not expose a reliable byte-total for an entire Next.js
-  page, but it can reach 100% only after the load event, fonts, and two paint frames. The loader
-  gate is an intentionally raw first-body script: Next's `beforeInteractive` component was
-  serialized into the client script queue in this Next.js version and therefore ran too late to
-  prevent the hero's first-frame flash. Keep the raw script before `LoaderMount` and page content.
+  page, but it can reach 100% only after the load event, fonts, and two paint frames. The gate uses
+  `next/script` with `beforeInteractive`; because Next.js 16.3 queues inline scripts until its
+  bootstrap runs, the static `loader-pending` class displays the SSR shell immediately and avoids
+  a hero flash. Pre-hydration code must store progress outside React-owned markup and let
+  `Loader` adopt it during `useLayoutEffect`, or React will correctly report a hydration mismatch.
 - **2026-08-27 — `resend` added as a dependency (`CLAUDE.md` §2 requires logging this).** It is
   not a UI/animation/particle package, so it does not compete with anything in §2; it is the
   mail transport for the contact form, and it is the provider `CONTENT_BRIEF.md` itself named.

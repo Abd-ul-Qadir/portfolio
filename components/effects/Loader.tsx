@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { identity } from "@/content/data";
 import { gsap } from "@/lib/gsap";
@@ -16,6 +16,7 @@ const STATUS_LINES = [
 const BAR_CELLS = 16;
 const MIN_VISIBLE_MS = 450;
 const PROGRESS_CEILING_SECONDS = 6;
+const COMPLETE_HOLD_MS = 180;
 const STATUS_THRESHOLDS = [0, 30, 60, 99] as const;
 
 interface LoaderProps {
@@ -67,17 +68,24 @@ export default function Loader({ active, onDone }: LoaderProps) {
   const barEmpty = useRef<HTMLSpanElement>(null);
   const percent = useRef<HTMLSpanElement>(null);
   const lines = useRef<Array<HTMLLIElement | null>>([]);
-  useEffect(() => {
-    if (!active || document.documentElement.dataset.loader !== "show") return;
+  useLayoutEffect(() => {
+    const loaderWindow = window as typeof window & {
+      __aqLoaderBootTimer?: number;
+      __aqLoaderDecision?: "show" | "skip";
+      __aqLoaderProgress?: number;
+    };
+    if (!active || loaderWindow.__aqLoaderDecision !== "show") return;
 
     const controller = new AbortController();
-    const loaderWindow = window as typeof window & { __aqLoaderBootTimer?: number };
     if (loaderWindow.__aqLoaderBootTimer !== undefined) {
       window.clearInterval(loaderWindow.__aqLoaderBootTimer);
       delete loaderWindow.__aqLoaderBootTimer;
     }
 
-    const initialProgress = Number.parseInt(percent.current?.textContent ?? "0", 10) || 0;
+    const initialProgress =
+      (loaderWindow.__aqLoaderProgress ??
+        Number.parseInt(percent.current?.textContent ?? "0", 10)) ||
+      0;
     const counter = { value: initialProgress };
     let released = false;
     let finishTween: gsap.core.Tween | undefined;
@@ -85,6 +93,7 @@ export default function Loader({ active, onDone }: LoaderProps) {
 
     const renderProgress = () => {
       const value = Math.round(counter.value);
+      loaderWindow.__aqLoaderProgress = value;
       const filled = Math.round((value / 100) * BAR_CELLS);
 
       // Direct DOM writes — see the performance note above.
@@ -141,16 +150,19 @@ export default function Loader({ active, onDone }: LoaderProps) {
       loadingTween.kill();
       finishTween = gsap.to(counter, {
         value: 100,
-        duration: 0.22,
+        duration: 0.5,
         ease: "power2.inOut",
         onUpdate: renderProgress,
         onComplete: () => {
-          fadeTween = gsap.to(root.current, {
-            autoAlpha: 0,
-            duration: 0.32,
-            ease: "power2.out",
-            onComplete: release,
-          });
+          window.setTimeout(() => {
+            if (controller.signal.aborted) return;
+            fadeTween = gsap.to(root.current, {
+              autoAlpha: 0,
+              duration: 0.32,
+              ease: "power2.out",
+              onComplete: release,
+            });
+          }, COMPLETE_HOLD_MS);
         },
       });
     };
@@ -188,10 +200,18 @@ export default function Loader({ active, onDone }: LoaderProps) {
           status lines below carry the same information at a pace a screen reader can use. */}
       <p className="mt-4 font-mono text-sm text-accent-violet-text" aria-hidden>
         <span ref={bar} data-loader-bar />
-        <span ref={barEmpty} data-loader-bar-empty className="text-text-secondary">
+        <span
+          ref={barEmpty}
+          data-loader-bar-empty
+          className="text-text-secondary"
+        >
           {"░".repeat(BAR_CELLS)}
         </span>
-        <span ref={percent} data-loader-percent className="ml-3 text-text-primary">
+        <span
+          ref={percent}
+          data-loader-percent
+          className="ml-3 text-text-primary"
+        >
           0%
         </span>
       </p>

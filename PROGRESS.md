@@ -3875,6 +3875,42 @@ when they next appear (neither blocks work before Phase 9/10): the missing image
   `text-accent-violet` are provably the same value and there is still exactly one copy of
   each hex in the repo. Don't "fix" this by re-declaring the tokens in `globals.css`.
 
+### Session (cont.) — 2026-08-28 — Entity SEO: schema.org structured data
+
+Abdul asked to rank for his name and be the entity behind AI Overviews. The site had solid
+Phase 13 metadata (canonical, OG/Twitter, sitemap, robots) but **zero structured data**, which
+is the actual mechanism for entity resolution.
+
+Added `lib/structured-data.ts` + `components/seo/JsonLd.tsx`:
+
+- **`Person` (`{siteUrl}/#person`)** — the entity that should rank. Carries `jobTitle`,
+  `description`, `image`, `address`, `worksFor`, `alumniOf`, 40 `knowsAbout` topics, and 11
+  `hasCredential` entries (the four Coursera certs keep their verification URLs, which is what
+  makes them independently checkable).
+- **`sameAs` is the load-bearing property** — it is what merges the portfolio, GitHub, LinkedIn
+  and Instagram into ONE entity instead of several weak ones. It is generated from
+  `identity.socials`, so adding a profile there strengthens the entity with no second list to
+  maintain. **X/Twitter is not in `socials` yet** — Abdul named it, so it should be added.
+- **`WebSite`** and **`ProfilePage`**, cross-linked to the person by `@id`. `ProfilePage` is
+  Google's documented type for "a page about one person" and is a stronger claim than a generic
+  `WebPage` that this is his canonical profile.
+- **Per-project `CreativeWork`** authored by `#person` (so each project reinforces the entity
+  rather than floating free), with `workExample` for the live Hugging Face Space, plus
+  `BreadcrumbList`.
+
+**Every value derives from `content/data.ts` — nothing is retyped.** That is a correctness
+requirement, not tidiness: structured data that disagrees with the visible page is a spam
+signal.
+
+Verified against a production build by parsing the emitted `<script type="application/ld+json">`
+from both routes: 3 connected nodes on the homepage, `author` on the project page resolving to
+the person's `@id`.
+
+**BLOCKER: every `@id`, canonical and `sameAs` self-reference is keyed on `siteUrl`, still the
+placeholder `https://abdulqadir.dev`.** Structured data pointing at a domain that is not the
+live site is worse than none — it splits the entity. This must be set before deploy, and the
+Rich Results Test run against the live URL afterwards.
+
 ## Known issues / TODO
 
 > Anything flagged but not blocking — including any `[TODO]` placeholder content still

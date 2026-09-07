@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { GradientText } from "@/components/ui/GradientText";
 import { MediaFrame } from "@/components/ui/MediaFrame";
 import { getProject, projects, siteUrl } from "@/content/data";
+import { projectGraph } from "@/lib/structured-data";
 
 /**
  * Case-study page per project.
@@ -66,7 +68,9 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
   ];
 
   return (
-    <main className="relative py-section">
+    <>
+      <JsonLd data={projectGraph(project)} />
+    <main data-project-page className="relative py-section">
       <Container className="relative">
         {/* Back to the projects section of the homepage, not just "/" — returning the
             reader to where they left. The loader is session-gated, so this does not
@@ -150,5 +154,6 @@ export default async function ProjectPage(props: PageProps<"/projects/[slug]">) 
         </div>
       </Container>
     </main>
+    </>
   );
 }

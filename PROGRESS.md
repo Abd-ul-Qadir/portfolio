@@ -3906,10 +3906,30 @@ Verified against a production build by parsing the emitted `<script type="applic
 from both routes: 3 connected nodes on the homepage, `author` on the project page resolving to
 the person's `@id`.
 
-**BLOCKER: every `@id`, canonical and `sameAs` self-reference is keyed on `siteUrl`, still the
-placeholder `https://abdulqadir.dev`.** Structured data pointing at a domain that is not the
-live site is worse than none — it splits the entity. This must be set before deploy, and the
-Rich Results Test run against the live URL afterwards.
+**RESOLVED 2026-08-28.** `siteUrl` is now the real domain `https://abdullqadir.vercel.app`,
+and X/Twitter (`https://x.com/AbdullQadir_`) is in `identity.socials`, so `sameAs` carries all
+four profiles. Both URLs were checked live (HTTP 200) before being wired — a dead profile in
+`sameAs` harms entity consolidation rather than being merely useless. Still to do after deploy:
+run the live URL through Google's Rich Results Test, and verify the domain in Search Console.
+
+### Session (cont.) — 2026-08-28 — Real domain + X profile wired through
+
+Abdul supplied the live domain and his X handle. Both are single values in `content/data.ts`
+that fan out everywhere, which is the payoff of the no-restated-facts rule:
+
+- **`siteUrl` → `https://abdullqadir.vercel.app`.** Verified propagated to the Person/WebSite/
+  ProfilePage `@id`s, `Person.url`, `Person.image`, the canonical, `og:url`, all four sitemap
+  entries and the robots `Sitemap:` line.
+- **X added to `identity.socials`**, which automatically put it into `sameAs` (now 4 profiles),
+  the contact orbs and the footer — no separate lists to update.
+- **`twitter:site` / `twitter:creator` = `@AbdullQadir_`** in the root metadata, for attribution
+  on shared links and one more machine-readable tie between site and profile.
+
+**One thing that would have shipped broken:** the contact orbs and footer render brand marks
+from `components/ui/BrandMarks.tsx` because lucide v1 has none, and the lookup falls through to
+`null` for an unknown icon. Adding the social alone would have rendered an **empty circle** for
+X. Added an `XMark` glyph and wired it into both consumers; verified each of the four orbs now
+paints an 18x18 SVG with a real path.
 
 ## Known issues / TODO
 

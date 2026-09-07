@@ -38,6 +38,14 @@ export function LinkedInMark(props: MarkProps) {
   );
 }
 
+export function XMark(props: MarkProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden focusable="false" {...props}>
+      <path d="M18.9 2.25h3.34l-7.29 8.33 8.58 11.34h-6.72l-5.26-6.88-6.02 6.88H1.18l7.8-8.91L.75 2.25h6.89l4.76 6.29 5.5-6.29Zm-1.17 17.98h1.85L6.35 4.14H4.37l13.36 16.09Z" />
+    </svg>
+  );
+}
+
 export function NextJsMark(props: MarkProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden focusable="false" {...props}>

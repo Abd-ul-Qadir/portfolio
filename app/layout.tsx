@@ -119,6 +119,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    // Attribution on shared links, and one more machine-readable tie between the site and
+    // the X profile that `sameAs` already claims.
+    site: "@AbdullQadir_",
+    creator: "@AbdullQadir_",
     title: `${identity.fullName} — ${identity.roles[0]}`,
     description: identity.tagline,
   },

@@ -24,6 +24,7 @@ export type IconName =
   | "github"
   | "linkedin"
   | "instagram"
+  | "x"
   | "mail"
   | "phone"
   | "file-text";
@@ -163,6 +164,9 @@ export const identity: Identity = {
       href: "https://www.linkedin.com/in/abd-ul-qadir/",
       icon: "linkedin",
     },
+    // X/Twitter. Confirmed live (HTTP 200) before being added: a dead profile in `sameAs`
+    // actively harms entity consolidation rather than being merely useless.
+    { label: "X", href: "https://x.com/AbdullQadir_", icon: "x" },
     {
       label: "Instagram",
       href: "https://www.instagram.com/abdu1.qadir",
@@ -900,6 +904,7 @@ const NODE_HINTS: Record<string, string> = {
   github: "View work",
   linkedin: "Connect",
   instagram: "Follow",
+  x: "Follow",
 };
 
 /**
@@ -975,4 +980,4 @@ export const portfolioStack = [
  * Canonical origin, used by `generateMetadata`, the sitemap and OG tags in Phase 13.
  * [TODO] Replace once the production domain is confirmed — Vercel deploy is Phase 14.
  */
-export const siteUrl = "https://abdulqadir.dev";
+export const siteUrl = "https://abdullqadir.vercel.app";

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Fragment, useRef, type PointerEvent as ReactPointerEvent } from "react";
 
-import { GitHubMark, InstagramMark, LinkedInMark } from "@/components/ui/BrandMarks";
+import { GitHubMark, InstagramMark, LinkedInMark, XMark } from "@/components/ui/BrandMarks";
 import { iconMap } from "@/components/ui/icons";
 import { contactNodes, directContacts, type ContactNode } from "@/content/data";
 import { usePointerEffectsEnabled, useReducedMotion } from "@/lib/hooks";
@@ -38,6 +38,7 @@ function NodeIcon({ node }: { node: ContactNode }) {
   if (node.icon === "github") return <GitHubMark className={className} />;
   if (node.icon === "linkedin") return <LinkedInMark className={className} />;
   if (node.icon === "instagram") return <InstagramMark className={className} />;
+  if (node.icon === "x") return <XMark className={className} />;
 
   const Icon = iconMap[node.icon];
   return Icon ? <Icon aria-hidden className={className} /> : null;
